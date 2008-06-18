@@ -3,6 +3,9 @@
 # Candy: Commanders Are Not Dead Yet
 # Based on File Hunter from http://wiki.wxpython.org/AnotherTutorial
 
+# BUG: doesn't cd into 'fishki.net'
+# BUG: loses focus when updiring while cwd is '/'
+
 import wx
 import os
 import time
@@ -24,12 +27,15 @@ class FileInfo:
 
 class MyListCtrl (wx.ListCtrl):
     def __init__ (self, parent, id):
-        wx.ListCtrl.__init__ (self, parent, id, style = wx.LC_REPORT)
+        wx.ListCtrl.__init__ (self, parent, id, style = wx.LC_REPORT | wx.LC_SINGLE_SEL)
         # LC_REPORT
         # LC_LIST
 
         self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_LIST_ITEM_ACTIVATED, self.OnListItemActivated)
+
+        self.searchMode = False
+        self.searchString = ''
 
         images = ['images/empty.png',
                   'images/folder.png',
@@ -142,6 +148,7 @@ class MyListCtrl (wx.ListCtrl):
         self.Focus (0)
 
     def OnListItemActivated (self, listEvent):
+        self.searchMode = False
         text = listEvent.GetText ()
 
         if text == '..':
@@ -153,10 +160,22 @@ class MyListCtrl (wx.ListCtrl):
         keycode = event.GetKeyCode ()
         #self.GetParent ().GetParent ().sb.SetStatusText (str (keycode))
 
-        if keycode in [wx.WXK_LEFT, ord ('U')]:
-            self.updir ()
-        elif keycode == wx.WXK_ESCAPE:
-            sys.exit (0)
+        if not self.searchMode:
+            if keycode in [wx.WXK_LEFT, ord ('U')]:
+                self.updir ()
+            elif keycode == wx.WXK_ESCAPE:
+                sys.exit (0)
+            elif keycode == ord ('/'):
+                self.searchMode = True
+                self.searchString = ''
+        else:
+            self.searchString += chr (keycode)
+            item = self.FindItem (0, self.searchString, partial = True)
+
+            if item != -1:
+                self.Select (item)
+                self.Focus (item)
+                self.RefreshItems (0, self.GetItemCount ())
 
         """
         if keycode == wx.WXK_ESCAPE:
