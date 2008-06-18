@@ -47,45 +47,35 @@ class MyListCtrl (wx.ListCtrl):
         self.SetFocus ()
 
     def fillList (self, cwd):
-        j = 1
-        itemIndex = self.InsertStringItem (0, '..')
-        #self.SetItemImage (0, 5)
-
+        self.InsertStringItem (0, '..')
         files = os.listdir (cwd)
-        for i in files:
-            if i[0] == '.':
+
+        for file in files:
+            if file[0] == '.':
                 continue
 
-            (name, ext) = os.path.splitext (i)
-            ex = ext[1:]
-            size = os.path.getsize (i)
-            sec = os.path.getmtime (i)
-            self.InsertStringItem (j, name)
-            self.SetStringItem (j, 1, ex)
-            self.SetStringItem (j, 2, str (size) + ' B')
-            self.SetStringItem (j, 3, time.strftime ('%Y-%m-%d %H:%M', time.localtime (sec)))
+            isDir = os.path.isdir (file)
+            itemPosHint = -1
+            itemPos = -1
 
-            if os.path.isdir (i):
-                self.SetItemTextColour (j, wx.BLUE)
-                boldFont = wx.Font (10, wx.NORMAL, wx.NORMAL, wx.BOLD)
-                self.SetItemFont (j, boldFont)
-
-            """
-            if os.path.isdir (i):
-                self.SetItemImage (j, 1)
-            elif ex == 'py':
-                self.SetItemImage (j, 2)
-            elif ex == 'jpg':
-                self.SetItemImage (j, 3)
-            elif ex == 'pdf':
-                self.SetItemImage (j, 4)
+            if isDir:
+                itemPosHint = 1
             else:
-                self.SetItemImage (j, 0)
-                """
+                itemPosHint = self.GetItemCount ()
 
-            #if (j % 2) == 0:
-            #    self.SetItemBackgroundColour (j, '#e6f1f5')
-            j = j + 1
+            (name, ext) = os.path.splitext (file)
+            ex = ext[1:]
+            size = os.path.getsize (file)
+            sec = os.path.getmtime (file)
+            itemPos = self.InsertStringItem (itemPosHint, name)
+            self.SetStringItem (itemPos, 1, ex)
+            self.SetStringItem (itemPos, 2, str (size) + ' B')
+            self.SetStringItem (itemPos, 3, time.strftime ('%Y-%m-%d %H:%M', time.localtime (sec)))
+
+            if isDir:
+                self.SetItemTextColour (itemPos, wx.BLUE)
+                boldFont = wx.Font (10, wx.NORMAL, wx.NORMAL, wx.BOLD)
+                self.SetItemFont (itemPos, boldFont)
 
     def selectNeededItem (self, oldDir, upwards):
         if upwards:
