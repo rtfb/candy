@@ -74,6 +74,17 @@ class MyListCtrl (wx.ListCtrl):
 
         return files
 
+    def insertItemAtPos (self, fileName, pos):
+        (name, ext) = os.path.splitext (fileName)
+        ex = ext[1:]
+        size = os.path.getsize (fileName)
+        sec = os.path.getmtime (fileName)
+        itemPos = self.InsertStringItem (pos, name)
+        self.SetStringItem (itemPos, 1, ex)
+        self.SetStringItem (itemPos, 2, str (size) + ' B')
+        self.SetStringItem (itemPos, 3, time.strftime ('%Y-%m-%d %H:%M', time.localtime (sec)))
+        return itemPos
+
     def fillList (self, cwd):
         files = self.collectListInfo (cwd)
         self.InsertStringItem (0, '..')
@@ -86,15 +97,7 @@ class MyListCtrl (wx.ListCtrl):
             if dir.isHidden:
                 continue
 
-            (name, ext) = os.path.splitext (dir.fileName)
-            ex = ext[1:]
-            size = os.path.getsize (dir.fileName)
-            sec = os.path.getmtime (dir.fileName)
-            itemPos = self.InsertStringItem (pos, name)
-            self.SetStringItem (itemPos, 1, ex)
-            self.SetStringItem (itemPos, 2, str (size) + ' B')
-            self.SetStringItem (itemPos, 3, time.strftime ('%Y-%m-%d %H:%M', time.localtime (sec)))
-
+            itemPos = self.insertItemAtPos (dir.fileName, pos)
             self.SetItemTextColour (itemPos, wx.BLUE)
             boldFont = wx.Font (10, wx.NORMAL, wx.NORMAL, wx.BOLD)
             self.SetItemFont (itemPos, boldFont)
@@ -109,15 +112,7 @@ class MyListCtrl (wx.ListCtrl):
             if file.isHidden:
                 continue
 
-            (name, ext) = os.path.splitext (file.fileName)
-            ex = ext[1:]
-            size = os.path.getsize (file.fileName)
-            sec = os.path.getmtime (file.fileName)
-            itemPos = self.InsertStringItem (pos, name)
-            self.SetStringItem (itemPos, 1, ex)
-            self.SetStringItem (itemPos, 2, str (size) + ' B')
-            self.SetStringItem (itemPos, 3, time.strftime ('%Y-%m-%d %H:%M', time.localtime (sec)))
-
+            self.insertItemAtPos (file.fileName, pos)
             pos += 1
 
     def selectNeededItem (self, oldDir, upwards):
