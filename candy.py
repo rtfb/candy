@@ -6,6 +6,7 @@
 import wx
 import os
 import time
+import sys
 
 ID_BUTTON = 100
 ID_EXIT = 200
@@ -27,7 +28,7 @@ class MyListCtrl (wx.ListCtrl):
         # LC_REPORT
         # LC_LIST
 
-        #self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_LIST_ITEM_ACTIVATED, self.OnListItemActivated)
 
         images = ['images/empty.png',
@@ -42,10 +43,10 @@ class MyListCtrl (wx.ListCtrl):
         self.InsertColumn (2, 'Size', wx.LIST_FORMAT_RIGHT)
         self.InsertColumn (3, 'Modified')
 
-        self.SetColumnWidth (0, 220)
+        self.SetColumnWidth (0, 320)
         self.SetColumnWidth (1, 70)
         self.SetColumnWidth (2, 100)
-        self.SetColumnWidth (3, 420)
+        self.SetColumnWidth (3, 220)
 
         #self.il = wx.ImageList (16, 16)
         #for i in images:
@@ -53,7 +54,8 @@ class MyListCtrl (wx.ListCtrl):
         #self.SetImageList (self.il, wx.IMAGE_LIST_SMALL)
 
         self.fillList ('.')
-        self.selectNeededItem ('', False)
+        self.Select (0)
+        self.Focus (0)
         self.SetFocus ()
 
     def collectListInfo (self, cwd):
@@ -120,35 +122,43 @@ class MyListCtrl (wx.ListCtrl):
             self.insertItemAtPos (file.fileName, pos)
             pos += 1
 
-    def selectNeededItem (self, oldDir, upwards):
-        if upwards:
-            item = self.FindItem (0, oldDir)
+    def updir (self):
+        oldDir = os.path.split (os.getcwd ())[1]
+        os.chdir ('..')
+        self.DeleteAllItems ()
+        self.fillList (os.getcwd ())
 
-            if item != -1:
-                self.Select (item)
-                self.Focus (item)
-        else:
-            self.Select (0)
-            self.Focus (0)
+        item = self.FindItem (0, oldDir)
+
+        if item != -1:
+            self.Select (item)
+            self.Focus (item)
+
+    def downdir (self, dirName):
+        os.chdir (dirName)
+        self.DeleteAllItems ()
+        self.fillList (os.getcwd ())
+        self.Select (0)
+        self.Focus (0)
 
     def OnListItemActivated (self, listEvent):
         text = listEvent.GetText ()
 
-        if os.path.isdir (text):
-            oldDir = os.path.split (os.getcwd ())[1]
-            os.chdir (text)
-            self.DeleteAllItems ()
-            self.fillList (os.getcwd ())
-            self.selectNeededItem (oldDir, text == '..')
+        if text == '..':
+            self.updir ()
+        elif os.path.isdir (text):
+            self.downdir (text)
 
     def OnKeyDown (self, event):
-        print "OKD in MyListCtrl"
         keycode = event.GetKeyCode ()
-        self.GetParent ().GetParent ().sb.SetStatusText (str (keycode))
+        #self.GetParent ().GetParent ().sb.SetStatusText (str (keycode))
 
-        if keycode == wx.WXK_RETURN:
-            doEnterKey ()
+        if keycode in [wx.WXK_LEFT, ord ('U')]:
+            self.updir ()
+        elif keycode == wx.WXK_ESCAPE:
+            sys.exit (0)
 
+        """
         if keycode == wx.WXK_ESCAPE:
             ret  = wx.MessageBox ('Are you sure to quit?',
                                   'Question',
@@ -156,6 +166,7 @@ class MyListCtrl (wx.ListCtrl):
                                   self)
             if ret == wx.YES:
                 self.Close ()
+                """
 
         event.Skip ()
 
