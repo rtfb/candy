@@ -12,9 +12,19 @@ ID_EXIT = 200
 ID_SPLITTER = 300
 ID_PANEL = 400
 
+class FileInfo:
+    def __init__ (self):
+        self.isDir = False
+        self.isHidden = False
+        self.fileName = ''
+
+    def __lt__ (self, other):
+        return self.fileName < other.fileName
+
 class MyListCtrl (wx.ListCtrl):
     def __init__ (self, parent, id):
         wx.ListCtrl.__init__ (self, parent, id, style = wx.LC_REPORT)
+        # LC_REPORT
         # LC_LIST
 
         #self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
@@ -46,36 +56,69 @@ class MyListCtrl (wx.ListCtrl):
         self.selectNeededItem ('', False)
         self.SetFocus ()
 
-    def fillList (self, cwd):
-        self.InsertStringItem (0, '..')
-        files = os.listdir (cwd)
+    def collectListInfo (self, cwd):
+        files = []
+        ls = os.listdir (cwd)
 
-        for file in files:
+        for file in ls:
+            fileInfo = FileInfo ()
+            fileInfo.fileName = file
+
+            if os.path.isdir (file):
+                fileInfo.isDir = True
+
             if file[0] == '.':
+                fileInfo.isHidden = True
+
+            files.append (fileInfo)
+
+        return files
+
+    def fillList (self, cwd):
+        files = self.collectListInfo (cwd)
+        self.InsertStringItem (0, '..')
+
+        dirs = filter (lambda (f): f.isDir, files)
+        dirs.sort ()
+
+        pos = 1
+        for dir in dirs:
+            if dir.isHidden:
                 continue
 
-            isDir = os.path.isdir (file)
-            itemPosHint = -1
-            itemPos = -1
-
-            if isDir:
-                itemPosHint = 1
-            else:
-                itemPosHint = self.GetItemCount ()
-
-            (name, ext) = os.path.splitext (file)
+            (name, ext) = os.path.splitext (dir.fileName)
             ex = ext[1:]
-            size = os.path.getsize (file)
-            sec = os.path.getmtime (file)
-            itemPos = self.InsertStringItem (itemPosHint, name)
+            size = os.path.getsize (dir.fileName)
+            sec = os.path.getmtime (dir.fileName)
+            itemPos = self.InsertStringItem (pos, name)
             self.SetStringItem (itemPos, 1, ex)
             self.SetStringItem (itemPos, 2, str (size) + ' B')
             self.SetStringItem (itemPos, 3, time.strftime ('%Y-%m-%d %H:%M', time.localtime (sec)))
 
-            if isDir:
-                self.SetItemTextColour (itemPos, wx.BLUE)
-                boldFont = wx.Font (10, wx.NORMAL, wx.NORMAL, wx.BOLD)
-                self.SetItemFont (itemPos, boldFont)
+            self.SetItemTextColour (itemPos, wx.BLUE)
+            boldFont = wx.Font (10, wx.NORMAL, wx.NORMAL, wx.BOLD)
+            self.SetItemFont (itemPos, boldFont)
+
+            pos += 1
+
+        files = filter (lambda (f): not f.isDir, files)
+        files.sort ()
+
+        pos = self.GetItemCount ()
+        for file in files:
+            if file.isHidden:
+                continue
+
+            (name, ext) = os.path.splitext (file.fileName)
+            ex = ext[1:]
+            size = os.path.getsize (file.fileName)
+            sec = os.path.getmtime (file.fileName)
+            itemPos = self.InsertStringItem (pos, name)
+            self.SetStringItem (itemPos, 1, ex)
+            self.SetStringItem (itemPos, 2, str (size) + ' B')
+            self.SetStringItem (itemPos, 3, time.strftime ('%Y-%m-%d %H:%M', time.localtime (sec)))
+
+            pos += 1
 
     def selectNeededItem (self, oldDir, upwards):
         if upwards:
@@ -236,7 +279,7 @@ class Candy (wx.Frame):
 
 def main ():
     app = wx.App (0)
-    candy = Candy (None, -1, 'File Hunter')
+    candy = Candy (None, -1, 'Candy')
     app.MainLoop ()
 
 if __name__ == '__main__':
