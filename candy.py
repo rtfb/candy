@@ -77,12 +77,17 @@ class MyListCtrl (wx.ListCtrl):
     def insertItemAtPos (self, fileName, pos):
         (name, ext) = os.path.splitext (fileName)
         ex = ext[1:]
-        size = os.path.getsize (fileName)
-        sec = os.path.getmtime (fileName)
+        size = '?'
+        sec = '?'
+
+        if os.path.exists (fileName):
+            size = str (os.path.getsize (fileName)) + ' B'
+            sec = time.strftime ('%Y-%m-%d %H:%M', time.localtime (os.path.getmtime (fileName)))
+
         itemPos = self.InsertStringItem (pos, name)
         self.SetStringItem (itemPos, 1, ex)
-        self.SetStringItem (itemPos, 2, str (size) + ' B')
-        self.SetStringItem (itemPos, 3, time.strftime ('%Y-%m-%d %H:%M', time.localtime (sec)))
+        self.SetStringItem (itemPos, 2, size)
+        self.SetStringItem (itemPos, 3, sec)
         return itemPos
 
     def fillList (self, cwd):
