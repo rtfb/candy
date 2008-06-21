@@ -8,6 +8,8 @@ import sys
 
 numTotalColumns = 5
 
+STYLE_FOLDER = 1
+
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
@@ -15,12 +17,14 @@ class MySTC (stc.StyledTextCtrl):
         self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
 
-        #self.currSelection = (0, 0)     # Top left item in the list
         self.linesPerCol = 0
         self.charsPerCol = 0
         self.numFullColumns = 0
         self.items = []
         self.selectedItem = 0
+
+    def setDefaultSelection (self):
+        self.SetSelection (0, self.charsPerCol)
 
     def setCharsPerCol (self, chars):
         self.charsPerCol = chars
@@ -32,11 +36,66 @@ class MySTC (stc.StyledTextCtrl):
         self.items = list
         self.numFullColumns = len (self.items) / self.linesPerCol
 
+    def fillList (self, cwd):
+        self.SetReadOnly (False)
+        files = os.listdir (cwd)
+        files.insert (0, '..')
+        linesToAdd = ['' for i in range (self.linesPerCol)]
+
+        currLine = 0
+        for file in files:
+            linesToAdd[currLine] += lJustAndCut (file, self.charsPerCol)
+            currLine += 1
+
+            if currLine > self.linesPerCol - 1:
+                currLine = 0
+
+        self.SetText ('\n'.join (linesToAdd))
+        self.EmptyUndoBuffer ()
+        self.SetReadOnly (True)
+        self.SetFocus ()
+        self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
+        self.SetViewEOL (True)
+        self.SetSelBackground (1, "yellow")
+        self.setDefaultSelection ()
+        self.setItemList (files)
+        self.runStyling ()
+
+    def afterDirChange (self):
+        self.setSelectionOnCurrItem ()
+        #self.GetParent ().GetParent ().sb.SetStatusText (os.getcwd ())
+
+    def updir (self):
+        oldDir = os.path.split (os.getcwd ())[1]
+        os.chdir ('..')
+        self.clearScreen ()
+        self.fillList (os.getcwd ())
+        self.selectedItem = self.items.index (oldDir)
+
+        self.afterDirChange ()
+
+    def downdir (self, dirName):
+        os.chdir (dirName)
+        self.clearScreen ()
+        self.fillList (os.getcwd ())
+        self.selectedItem = 0
+        """
+        self.Select (0)
+        self.Focus (0)
+        """
+
+        self.afterDirChange ()
+
     def OnDestroy (self, evt):
         # This is how the clipboard contents can be preserved after
         # the app has exited.
         wx.TheClipboard.Flush ()
         evt.Skip ()
+
+    def clearScreen (self):
+        self.SetReadOnly (False)
+        self.ClearAll ()
+        self.SetReadOnly (True)
 
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
@@ -53,8 +112,23 @@ class MySTC (stc.StyledTextCtrl):
             self.moveSelectionLeft ()
         elif key == 'L':
             self.moveSelectionRight ()
+        elif key == 'Q':
+            sys.exit (0)
+        elif key == 'U':
+            self.updir ()
+        elif keyCode == wx.WXK_RETURN:
+            self.downdir (self.items[self.selectedItem])
+        elif key == 'C':
+            self.clearScreen ()
 
-        self.setSelection ()
+        self.setSelectionOnCurrItem ()
+
+    def setSelectionOnCurrItem (self):
+        selectionStart = self.getItemStartChar (self.selectedItem)
+        self.SetCurrentPos (selectionStart)
+        self.EnsureCaretVisible ()
+        self.SetSelection (selectionStart , selectionStart + self.charsPerCol)
+        self.EnsureVisible (selectionStart)
 
     def moveSelectionDown (self):
         self.selectedItem += 1
@@ -88,9 +162,9 @@ class MySTC (stc.StyledTextCtrl):
             self.selectedItem -= self.linesPerCol
             self.selectedItem = self.selectedItem % self.linesPerCol + 1
 
-    def setSelection (self):
-        itemX = self.selectedItem / self.linesPerCol
-        itemY = self.selectedItem % self.linesPerCol
+    def getItemStartChar (self, itemNo):
+        itemX = itemNo / self.linesPerCol
+        itemY = itemNo % self.linesPerCol
         numNonEmptyColumns = self.numFullColumns + 1
         numFullLines = len (self.items) % self.linesPerCol
 
@@ -101,7 +175,7 @@ class MySTC (stc.StyledTextCtrl):
         else:
             selStart = itemY * numNonEmptyColumns * self.charsPerCol + (itemX * self.charsPerCol) + itemY
 
-        self.SetSelection (selStart, selStart + self.charsPerCol)
+        return selStart
 
     def OnModified (self, evt):
         pass
@@ -142,8 +216,30 @@ class MySTC (stc.StyledTextCtrl):
 
         return st
 
-#face1 = 'Helvetica'
-#face2 = 'Times'
+    def runStyling (self):
+        # Now set some text to those styles...  Normally this would be
+        # done in an event handler that happens when text needs displayed.
+        for i in range (len (self.items)):
+            fileName = self.items[i]
+
+            if os.path.isdir (fileName):
+                selStart = self.getItemStartChar (i)
+                self.StartStyling (selStart, 0xff)
+                self.SetStyling (len (fileName), STYLE_FOLDER)
+
+        """
+        self.p1.StartStyling (98, 0xff)
+        self.p1.SetStyling (6, 1)  # set style for 6 characters using style 1
+
+        self.p1.StartStyling (190, 0xff)
+        self.p1.SetStyling (20, 2)
+
+        self.p1.StartStyling (310, 0xff)
+        self.p1.SetStyling (4, 3)
+        self.p1.SetStyling (2, 0)
+        self.p1.SetStyling (10, 4)
+        """
+
 faceCourier = 'Courier'
 pb = 12
 
@@ -163,25 +259,12 @@ class Candy (wx.Frame):
 
         # make some styles
         self.p1.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s" % (pb, faceCourier))
-        """
         self.p1.StyleClearAll ()
-        self.p1.StyleSetSpec (1, "size:%d,bold,face:%s,fore:#0000FF" % (pb + 2, face3))
+        self.p1.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:#0000FF" % (pb, faceCourier))
+        """
         self.p1.StyleSetSpec (2, "face:%s,italic,fore:#FF0000,size:%d" % (face3, pb))
         self.p1.StyleSetSpec (3, "face:%s,bold,size:%d" % (face3, pb + 2))
         self.p1.StyleSetSpec (4, "face:%s,size:%d" % (face3, pb - 1))
-
-        # Now set some text to those styles...  Normally this would be
-        # done in an event handler that happens when text needs displayed.
-        self.p1.StartStyling (98, 0xff)
-        self.p1.SetStyling (6, 1)  # set style for 6 characters using style 1
-
-        self.p1.StartStyling (190, 0xff)
-        self.p1.SetStyling (20, 2)
-
-        self.p1.StartStyling (310, 0xff)
-        self.p1.SetStyling (4, 3)
-        self.p1.SetStyling (2, 0)
-        self.p1.SetStyling (10, 4)
         """
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
@@ -205,28 +288,12 @@ class Candy (wx.Frame):
         charWidth = self.p1.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
         charsPerCol = width / charWidth / numTotalColumns
 
-        files = os.listdir ('/home/rtfb')
-        linesToAdd = ['' for i in range (linesPerCol)]
-
-        currLine = 0
-        for file in files:
-            linesToAdd[currLine] += lJustAndCut (file, charsPerCol)
-            currLine += 1
-
-            if currLine > linesPerCol - 1:
-                currLine = 0
-
-        print linesPerCol, len (linesToAdd)
-        self.p1.SetText ('\n'.join (linesToAdd))
         self.p1.setCharsPerCol (charsPerCol)
         self.p1.setLinesPerCol (linesPerCol)
-        self.p1.setItemList (files)
-        self.p1.EmptyUndoBuffer ()
-        self.p1.SetReadOnly (True)
-        self.p1.SetFocus ()
-        self.p1.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
-        self.p1.SetViewEOL (True)
-        self.p1.SetSelBackground (1, "yellow")
+
+        dir = '/home/rtfb'
+        os.chdir (dir)
+        self.p1.fillList (dir)
 
     def OnExit (self, e):
         self.Close (True)
