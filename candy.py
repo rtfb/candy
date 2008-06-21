@@ -31,7 +31,7 @@ class MyListCtrl (wx.ListCtrl):
         # LC_REPORT
         # LC_LIST
 
-        self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind (wx.EVT_LIST_KEY_DOWN, self.OnListKeyDown)
         self.Bind (wx.EVT_LIST_ITEM_ACTIVATED, self.OnListItemActivated)
 
         self.searchMode = False
@@ -128,6 +128,9 @@ class MyListCtrl (wx.ListCtrl):
             self.insertItemAtPos (file.fileName, pos)
             pos += 1
 
+    def onDirChange (self):
+        self.GetParent ().GetParent ().sb.SetStatusText (os.getcwd ())
+
     def updir (self):
         oldDir = os.path.split (os.getcwd ())[1]
         os.chdir ('..')
@@ -140,12 +143,16 @@ class MyListCtrl (wx.ListCtrl):
             self.Select (item)
             self.Focus (item)
 
+        self.onDirChange ()
+
     def downdir (self, dirName):
         os.chdir (dirName)
         self.DeleteAllItems ()
         self.fillList (os.getcwd ())
         self.Select (0)
         self.Focus (0)
+
+        self.onDirChange ()
 
     def OnListItemActivated (self, listEvent):
         self.searchMode = False
@@ -156,18 +163,21 @@ class MyListCtrl (wx.ListCtrl):
         elif os.path.isdir (text):
             self.downdir (text)
 
-    def OnKeyDown (self, event):
+    def OnListKeyDown (self, event):
         keycode = event.GetKeyCode ()
-        #self.GetParent ().GetParent ().sb.SetStatusText (str (keycode))
 
         if not self.searchMode:
-            if keycode in [wx.WXK_LEFT, ord ('U')]:
+            if keycode in [wx.WXK_LEFT, ord ('u')]:
                 self.updir ()
+            if keycode == wx.WXK_RIGHT:
+                self.downdir (event.GetText ())
             elif keycode == wx.WXK_ESCAPE:
-                sys.exit (0)
+                sys.exit (0)    # Esc quits for now, but should do something else later.
             elif keycode == ord ('/'):
                 self.searchMode = True
                 self.searchString = ''
+            elif keycode == ord ('q'):
+                sys.exit (0)
         else:
             self.searchString += chr (keycode)
             item = self.FindItem (0, self.searchString, partial = True)
