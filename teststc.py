@@ -9,6 +9,13 @@ import sys
 numTotalColumns = 5
 
 STYLE_FOLDER = 1
+STYLE_INC_SEARCH = 2
+
+class IncSearchDirtyInfo:
+    def __init__ (self):
+        self.dirtyAreaBegin = 0
+        self.dirtyAreaEnd = 0
+        self.dirtyItemOriginalStyle = -1
 
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
@@ -19,15 +26,27 @@ class MySTC (stc.StyledTextCtrl):
 
         self.linesPerCol = 0
         self.charsPerCol = 0
+        self.charsPerWidth = 0
         self.numFullColumns = 0
         self.items = []
         self.selectedItem = 0
+        self.searchMode = False
+        self.searchStr = ''
+        self.incSearchDirtyInfo = IncSearchDirtyInfo ()
+        self.searchMatchIndex = -1
+        self.columnWidth = 0
+
+    def setColumnWidth (self, width):
+        self.columnWidth = width
 
     def setDefaultSelection (self):
         self.SetSelection (0, self.charsPerCol)
 
     def setCharsPerCol (self, chars):
         self.charsPerCol = chars
+
+    def setCharsPerWidth (self, width):
+        self.charsPerWidth = width
 
     def setLinesPerCol (self, lines):
         self.linesPerCol = lines
@@ -71,7 +90,6 @@ class MySTC (stc.StyledTextCtrl):
         self.clearScreen ()
         self.fillList (os.getcwd ())
         self.selectedItem = self.items.index (oldDir)
-
         self.afterDirChange ()
 
     def downdir (self, dirName):
@@ -79,11 +97,6 @@ class MySTC (stc.StyledTextCtrl):
         self.clearScreen ()
         self.fillList (os.getcwd ())
         self.selectedItem = 0
-        """
-        self.Select (0)
-        self.Focus (0)
-        """
-
         self.afterDirChange ()
 
     def OnDestroy (self, evt):
@@ -104,31 +117,88 @@ class MySTC (stc.StyledTextCtrl):
         if keyCode < 256:
             key = chr (keyCode)
 
-        if key == 'J':
-            self.moveSelectionDown ()
-        elif key == 'K':
-            self.moveSelectionUp ()
-        elif key == 'H':
-            self.moveSelectionLeft ()
-        elif key == 'L':
-            self.moveSelectionRight ()
-        elif key == 'Q':
-            sys.exit (0)
-        elif key == 'U':
-            self.updir ()
-        elif keyCode == wx.WXK_RETURN:
-            self.downdir (self.items[self.selectedItem])
-        elif key == 'C':
-            self.clearScreen ()
+        if not self.searchMode:
+            # Navigation mode:
+            if key == 'J':
+                self.moveSelectionDown ()
+            elif key == 'K':
+                self.moveSelectionUp ()
+            elif key == 'H':
+                self.moveSelectionLeft ()
+            elif key == 'L':
+                self.moveSelectionRight ()
+            elif key == 'Q':
+                sys.exit (0)
+            elif key == 'U':
+                self.updir ()
+            elif keyCode == wx.WXK_RETURN:
+                self.downdir (self.items[self.selectedItem])
+            elif key == 'C':
+                self.clearScreen ()
+            elif key == '/':
+                self.searchMode = True
+                self.searchStr = ''
 
-        self.setSelectionOnCurrItem ()
+            self.setSelectionOnCurrItem ()
+        else:
+            # Search mode:
+            if keyCode == wx.WXK_RETURN:
+                self.searchMode = False
+                self.selectedItem = self.searchMatchIndex
+                self.setSelectionOnCurrItem ()
+            elif keyCode == wx.WXK_ESCAPE:
+                self.searchMode = False
+                self.clearIncSearchDirtyArea ()
+            else:
+                self.searchStr += key
+                self.incrementalSearch ()
+
+    def clearIncSearchDirtyArea (self):
+        self.StartStyling (self.incSearchDirtyInfo.dirtyAreaBegin, 0xff)
+        self.SetStyling (self.incSearchDirtyInfo.dirtyAreaEnd, self.incSearchDirtyInfo.dirtyItemOriginalStyle)
+
+    def isPositionVisible (self, pos):
+        if pos / self.linesPerCol > self.linesPerCol or pos / self.charsPerWidth > self.charsPerWidth:
+           return False
+
+        return True
+
+    # TODO: wrap search
+    def incrementalSearch (self):
+        index = self.selectedItem       # start searching from curr selection
+
+        for i in range (index, len (self.items)):
+            match = self.items[i].lower ().find (self.searchStr.lower ())
+
+            if match == -1:
+                continue
+
+            self.searchMatchIndex = i
+            selection = self.getItemStartChar (i)
+            selectionStart = selection + match
+
+            # This is my lame approach to move search match into view
+            if not self.isPositionVisible (selectionStart):
+                self.GotoPos (selectionStart + self.charsPerCol)
+                self.MoveCaretInsideView ()
+
+            # First of all, clean previous match:
+            self.clearIncSearchDirtyArea ()
+
+            # Now, set the style for the new match:
+            self.incSearchDirtyInfo.dirtyItemOriginalStyle = self.GetStyleAt (selectionStart)   # remember original style
+            self.StartStyling (selectionStart, 0xff)
+            stylingRegion = len (self.searchStr)
+            self.incSearchDirtyInfo.dirtyAreaBegin = selectionStart
+            self.incSearchDirtyInfo.dirtyAreaEnd = stylingRegion
+            self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
+            break
 
     def setSelectionOnCurrItem (self):
         selectionStart = self.getItemStartChar (self.selectedItem)
         self.SetCurrentPos (selectionStart)
         self.EnsureCaretVisible ()
         self.SetSelection (selectionStart , selectionStart + self.charsPerCol)
-        self.EnsureVisible (selectionStart)
 
     def moveSelectionDown (self):
         self.selectedItem += 1
@@ -261,6 +331,7 @@ class Candy (wx.Frame):
         self.p1.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s" % (pb, faceCourier))
         self.p1.StyleClearAll ()
         self.p1.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:#0000FF" % (pb, faceCourier))
+        self.p1.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:#000000,back:#00ffff" % (pb, faceCourier))
         """
         self.p1.StyleSetSpec (2, "face:%s,italic,fore:#FF0000,size:%d" % (face3, pb))
         self.p1.StyleSetSpec (3, "face:%s,bold,size:%d" % (face3, pb + 2))
@@ -288,8 +359,11 @@ class Candy (wx.Frame):
         charWidth = self.p1.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
         charsPerCol = width / charWidth / numTotalColumns
 
+        self.p1.setCharsPerWidth (width / charWidth)
         self.p1.setCharsPerCol (charsPerCol)
         self.p1.setLinesPerCol (linesPerCol)
+        self.p1.setColumnWidth (colWidth)
+        #self.p1.SetYCaretPolicy (stc.STC_CARET_STRICT, colWidth)
 
         dir = '/home/rtfb'
         os.chdir (dir)
