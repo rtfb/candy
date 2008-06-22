@@ -247,45 +247,6 @@ class MySTC (stc.StyledTextCtrl):
 
         return selStart
 
-    def OnModified (self, evt):
-        pass
-        #print evt.GetLinesAdded ()
-        #print evt.GetText ()
-        #self.log.write ("""OnModified
-        #Mod type:     %s
-        #At position:  %d
-        #Lines added:  %d
-        #Text Length:  %d
-        #Text:         %s\n""" % (self.transModType (evt.GetModificationType ()),
-        #                         evt.GetPosition (),
-        #                         evt.GetLinesAdded (),
-        #                         evt.GetLength (),
-        #                         repr(evt.GetText ())))
-
-    def transModType (self, modType):
-        st = ""
-        table = [(stc.STC_MOD_INSERTTEXT, "InsertText"),
-                 (stc.STC_MOD_DELETETEXT, "DeleteText"),
-                 (stc.STC_MOD_CHANGESTYLE, "ChangeStyle"),
-                 (stc.STC_MOD_CHANGEFOLD, "ChangeFold"),
-                 (stc.STC_PERFORMED_USER, "UserFlag"),
-                 (stc.STC_PERFORMED_UNDO, "Undo"),
-                 (stc.STC_PERFORMED_REDO, "Redo"),
-                 (stc.STC_LASTSTEPINUNDOREDO, "Last-Undo/Redo"),
-                 (stc.STC_MOD_CHANGEMARKER, "ChangeMarker"),
-                 (stc.STC_MOD_BEFOREINSERT, "B4-Insert"),
-                 (stc.STC_MOD_BEFOREDELETE, "B4-Delete")
-                 ]
-
-        for flag, text in table:
-            if flag & modType:
-                st = st + text + " "
-
-        if not st:
-            st = 'UNKNOWN'
-
-        return st
-
     def runStyling (self):
         # Now set some text to those styles...  Normally this would be
         # done in an event handler that happens when text needs displayed.
@@ -296,19 +257,6 @@ class MySTC (stc.StyledTextCtrl):
                 selStart = self.getItemStartChar (i)
                 self.StartStyling (selStart, 0xff)
                 self.SetStyling (len (fileName), STYLE_FOLDER)
-
-        """
-        self.p1.StartStyling (98, 0xff)
-        self.p1.SetStyling (6, 1)  # set style for 6 characters using style 1
-
-        self.p1.StartStyling (190, 0xff)
-        self.p1.SetStyling (20, 2)
-
-        self.p1.StartStyling (310, 0xff)
-        self.p1.SetStyling (4, 3)
-        self.p1.SetStyling (2, 0)
-        self.p1.SetStyling (10, 4)
-        """
 
 faceCourier = 'Courier'
 pb = 12
@@ -350,8 +298,6 @@ class Candy (wx.Frame):
         self.Center ()
         self.Show (True)
 
-        #height = self.p1.GetRect ()[3]
-        #width = self.p1.GetRect ()[2]
         width, height = self.p1.GetClientSizeTuple ()
         colWidth = width / numTotalColumns
         lineHeight = self.p1.TextHeight (0)
@@ -363,7 +309,6 @@ class Candy (wx.Frame):
         self.p1.setCharsPerCol (charsPerCol)
         self.p1.setLinesPerCol (linesPerCol)
         self.p1.setColumnWidth (colWidth)
-        #self.p1.SetYCaretPolicy (stc.STC_CARET_STRICT, colWidth)
 
         dir = '/home/rtfb'
         os.chdir (dir)
