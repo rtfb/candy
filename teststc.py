@@ -5,17 +5,25 @@ import wx.stc as stc
 import os
 import time
 import sys
+import pdb
 
 numTotalColumns = 5
 
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
 
-class IncSearchDirtyInfo:
-    def __init__ (self):
-        self.dirtyAreaBegin = 0
-        self.dirtyAreaEnd = 0
-        self.dirtyItemOriginalStyle = -1
+class ListItem:
+    """An item to be stored in the list: basically, a filename with additional info
+    """
+    def __init__ (self, fileName):
+        self.fileName = fileName
+        self.style = stc.STC_STYLE_DEFAULT
+
+    def __eq__ (self, fileName):
+        return self.fileName == fileName
+
+    def __str__ (self):
+        return self.fileName
 
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
@@ -32,7 +40,6 @@ class MySTC (stc.StyledTextCtrl):
         self.selectedItem = 0
         self.searchMode = False
         self.searchStr = ''
-        self.incSearchDirtyInfo = IncSearchDirtyInfo ()
         self.searchMatchIndex = -1
         self.columnWidth = 0
 
@@ -52,8 +59,18 @@ class MySTC (stc.StyledTextCtrl):
         self.linesPerCol = lines
 
     def setItemList (self, list):
-        self.items = list
+        self.items = []
+
+        for f in list:
+            item = ListItem (f)
+
+            if os.path.isdir (f):
+                item.style = STYLE_FOLDER
+
+            self.items.append (item)
+
         self.numFullColumns = len (self.items) / self.linesPerCol
+        print 'Number of files in the list:', len (self.items)
 
     def fillList (self, cwd):
         self.SetReadOnly (False)
@@ -78,7 +95,7 @@ class MySTC (stc.StyledTextCtrl):
         self.SetSelBackground (1, "yellow")
         self.setDefaultSelection ()
         self.setItemList (files)
-        self.runStyling ()
+        self.applyDefaultStyles ()
 
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
@@ -132,9 +149,13 @@ class MySTC (stc.StyledTextCtrl):
             elif key == 'U':
                 self.updir ()
             elif keyCode == wx.WXK_RETURN:
-                self.downdir (self.items[self.selectedItem])
+                self.downdir (self.items[self.selectedItem].fileName)
             elif key == 'C':
                 self.clearScreen ()
+            elif key == 'N':
+                self.searchMatchIndex = self.nextSearchMatch (self.searchMatchIndex + 1)
+                self.selectedItem = self.searchMatchIndex
+                self.setSelectionOnCurrItem ()
             elif key == '/':
                 self.searchMode = True
                 self.searchStr = ''
@@ -148,14 +169,10 @@ class MySTC (stc.StyledTextCtrl):
                 self.setSelectionOnCurrItem ()
             elif keyCode == wx.WXK_ESCAPE:
                 self.searchMode = False
-                self.clearIncSearchDirtyArea ()
+                self.applyDefaultStyles ()  # Stop searching; clean matches
             else:
                 self.searchStr += key
                 self.incrementalSearch ()
-
-    def clearIncSearchDirtyArea (self):
-        self.StartStyling (self.incSearchDirtyInfo.dirtyAreaBegin, 0xff)
-        self.SetStyling (self.incSearchDirtyInfo.dirtyAreaEnd, self.incSearchDirtyInfo.dirtyItemOriginalStyle)
 
     def isPositionVisible (self, pos):
         if pos / self.linesPerCol > self.linesPerCol or pos / self.charsPerWidth > self.charsPerWidth:
@@ -163,36 +180,69 @@ class MySTC (stc.StyledTextCtrl):
 
         return True
 
-    # TODO: wrap search
+    def posToColumn (self, pos):
+        return pos % self.GetLineEndPosition (0) - pos / self.GetLineEndPosition (0)
+
+    def nextSearchMatch (self, initPos):
+        # Construct a range of indices to produce wrapped search from current pos
+        searchRange = range (initPos, len (self.items)) + range (initPos)
+
+        for i in searchRange:
+            match = self.items[i].fileName.lower ().find (self.searchStr.lower ())
+
+            if match != -1:
+                return i
+
+    def getLeftmostColumn (self):
+        point = wx.Point ()
+        point.x = self.GetXOffset ()
+        point.y = 0
+        return self.posToColumn (self.PositionFromPoint (point))
+
+    def highlightSearchMatch (self, itemIndex, matchInsideStr):
+        selection = self.getItemStartChar (itemIndex)
+        selectionStart = selection + matchInsideStr
+        leftmostColumn = self.getLeftmostColumn ()
+        rightmostColumn = leftmostColumn + self.charsPerWidth
+        columnOfTheMatch = self.posToColumn (selectionStart)
+
+        # This is my lame approach to move search match into view
+        if columnOfTheMatch + len (self.searchStr) > rightmostColumn:
+            # we're to the right of the view:
+            self.GotoPos (selectionStart + self.charsPerCol)
+            self.MoveCaretInsideView ()
+        elif columnOfTheMatch < leftmostColumn:
+            # we're to the left:
+            self.GotoPos (selectionStart)
+            self.MoveCaretInsideView ()
+
+        # Set the style for the new match:
+        self.StartStyling (selectionStart, 0xff)
+        stylingRegion = len (self.searchStr)
+        self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
+
     def incrementalSearch (self):
         index = self.selectedItem       # start searching from curr selection
 
-        for i in range (index, len (self.items)):
-            match = self.items[i].lower ().find (self.searchStr.lower ())
+        # Construct a range of indices to produce wrapped search from current pos
+        searchRange = range (index, len (self.items)) + range (index)
 
-            if match == -1:
-                continue
+        # First of all, clean previous matches
+        self.applyDefaultStyles ()
 
-            self.searchMatchIndex = i
-            selection = self.getItemStartChar (i)
-            selectionStart = selection + match
+        # We only want to remember first match
+        firstMatch = -1
 
-            # This is my lame approach to move search match into view
-            if not self.isPositionVisible (selectionStart):
-                self.GotoPos (selectionStart + self.charsPerCol)
-                self.MoveCaretInsideView ()
+        for i in searchRange:
+            match = self.items[i].fileName.lower ().find (self.searchStr.lower ())
 
-            # First of all, clean previous match:
-            self.clearIncSearchDirtyArea ()
+            if match != -1:
+                if firstMatch == -1:
+                    firstMatch = i
 
-            # Now, set the style for the new match:
-            self.incSearchDirtyInfo.dirtyItemOriginalStyle = self.GetStyleAt (selectionStart)   # remember original style
-            self.StartStyling (selectionStart, 0xff)
-            stylingRegion = len (self.searchStr)
-            self.incSearchDirtyInfo.dirtyAreaBegin = selectionStart
-            self.incSearchDirtyInfo.dirtyAreaEnd = stylingRegion
-            self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
-            break
+                self.highlightSearchMatch (i, match)
+
+        self.searchMatchIndex = firstMatch
 
     def setSelectionOnCurrItem (self):
         selectionStart = self.getItemStartChar (self.selectedItem)
@@ -247,16 +297,14 @@ class MySTC (stc.StyledTextCtrl):
 
         return selStart
 
-    def runStyling (self):
+    def applyDefaultStyles (self):
         # Now set some text to those styles...  Normally this would be
         # done in an event handler that happens when text needs displayed.
         for i in range (len (self.items)):
-            fileName = self.items[i]
-
-            if os.path.isdir (fileName):
-                selStart = self.getItemStartChar (i)
-                self.StartStyling (selStart, 0xff)
-                self.SetStyling (len (fileName), STYLE_FOLDER)
+            fileName = self.items[i].fileName
+            selStart = self.getItemStartChar (i)
+            self.StartStyling (selStart, 0xff)
+            self.SetStyling (len (fileName), self.items[i].style)
 
 faceCourier = 'Courier'
 pb = 12
@@ -325,7 +373,6 @@ class Candy (wx.Frame):
         size =  self.GetSize ()
 
     def OnKeyDown (self, event):
-        print "OKD in Candy"
         keycode = event.GetKeyCode ()
         self.sb.SetStatusText (str (keycode))
         if keycode == wx.WXK_ESCAPE:
