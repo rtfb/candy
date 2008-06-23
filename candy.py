@@ -134,7 +134,12 @@ class MySTC (stc.StyledTextCtrl):
         os.chdir ('..')
         self.clearScreen ()
         self.fillList (os.getcwd ())
-        self.selectedItem = self.items.index (oldDir)
+
+        try:
+            self.selectedItem = self.items.index (oldDir)
+        except ValueError:
+            pass
+
         self.afterDirChange ()
 
     def downdir (self, dirName):
