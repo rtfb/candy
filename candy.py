@@ -69,7 +69,9 @@ class MySTC (stc.StyledTextCtrl):
     def collectListInfo (self, cwd):
         items = []
         files = os.listdir (cwd)
-        files.insert (0, '..')
+
+        if cwd != '/':
+            files.insert (0, '..')
 
         for f in files:
             item = ListItem (f)
