@@ -20,9 +20,15 @@ class ListItem:
     def __init__ (self, fileName):
         self.fileName = fileName
         self.style = stc.STC_STYLE_DEFAULT
+        self.isDir = False
+        self.isHidden = False
+        self.visiblePartLength = 0
 
     def __eq__ (self, fileName):
         return self.fileName == fileName
+
+    def __lt__ (self, other):
+        return self.fileName < other.fileName
 
     def __str__ (self):
         return self.fileName
@@ -60,29 +66,48 @@ class MySTC (stc.StyledTextCtrl):
     def setLinesPerCol (self, lines):
         self.linesPerCol = lines
 
-    def setItemList (self, list):
-        self.items = []
+    def collectListInfo (self, cwd):
+        items = []
+        files = os.listdir (cwd)
+        files.insert (0, '..')
 
-        for f in list:
+        for f in files:
             item = ListItem (f)
 
             if os.path.isdir (f):
                 item.style = STYLE_FOLDER
+                item.isDir = True
 
-            self.items.append (item)
+            if f.startswith ('.') and f != '..':
+                item.isHidden = True
 
-        self.numFullColumns = len (self.items) / self.linesPerCol
-        print 'Number of files in the list:', len (self.items)
+            items.append (item)
+
+        return items
+
+    def constructListForFilling (self, fullList):
+        dirList = filter (lambda (f): f.isDir, fullList)
+        dirList.sort ()
+
+        fileList = filter (lambda (f): not f.isDir, fullList)
+        fileList.sort ()
+
+        return filter (lambda (f): not f.isHidden, dirList + fileList)
 
     def fillList (self, cwd):
         self.SetReadOnly (False)
-        files = os.listdir (cwd)
-        files.insert (0, '..')
+        allItems = self.collectListInfo (cwd)
+        self.items = self.constructListForFilling (allItems)
+        self.numFullColumns = len (self.items) / self.linesPerCol
+        print 'Number of files in the list:', len (self.items)
+
         linesToAdd = ['' for i in range (self.linesPerCol)]
 
         currLine = 0
-        for file in files:
-            linesToAdd[currLine] += lJustAndCut (file, self.charsPerCol)
+        for item in self.items:
+            visiblePart = lJustAndCut (item.fileName, self.charsPerCol)
+            linesToAdd[currLine] += visiblePart
+            item.visiblePartLength = len (visiblePart)
             currLine += 1
 
             if currLine > self.linesPerCol - 1:
@@ -96,7 +121,6 @@ class MySTC (stc.StyledTextCtrl):
         self.SetViewEOL (True)
         self.SetSelBackground (1, "yellow")
         self.setDefaultSelection ()
-        self.setItemList (files)
         self.applyDefaultStyles ()
 
     def afterDirChange (self):
@@ -151,7 +175,12 @@ class MySTC (stc.StyledTextCtrl):
             elif key == 'U':
                 self.updir ()
             elif keyCode == wx.WXK_RETURN:
-                self.downdir (self.items[self.selectedItem].fileName)
+                selection = self.items[self.selectedItem].fileName
+
+                if selection == '..':
+                    self.updir ()
+                else:
+                    self.downdir (selection)
             elif key == 'C':
                 self.clearScreen ()
             elif key == 'N':
@@ -299,11 +328,10 @@ class MySTC (stc.StyledTextCtrl):
     def applyDefaultStyles (self):
         # Now set some text to those styles...  Normally this would be
         # done in an event handler that happens when text needs displayed.
-        for i in range (len (self.items)):
-            fileName = self.items[i].fileName
-            selStart = self.getItemStartChar (i)
+        for i in self.items:
+            selStart = self.getItemStartChar (self.items.index (i))
             self.StartStyling (selStart, 0xff)
-            self.SetStyling (len (fileName), self.items[i].style)
+            self.SetStyling (min (len (i.fileName), i.visiblePartLength), i.style)
 
 faceCourier = 'Courier'
 pb = 12
@@ -358,8 +386,8 @@ class Candy (wx.Frame):
         self.p1.setLinesPerCol (linesPerCol)
         self.p1.setColumnWidth (colWidth)
 
-        #dir = '/home/rtfb'
-        dir = '/usr/lib'
+        dir = '/home/rtfb'
+        #dir = '/usr/lib'
         os.chdir (dir)
         self.p1.fillList (dir)
 
