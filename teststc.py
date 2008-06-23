@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# http://freshmeat.net/projects/python-urwid/
+
 import wx
 import wx.stc as stc
 import os
@@ -153,7 +155,7 @@ class MySTC (stc.StyledTextCtrl):
             elif key == 'C':
                 self.clearScreen ()
             elif key == 'N':
-                self.searchMatchIndex = self.nextSearchMatch (self.searchMatchIndex + 1)
+                self.searchMatchIndex = self.nextSearchMatch (self.selectedItem + 1)
                 self.selectedItem = self.searchMatchIndex
                 self.setSelectionOnCurrItem ()
             elif key == '/':
@@ -174,12 +176,6 @@ class MySTC (stc.StyledTextCtrl):
                 self.searchStr += key
                 self.incrementalSearch ()
 
-    def isPositionVisible (self, pos):
-        if pos / self.linesPerCol > self.linesPerCol or pos / self.charsPerWidth > self.charsPerWidth:
-           return False
-
-        return True
-
     def posToColumn (self, pos):
         return pos % self.GetLineEndPosition (0) - pos / self.GetLineEndPosition (0)
 
@@ -199,9 +195,16 @@ class MySTC (stc.StyledTextCtrl):
         point.y = 0
         return self.posToColumn (self.PositionFromPoint (point))
 
-    def highlightSearchMatch (self, itemIndex, matchInsideStr):
-        selection = self.getItemStartChar (itemIndex)
-        selectionStart = selection + matchInsideStr
+    def highlightSearchMatch (self, itemIndex, matchOffset):
+        selectionStart = self.getItemStartChar (itemIndex) + matchOffset
+
+        # Set the style for the new match:
+        self.StartStyling (selectionStart, 0xff)
+        stylingRegion = len (self.searchStr)
+        self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
+
+    def moveItemIntoView (self, itemIndex):
+        selectionStart = self.getItemStartChar (itemIndex)
         leftmostColumn = self.getLeftmostColumn ()
         rightmostColumn = leftmostColumn + self.charsPerWidth
         columnOfTheMatch = self.posToColumn (selectionStart)
@@ -210,16 +213,11 @@ class MySTC (stc.StyledTextCtrl):
         if columnOfTheMatch + len (self.searchStr) > rightmostColumn:
             # we're to the right of the view:
             self.GotoPos (selectionStart + self.charsPerCol)
-            self.MoveCaretInsideView ()
         elif columnOfTheMatch < leftmostColumn:
             # we're to the left:
             self.GotoPos (selectionStart)
-            self.MoveCaretInsideView ()
 
-        # Set the style for the new match:
-        self.StartStyling (selectionStart, 0xff)
-        stylingRegion = len (self.searchStr)
-        self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
+        self.MoveCaretInsideView ()
 
     def incrementalSearch (self):
         index = self.selectedItem       # start searching from curr selection
@@ -239,6 +237,7 @@ class MySTC (stc.StyledTextCtrl):
             if match != -1:
                 if firstMatch == -1:
                     firstMatch = i
+                    self.moveItemIntoView (i)
 
                 self.highlightSearchMatch (i, match)
 
@@ -349,16 +348,18 @@ class Candy (wx.Frame):
         width, height = self.p1.GetClientSizeTuple ()
         colWidth = width / numTotalColumns
         lineHeight = self.p1.TextHeight (0)
-        linesPerCol = height / lineHeight
+        linesPerCol = height / lineHeight - 5
         charWidth = self.p1.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
         charsPerCol = width / charWidth / numTotalColumns
+        print height, lineHeight, linesPerCol
 
         self.p1.setCharsPerWidth (width / charWidth)
         self.p1.setCharsPerCol (charsPerCol)
         self.p1.setLinesPerCol (linesPerCol)
         self.p1.setColumnWidth (colWidth)
 
-        dir = '/home/rtfb'
+        #dir = '/home/rtfb'
+        dir = '/usr/lib'
         os.chdir (dir)
         self.p1.fillList (dir)
 
