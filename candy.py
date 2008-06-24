@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # http://freshmeat.net/projects/python-urwid/
 
@@ -196,6 +196,12 @@ class MySTC (stc.StyledTextCtrl):
             elif key == '/':
                 self.searchMode = True
                 self.searchStr = ''
+            #elif keyCode == wx.WXK_F3:
+            elif key == 'V':
+                import viewr
+                file = self.items[self.selectedItem].fileName
+                wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
+                wnd.Show (True)
 
             self.setSelectionOnCurrItem ()
         else:
@@ -385,7 +391,7 @@ class Candy (wx.Frame):
         linesPerCol = height / lineHeight - 5
         charWidth = self.p1.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
         charsPerCol = width / charWidth / numTotalColumns
-        print height, lineHeight, linesPerCol
+        #print height, lineHeight, linesPerCol
 
         self.p1.setCharsPerWidth (width / charWidth)
         self.p1.setCharsPerCol (charsPerCol)
