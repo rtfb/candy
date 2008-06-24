@@ -41,6 +41,12 @@ def resolveCommandByFileExt (ext):
         'avi':  'mplayer %s', \
         'asf':  'mplayer %s', \
         'pdf':  'evince %s', \
+        'jpg':  'gqview %s', \
+        'jpeg': 'gqview %s', \
+        'png':  'gqview %s', \
+        'bmp':  'gqview %s', \
+        'xpm':  'gqview %s', \
+        'gif':  'gqview %s', \
         'txt':  'gvim %s'}
 
     cmd = None
