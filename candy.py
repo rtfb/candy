@@ -51,6 +51,21 @@ class MySTC (stc.StyledTextCtrl):
         self.searchMatchIndex = -1
         self.columnWidth = 0
 
+        self.navigationModeMap = { \
+            ord ('J'): self.moveSelectionDown, \
+            ord ('K'): self.moveSelectionUp, \
+            ord ('H'): self.moveSelectionLeft, \
+            ord ('L'): self.moveSelectionRight, \
+            ord ('Q'): self.quiter, \
+            ord ('U'): self.updir, \
+            wx.WXK_RETURN: self.onEnter, \
+            wx.WXK_SPACE: self.onEnter, \
+            ord ('C'): self.clearScreen, \
+            ord ('N'): self.onNextMatch, \
+            ord ('/'): self.onStartIncSearch, \
+            wx.WXK_F3: self.startViewer, \
+            ord ('V'): self.startViewer}
+
     def setColumnWidth (self, width):
         self.columnWidth = width
 
@@ -160,6 +175,31 @@ class MySTC (stc.StyledTextCtrl):
         self.ClearAll ()
         self.SetReadOnly (True)
 
+    def quiter (self):
+        sys.exit (0)
+
+    def onEnter (self):
+        selection = self.items[self.selectedItem].fileName
+
+        if selection == '..':
+            self.updir ()
+        else:
+            self.downdir (selection)
+
+    def onNextMatch (self):
+        self.searchMatchIndex = self.nextSearchMatch (self.selectedItem + 1)
+        self.selectedItem = self.searchMatchIndex
+
+    def onStartIncSearch (self):
+        self.searchMode = True
+        self.searchStr = ''
+
+    def startViewer (self):
+        import viewr
+        file = self.items[self.selectedItem].fileName
+        wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
+        wnd.Show (True)
+
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
         key = ''
@@ -169,41 +209,16 @@ class MySTC (stc.StyledTextCtrl):
 
         if not self.searchMode:
             # Navigation mode:
-            if key == 'J':
-                self.moveSelectionDown ()
-            elif key == 'K':
-                self.moveSelectionUp ()
-            elif key == 'H':
-                self.moveSelectionLeft ()
-            elif key == 'L':
-                self.moveSelectionRight ()
-            elif key == 'Q':
-                sys.exit (0)
-            elif key == 'U':
-                self.updir ()
-            elif keyCode == wx.WXK_RETURN:
-                selection = self.items[self.selectedItem].fileName
+            func = None
 
-                if selection == '..':
-                    self.updir ()
-                else:
-                    self.downdir (selection)
-            elif key == 'C':
-                self.clearScreen ()
-            elif key == 'N':
-                self.searchMatchIndex = self.nextSearchMatch (self.selectedItem + 1)
-                self.selectedItem = self.searchMatchIndex
-            elif key == '/':
-                self.searchMode = True
-                self.searchStr = ''
-            #elif keyCode == wx.WXK_F3:
-            elif key == 'V':
-                import viewr
-                file = self.items[self.selectedItem].fileName
-                wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
-                wnd.Show (True)
+            try:
+                func = self.navigationModeMap[keyCode]
+            except KeyError:
+                pass
 
-            self.setSelectionOnCurrItem ()
+            if func:
+                func ()
+                self.setSelectionOnCurrItem ()
         else:
             # Search mode:
             if keyCode == wx.WXK_RETURN:
