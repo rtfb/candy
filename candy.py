@@ -33,6 +33,25 @@ class ListItem:
     def __str__ (self):
         return self.fileName
 
+def resolveCommandByFileExt (ext):
+    extDict = { \
+        'wmv':  'mplayer %s', \
+        'mpeg': 'mplayer %s', \
+        'mpg':  'mplayer %s', \
+        'avi':  'mplayer %s', \
+        'asf':  'mplayer %s', \
+        'pdf':  'evince %s', \
+        'txt':  'gvim %s'}
+
+    cmd = None
+
+    try:
+        cmd = extDict[ext]
+    except KeyError:
+        pass
+
+    return cmd
+
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
@@ -179,12 +198,19 @@ class MySTC (stc.StyledTextCtrl):
         sys.exit (0)
 
     def onEnter (self):
-        selection = self.items[self.selectedItem].fileName
+        selection = self.items[self.selectedItem]
 
-        if selection == '..':
-            self.updir ()
+        if selection.isDir:
+            if selection.fileName == '..':
+                self.updir ()
+            else:
+                self.downdir (selection.fileName)
         else:
-            self.downdir (selection)
+            base, ext = os.path.splitext (selection.fileName)
+            commandLine = resolveCommandByFileExt (ext[1:])
+
+            if commandLine:
+                os.system (commandLine % (selection.fileName))
 
     def onNextMatch (self):
         self.searchMatchIndex = self.nextSearchMatch (self.selectedItem + 1)
@@ -202,10 +228,6 @@ class MySTC (stc.StyledTextCtrl):
 
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
-        key = ''
-
-        if keyCode < 256:
-            key = chr (keyCode)
 
         if not self.searchMode:
             # Navigation mode:
@@ -229,7 +251,7 @@ class MySTC (stc.StyledTextCtrl):
                 self.searchMode = False
                 self.applyDefaultStyles ()  # Stop searching; clean matches
             else:
-                self.searchStr += key
+                self.searchStr += chr (keyCode)
                 self.incrementalSearch ()
 
     def posToColumn (self, pos):
