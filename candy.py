@@ -193,7 +193,6 @@ class MySTC (stc.StyledTextCtrl):
             elif key == 'N':
                 self.searchMatchIndex = self.nextSearchMatch (self.selectedItem + 1)
                 self.selectedItem = self.searchMatchIndex
-                self.setSelectionOnCurrItem ()
             elif key == '/':
                 self.searchMode = True
                 self.searchStr = ''
