@@ -47,6 +47,11 @@ def resolveCommandByFileExt (ext):
         'bmp':  'gqview %s', \
         'xpm':  'gqview %s', \
         'gif':  'gqview %s', \
+        # TODO: handle archives as folders
+        'rar':  'file-roller %s', \
+        'zip':  'file-roller %s', \
+        'gz':   'file-roller %s', \
+        'tar':  'file-roller %s', \
         'txt':  'gvim %s'}
 
     cmd = None
@@ -58,12 +63,56 @@ def resolveCommandByFileExt (ext):
 
     return cmd
 
+def colorNameToHtmlValue (name):
+    # http://html-color-codes.com/
+    dict = { \
+        'black':  '#000000', \
+        'white':  '#ffffff', \
+        'yellow': '#ffff00', \
+        'blue':   '#0000ff', \
+        'red':    '#ff0000', \
+        'lgrey':  '#cccccc', \
+        }
+
+    return dict[name]
+
+def readColorScheme (fileName):
+    lines = open (fileName).readlines ()
+    dict = {}
+
+    for l in lines:
+        if l.strip () == '':
+            continue
+
+        configPair = l.split (':')
+        dict.setdefault (configPair[0].strip (), colorNameToHtmlValue (configPair[1].strip ()))
+
+    return dict
+
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
 
         self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+
+        self.colorScheme = readColorScheme ('colorscheme-default.conf')
+
+        # Set the styles according to color scheme
+        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
+                                                  % (pb, faceCourier, \
+                                                     self.colorScheme['background'], \
+                                                     self.colorScheme['default-text']))
+        self.StyleClearAll ()
+        self.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:%s"
+                                         % (pb, faceCourier, \
+                                            self.colorScheme['folder']))
+        self.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:%s,back:%s" \
+                                             % (pb, faceCourier, \
+                                                self.colorScheme['search-highlight-fore'], \
+                                                self.colorScheme['search-highlight-back']))
+        self.SetSelBackground (1, self.colorScheme['selection-back'])
+        self.SetSelForeground (1, self.colorScheme['selection-fore'])
 
         self.linesPerCol = 0
         self.charsPerCol = 0
@@ -88,6 +137,8 @@ class MySTC (stc.StyledTextCtrl):
             ord ('C'): self.clearScreen, \
             ord ('N'): self.onNextMatch, \
             ord ('/'): self.onStartIncSearch, \
+            wx.WXK_F4: self.startEditor, \
+            ord ('E'): self.startEditor, \
             wx.WXK_F3: self.startViewer, \
             ord ('V'): self.startViewer}
 
@@ -161,13 +212,12 @@ class MySTC (stc.StyledTextCtrl):
         self.SetFocus ()
         self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
         self.SetViewEOL (True)
-        self.SetSelBackground (1, "yellow")
         self.setDefaultSelection ()
         self.applyDefaultStyles ()
 
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
-        #self.GetParent ().GetParent ().sb.SetStatusText (os.getcwd ())
+        self.GetParent ().sb.SetStatusText (os.getcwd ())
 
     def updir (self):
         oldDir = os.path.split (os.getcwd ())[1]
@@ -225,6 +275,9 @@ class MySTC (stc.StyledTextCtrl):
     def onStartIncSearch (self):
         self.searchMode = True
         self.searchStr = ''
+
+    def startEditor (self):
+        os.system ('gvim ' + self.items[self.selectedItem].fileName)
 
     def startViewer (self):
         import viewr
@@ -405,17 +458,6 @@ class Candy (wx.Frame):
 
         self.p1 = MySTC (self, -1)
 
-        # make some styles
-        self.p1.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s" % (pb, faceCourier))
-        self.p1.StyleClearAll ()
-        self.p1.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:#0000FF" % (pb, faceCourier))
-        self.p1.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:#000000,back:#00ffff" % (pb, faceCourier))
-        """
-        self.p1.StyleSetSpec (2, "face:%s,italic,fore:#FF0000,size:%d" % (face3, pb))
-        self.p1.StyleSetSpec (3, "face:%s,bold,size:%d" % (face3, pb + 2))
-        self.p1.StyleSetSpec (4, "face:%s,size:%d" % (face3, pb - 1))
-        """
-
         self.Bind (wx.EVT_SIZE, self.OnSize)
         #self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
         self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
@@ -445,6 +487,7 @@ class Candy (wx.Frame):
         #dir = '/usr/lib'
         os.chdir (dir)
         self.p1.fillList (dir)
+        self.p1.afterDirChange ()
 
     def OnExit (self, e):
         self.Close (True)
