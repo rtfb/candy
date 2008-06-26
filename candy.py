@@ -9,10 +9,12 @@ import time
 import sys
 import pdb
 
-numTotalColumns = 5
+numTotalColumns = 3
 
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
+
+ID_SPLITTER = 100
 
 class ListItem:
     """An item to be stored in the list: basically, a filename with additional info
@@ -72,6 +74,7 @@ def colorNameToHtmlValue (name):
         'blue':   '#0000ff', \
         'red':    '#ff0000', \
         'lgrey':  '#cccccc', \
+        'grey':   '#999999', \
         }
 
     return dict[name]
@@ -95,8 +98,10 @@ class MySTC (stc.StyledTextCtrl):
 
         self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
+        self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
 
-        self.colorScheme = readColorScheme ('colorscheme-default.conf')
+        self.colorScheme = readColorScheme ('/home/rtfb/projects/candy/colorscheme-default.conf')
 
         # Set the styles according to color scheme
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
@@ -111,7 +116,7 @@ class MySTC (stc.StyledTextCtrl):
                                              % (pb, faceCourier, \
                                                 self.colorScheme['search-highlight-fore'], \
                                                 self.colorScheme['search-highlight-back']))
-        self.SetSelBackground (1, self.colorScheme['selection-back'])
+        self.SetSelBackground (1, self.colorScheme['selection-inactive'])
         self.SetSelForeground (1, self.colorScheme['selection-fore'])
 
         self.linesPerCol = 0
@@ -139,23 +144,30 @@ class MySTC (stc.StyledTextCtrl):
             ord ('/'): self.onStartIncSearch, \
             wx.WXK_F4: self.startEditor, \
             ord ('E'): self.startEditor, \
+            wx.WXK_TAB: self.switchPane, \
             wx.WXK_F3: self.startViewer, \
             ord ('V'): self.startViewer}
 
-    def setColumnWidth (self, width):
-        self.columnWidth = width
+    def initializeAndShowInitialView (self):
+        width, height = self.GetClientSizeTuple ()
+        self.columnWidth = width / numTotalColumns
+        lineHeight = self.TextHeight (0)
+        self.linesPerCol = height / lineHeight - 5
+        charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
+        self.charsPerCol = width / charWidth / numTotalColumns
+        print height, lineHeight, self.linesPerCol
+
+        self.charsPerWidth = width / charWidth
+
+        dir = '/home/rtfb'
+        #dir = '/usr/lib'
+        os.chdir (dir)
+        self.fillList (dir)
+        self.SetFocus ()
+        self.afterDirChange ()
 
     def setDefaultSelection (self):
         self.SetSelection (0, self.charsPerCol)
-
-    def setCharsPerCol (self, chars):
-        self.charsPerCol = chars
-
-    def setCharsPerWidth (self, width):
-        self.charsPerWidth = width
-
-    def setLinesPerCol (self, lines):
-        self.linesPerCol = lines
 
     def collectListInfo (self, cwd):
         items = []
@@ -209,7 +221,6 @@ class MySTC (stc.StyledTextCtrl):
         self.SetText ('\n'.join (linesToAdd))
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
-        self.SetFocus ()
         self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
         self.SetViewEOL (True)
         self.setDefaultSelection ()
@@ -217,7 +228,7 @@ class MySTC (stc.StyledTextCtrl):
 
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
-        self.GetParent ().sb.SetStatusText (os.getcwd ())
+        self.GetParent ().GetParent ().statusBar.SetStatusText (os.getcwd ())
 
     def updir (self):
         oldDir = os.path.split (os.getcwd ())[1]
@@ -285,6 +296,9 @@ class MySTC (stc.StyledTextCtrl):
         wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
         wnd.Show (True)
 
+    def switchPane (self):
+        self.GetParent ().GetParent ().switchPane ()
+
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
 
@@ -312,6 +326,14 @@ class MySTC (stc.StyledTextCtrl):
             else:
                 self.searchStr += chr (keyCode)
                 self.incrementalSearch ()
+
+    def OnSetFocus (self, evt):
+        self.SetSelBackground (1, self.colorScheme['selection-back'])
+        self.SetSelForeground (1, self.colorScheme['selection-fore'])
+
+    def OnLoseFocus (self, evt):
+        self.SetSelBackground (1, self.colorScheme['selection-inactive'])
+        self.SetSelForeground (1, self.colorScheme['selection-fore'])
 
     def posToColumn (self, pos):
         return pos % self.GetLineEndPosition (0) - pos / self.GetLineEndPosition (0)
@@ -456,52 +478,48 @@ class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
         wx.Frame.__init__ (self, parent, -1, title)
 
-        self.p1 = MySTC (self, -1)
+        self.splitter = wx.SplitterWindow (self, ID_SPLITTER, style = wx.SP_BORDER)
+        self.splitter.SetMinimumPaneSize (50)
+
+        self.p1 = MySTC (self.splitter, -1)
+        self.p2 = MySTC (self.splitter, -1)
+        self.splitter.SplitVertically (self.p1, self.p2)
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
-        #self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
         self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
+
+        self.sizer = wx.BoxSizer (wx.VERTICAL)
+        self.sizer.Add (self.splitter, 1, wx.EXPAND)
+        self.SetSizer (self.sizer)
 
         size = wx.DisplaySize ()
         self.SetSize (size)
 
-        self.sb = self.CreateStatusBar ()
-        self.sb.SetStatusText (os.getcwd ())
+        self.statusBar = self.CreateStatusBar ()
+        self.statusBar.SetStatusText (os.getcwd ())
         self.Center ()
         self.Show (True)
 
-        width, height = self.p1.GetClientSizeTuple ()
-        colWidth = width / numTotalColumns
-        lineHeight = self.p1.TextHeight (0)
-        linesPerCol = height / lineHeight - 5
-        charWidth = self.p1.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
-        charsPerCol = width / charWidth / numTotalColumns
-        #print height, lineHeight, linesPerCol
-
-        self.p1.setCharsPerWidth (width / charWidth)
-        self.p1.setCharsPerCol (charsPerCol)
-        self.p1.setLinesPerCol (linesPerCol)
-        self.p1.setColumnWidth (colWidth)
-
-        dir = '/home/rtfb'
-        #dir = '/usr/lib'
-        os.chdir (dir)
-        self.p1.fillList (dir)
-        self.p1.afterDirChange ()
+        self.p2.initializeAndShowInitialView ()
+        self.p1.initializeAndShowInitialView ()
+        self.activePane = self.p1
 
     def OnExit (self, e):
         self.Close (True)
 
     def OnSize (self, event):
         size = self.GetSize ()
+        self.splitter.SetSashPosition (size.x / 2)
         event.Skip ()
 
     def OnDoubleClick (self, event):
-        size =  self.GetSize ()
+        size = self.GetSize ()
+        self.splitter.SetSashPosition (size.x / 2)
 
     def OnKeyDown (self, event):
         keycode = event.GetKeyCode ()
-        self.sb.SetStatusText (str (keycode))
+        self.statusBar.SetStatusText (str (keycode))
         if keycode == wx.WXK_ESCAPE:
             ret  = wx.MessageBox ('Are you sure to quit?',
                                   'Question',
@@ -510,6 +528,14 @@ class Candy (wx.Frame):
             if ret == wx.YES:
                 self.Close ()
         event.Skip ()
+
+    def switchPane (self):
+        if self.activePane == self.p1:
+            self.activePane = self.p2
+        else:
+            self.activePane = self.p1
+
+        self.activePane.SetFocus ()
 
 def main ():
     app = wx.App (0)
