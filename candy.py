@@ -36,24 +36,24 @@ class ListItem:
         return self.fileName
 
 def resolveCommandByFileExt (ext):
-    extDict = { \
-        'wmv':  'mplayer %s', \
-        'mpeg': 'mplayer %s', \
-        'mpg':  'mplayer %s', \
-        'avi':  'mplayer %s', \
-        'asf':  'mplayer %s', \
-        'pdf':  'evince %s', \
-        'jpg':  'gqview %s', \
-        'jpeg': 'gqview %s', \
-        'png':  'gqview %s', \
-        'bmp':  'gqview %s', \
-        'xpm':  'gqview %s', \
-        'gif':  'gqview %s', \
+    extDict = {
+        'wmv':  'mplayer %s',
+        'mpeg': 'mplayer %s',
+        'mpg':  'mplayer %s',
+        'avi':  'mplayer %s',
+        'asf':  'mplayer %s',
+        'pdf':  'evince %s',
+        'jpg':  'gqview %s',
+        'jpeg': 'gqview %s',
+        'png':  'gqview %s',
+        'bmp':  'gqview %s',
+        'xpm':  'gqview %s',
+        'gif':  'gqview %s',
         # TODO: handle archives as folders
-        'rar':  'file-roller %s', \
-        'zip':  'file-roller %s', \
-        'gz':   'file-roller %s', \
-        'tar':  'file-roller %s', \
+        'rar':  'file-roller %s',
+        'zip':  'file-roller %s',
+        'gz':   'file-roller %s',
+        'tar':  'file-roller %s',
         'txt':  'gvim %s'}
 
     cmd = None
@@ -67,14 +67,14 @@ def resolveCommandByFileExt (ext):
 
 def colorNameToHtmlValue (name):
     # http://html-color-codes.com/
-    dict = { \
-        'black':  '#000000', \
-        'white':  '#ffffff', \
-        'yellow': '#ffff00', \
-        'blue':   '#0000ff', \
-        'red':    '#ff0000', \
-        'lgrey':  '#cccccc', \
-        'grey':   '#999999', \
+    dict = {
+        'black':  '#000000',
+        'white':  '#ffffff',
+        'yellow': '#ffff00',
+        'blue':   '#0000ff',
+        'red':    '#ff0000',
+        'lgrey':  '#cccccc',
+        'grey':   '#999999',
         }
 
     return dict[name]
@@ -87,8 +87,8 @@ def readColorScheme (fileName):
         if l.strip () == '':
             continue
 
-        configPair = l.split (':')
-        dict.setdefault (configPair[0].strip (), colorNameToHtmlValue (configPair[1].strip ()))
+        name, value = l.split (':')
+        dict.setdefault (name.strip (), colorNameToHtmlValue (value.strip ()))
 
     return dict
 
@@ -105,16 +105,16 @@ class MySTC (stc.StyledTextCtrl):
 
         # Set the styles according to color scheme
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
-                                                  % (pb, faceCourier, \
-                                                     self.colorScheme['background'], \
+                                                  % (pb, faceCourier,
+                                                     self.colorScheme['background'],
                                                      self.colorScheme['default-text']))
         self.StyleClearAll ()
         self.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:%s"
-                                         % (pb, faceCourier, \
+                                         % (pb, faceCourier,
                                             self.colorScheme['folder']))
-        self.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:%s,back:%s" \
-                                             % (pb, faceCourier, \
-                                                self.colorScheme['search-highlight-fore'], \
+        self.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:%s,back:%s"
+                                             % (pb, faceCourier,
+                                                self.colorScheme['search-highlight-fore'],
                                                 self.colorScheme['search-highlight-back']))
         self.SetSelBackground (1, self.colorScheme['selection-inactive'])
         self.SetSelForeground (1, self.colorScheme['selection-fore'])
@@ -130,22 +130,22 @@ class MySTC (stc.StyledTextCtrl):
         self.searchMatchIndex = -1
         self.columnWidth = 0
 
-        self.navigationModeMap = { \
-            ord ('J'): self.moveSelectionDown, \
-            ord ('K'): self.moveSelectionUp, \
-            ord ('H'): self.moveSelectionLeft, \
-            ord ('L'): self.moveSelectionRight, \
-            ord ('Q'): self.quiter, \
-            ord ('U'): self.updir, \
-            wx.WXK_RETURN: self.onEnter, \
-            wx.WXK_SPACE: self.onEnter, \
-            ord ('C'): self.clearScreen, \
-            ord ('N'): self.onNextMatch, \
-            ord ('/'): self.onStartIncSearch, \
-            wx.WXK_F4: self.startEditor, \
-            ord ('E'): self.startEditor, \
-            wx.WXK_TAB: self.switchPane, \
-            wx.WXK_F3: self.startViewer, \
+        self.navigationModeMap = {
+            ord ('J'): self.moveSelectionDown,
+            ord ('K'): self.moveSelectionUp,
+            ord ('H'): self.moveSelectionLeft,
+            ord ('L'): self.moveSelectionRight,
+            ord ('Q'): self.quiter,
+            ord ('U'): self.updir,
+            wx.WXK_RETURN: self.onEnter,
+            wx.WXK_SPACE: self.onEnter,
+            ord ('C'): self.clearScreen,
+            ord ('N'): self.onNextMatch,
+            ord ('/'): self.onStartIncSearch,
+            wx.WXK_F4: self.startEditor,
+            ord ('E'): self.startEditor,
+            wx.WXK_TAB: self.switchPane,
+            wx.WXK_F3: self.startViewer,
             ord ('V'): self.startViewer}
 
     def initializeAndShowInitialView (self):

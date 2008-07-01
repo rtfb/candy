@@ -67,7 +67,7 @@ class BuiltinViewerFrame (wx.Frame):
             key = chr (keyCode)
 
         if key == 'Q':
-            OnCloseWindow (evt)
+            self.OnCloseWindow (evt)
 
 if __name__ == '__main__':
     print 'not a program :-)'
