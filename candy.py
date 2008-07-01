@@ -155,7 +155,7 @@ class MySTC (stc.StyledTextCtrl):
         self.linesPerCol = height / lineHeight - 5
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
         self.charsPerCol = width / charWidth / numTotalColumns
-        print height, lineHeight, self.linesPerCol
+        #print height, lineHeight, self.linesPerCol
 
         self.charsPerWidth = width / charWidth
 
@@ -458,10 +458,10 @@ class MySTC (stc.StyledTextCtrl):
     def applyDefaultStyles (self):
         # Now set some text to those styles...  Normally this would be
         # done in an event handler that happens when text needs displayed.
-        for i in self.items:
-            selStart = self.getItemStartChar (self.items.index (i))
+        for index, item in enumerate (self.items):
+            selStart = self.getItemStartChar (index)
             self.StartStyling (selStart, 0xff)
-            self.SetStyling (min (len (i.fileName), i.visiblePartLength), i.style)
+            self.SetStyling (min (len (item.fileName), item.visiblePartLength), item.style)
 
 faceCourier = 'Courier'
 pb = 12
