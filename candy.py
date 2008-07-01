@@ -101,7 +101,8 @@ class MySTC (stc.StyledTextCtrl):
         self.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
         self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
 
-        self.colorScheme = readColorScheme ('/home/rtfb/projects/candy/colorscheme-default.conf')
+        projectDir = os.path.dirname (__file__)
+        self.colorScheme = readColorScheme (os.path.join (projectDir, 'colorscheme-default.conf'))
 
         # Set the styles according to color scheme
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
@@ -159,7 +160,7 @@ class MySTC (stc.StyledTextCtrl):
 
         self.charsPerWidth = width / charWidth
 
-        dir = '/home/rtfb'
+        dir = os.path.expanduser ('~')
         #dir = '/usr/lib'
         os.chdir (dir)
         self.fillList (dir)
