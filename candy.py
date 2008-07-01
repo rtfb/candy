@@ -9,7 +9,7 @@ import time
 import sys
 import pdb
 
-numTotalColumns = 3
+numTotalColumns = 5
 
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
@@ -130,6 +130,7 @@ class MySTC (stc.StyledTextCtrl):
         self.searchStr = ''
         self.searchMatchIndex = -1
         self.columnWidth = 0
+        self.workingDir = os.path.expanduser ('~')
 
         self.navigationModeMap = {
             ord ('J'): self.moveSelectionDown,
@@ -172,6 +173,7 @@ class MySTC (stc.StyledTextCtrl):
 
     def collectListInfo (self, cwd):
         items = []
+        self.workingDir = cwd
         files = os.listdir (cwd)
 
         if cwd != '/':
@@ -331,6 +333,7 @@ class MySTC (stc.StyledTextCtrl):
     def OnSetFocus (self, evt):
         self.SetSelBackground (1, self.colorScheme['selection-back'])
         self.SetSelForeground (1, self.colorScheme['selection-fore'])
+        os.chdir (self.workingDir)
 
     def OnLoseFocus (self, evt):
         self.SetSelBackground (1, self.colorScheme['selection-inactive'])
@@ -484,10 +487,10 @@ class Candy (wx.Frame):
 
         self.p1 = MySTC (self.splitter, -1)
         self.p2 = MySTC (self.splitter, -1)
-        self.splitter.SplitVertically (self.p1, self.p2)
+        #self.splitter.SplitVertically (self.p1, self.p2)
+        self.splitter.SplitHorizontally (self.p1, self.p2)
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
-        self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
 
         self.sizer = wx.BoxSizer (wx.VERTICAL)
@@ -509,26 +512,16 @@ class Candy (wx.Frame):
     def OnExit (self, e):
         self.Close (True)
 
-    def OnSize (self, event):
+    def splitEqual (self):
         size = self.GetSize ()
-        self.splitter.SetSashPosition (size.x / 2)
+        self.splitter.SetSashPosition (size.y / 2)
+
+    def OnSize (self, event):
+        self.splitEqual ()
         event.Skip ()
 
     def OnDoubleClick (self, event):
-        size = self.GetSize ()
-        self.splitter.SetSashPosition (size.x / 2)
-
-    def OnKeyDown (self, event):
-        keycode = event.GetKeyCode ()
-        self.statusBar.SetStatusText (str (keycode))
-        if keycode == wx.WXK_ESCAPE:
-            ret  = wx.MessageBox ('Are you sure to quit?',
-                                  'Question',
-                                  wx.YES_NO | wx.CENTRE | wx.NO_DEFAULT,
-                                  self)
-            if ret == wx.YES:
-                self.Close ()
-        event.Skip ()
+        self.splitEqual ()
 
     def switchPane (self):
         if self.activePane == self.p1:
