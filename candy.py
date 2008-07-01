@@ -224,7 +224,6 @@ class MySTC (stc.StyledTextCtrl):
     def updateDisplayByItems (self):
         self.SetReadOnly (False)
         self.numFullColumns = len (self.items) / self.linesPerCol
-        print 'Number of files in the list:', len (self.items)
 
         linesToAdd = ['' for i in range (self.linesPerCol)]
 
@@ -254,10 +253,13 @@ class MySTC (stc.StyledTextCtrl):
     def flattenDirectory (self):
         self.flatDirectoryView = True
         self.fillList (self.workingDir)
+        self.afterDirChange ()
 
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
-        self.GetParent ().GetParent ().statusBar.SetStatusText (os.getcwd ())
+        # in the line below, I'm subtracting 1 from number of items because of '..' pseudoitem
+        statusText = '[Folder view]: %s\t%d item(s)' % (os.getcwd (), len (self.items) - 1)
+        self.GetParent ().GetParent ().statusBar.SetStatusText (statusText)
 
     def updir (self):
         # if we're in self.flatDirectoryView, all we want is to refresh the view of
