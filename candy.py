@@ -130,6 +130,7 @@ class MySTC (stc.StyledTextCtrl):
         self.columnWidth = 0
         self.workingDir = os.path.expanduser ('~')
         self.numberOfColumns = 3
+        self.flatDirectoryView = False
 
         self.navigationModeMap = {
             ord ('J'): self.moveSelectionDown,
@@ -137,6 +138,7 @@ class MySTC (stc.StyledTextCtrl):
             ord ('H'): self.moveSelectionLeft,
             ord ('L'): self.moveSelectionRight,
             ord ('Q'): self.quiter,
+            ord ('F'): self.flattenDirectory,
             ord ('U'): self.updir,
             wx.WXK_RETURN: self.onEnter,
             wx.WXK_SPACE: self.onEnter,
@@ -175,10 +177,23 @@ class MySTC (stc.StyledTextCtrl):
         self.SetFocus ()
         self.afterDirChange ()
 
+    # Obviously excludes subdirectories
+    def recursiveListDir (self, cwd):
+        allFiles = []
+
+        for root, dirs, files in os.walk (cwd):
+            allFiles.extend (files)
+
+        return allFiles
+
     def collectListInfo (self, cwd):
         items = []
         self.workingDir = cwd
-        files = os.listdir (cwd)
+
+        if self.flatDirectoryView:
+            files = self.recursiveListDir (cwd)
+        else:
+            files = os.listdir (cwd)
 
         if cwd != '/':
             files.insert (0, '..')
@@ -236,11 +251,27 @@ class MySTC (stc.StyledTextCtrl):
         self.items = self.constructListForFilling (allItems)
         self.updateDisplayByItems ()
 
+    def flattenDirectory (self):
+        self.flatDirectoryView = True
+        self.fillList (self.workingDir)
+
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
         self.GetParent ().GetParent ().statusBar.SetStatusText (os.getcwd ())
 
     def updir (self):
+        # if we're in self.flatDirectoryView, all we want is to refresh the view of
+        # self.workingDir without flattening
+        if self.flatDirectoryView:
+            self.flatDirectoryView = False
+            self.clearScreen ()
+            self.fillList (os.getcwd ())
+
+            # forget the selection of the flattened view
+            self.selectedItem = 0
+            self.afterDirChange ()
+            return
+
         oldDir = os.path.split (os.getcwd ())[1]
         os.chdir ('..')
         self.clearScreen ()
