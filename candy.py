@@ -382,9 +382,6 @@ class MySTC (stc.StyledTextCtrl):
         self.SetSelBackground (1, self.colorScheme['selection-inactive'])
         self.SetSelForeground (1, self.colorScheme['selection-fore'])
 
-    def posToColumn (self, pos):
-        return pos % self.GetLineEndPosition (0) - pos / self.GetLineEndPosition (0)
-
     def nextSearchMatch (self, initPos):
         # Construct a range of indices to produce wrapped search from current pos
         searchRange = range (initPos, len (self.items)) + range (initPos)
@@ -399,7 +396,7 @@ class MySTC (stc.StyledTextCtrl):
         point = wx.Point ()
         point.x = self.GetXOffset ()
         point.y = 0
-        return self.posToColumn (self.PositionFromPoint (point))
+        return self.GetColumn (self.PositionFromPoint (point))
 
     def highlightSearchMatch (self, itemIndex, matchOffset):
         selectionStart = self.getItemStartChar (itemIndex) + matchOffset
@@ -413,7 +410,7 @@ class MySTC (stc.StyledTextCtrl):
         selectionStart = self.getItemStartChar (itemIndex)
         leftmostColumn = self.getLeftmostColumn ()
         rightmostColumn = leftmostColumn + self.charsPerWidth
-        columnOfTheMatch = self.posToColumn (selectionStart)
+        columnOfTheMatch = self.GetColumn (selectionStart)
 
         # This is my lame approach to move search match into view
         if columnOfTheMatch + len (self.searchStr) > rightmostColumn:
