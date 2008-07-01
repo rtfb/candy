@@ -9,8 +9,6 @@ import time
 import sys
 import pdb
 
-numTotalColumns = 5
-
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
 
@@ -131,6 +129,7 @@ class MySTC (stc.StyledTextCtrl):
         self.searchMatchIndex = -1
         self.columnWidth = 0
         self.workingDir = os.path.expanduser ('~')
+        self.numberOfColumns = 3
 
         self.navigationModeMap = {
             ord ('J'): self.moveSelectionDown,
@@ -147,19 +146,27 @@ class MySTC (stc.StyledTextCtrl):
             wx.WXK_F4: self.startEditor,
             ord ('E'): self.startEditor,
             wx.WXK_TAB: self.switchPane,
+            ord ('X'): self.switchSplittingMode,
+            ord ('Y'): self.switchSplittingMode,
             wx.WXK_F3: self.startViewer,
             ord ('V'): self.startViewer}
 
-    def initializeAndShowInitialView (self):
+    def initializeViewSettings (self, numColumns = 3):
+        self.numberOfColumns = numColumns
         width, height = self.GetClientSizeTuple ()
-        self.columnWidth = width / numTotalColumns
+        self.columnWidth = width / self.numberOfColumns
         lineHeight = self.TextHeight (0)
         self.linesPerCol = height / lineHeight - 5
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
-        self.charsPerCol = width / charWidth / numTotalColumns
-        #print height, lineHeight, self.linesPerCol
+        self.charsPerCol = width / charWidth / self.numberOfColumns
+        print height, lineHeight, self.linesPerCol
 
         self.charsPerWidth = width / charWidth
+        self.clearScreen ()
+        self.updateDisplayByItems ()
+
+    def initializeAndShowInitialView (self):
+        self.initializeViewSettings ()
 
         dir = os.path.expanduser ('~')
         #dir = '/usr/lib'
@@ -167,9 +174,6 @@ class MySTC (stc.StyledTextCtrl):
         self.fillList (dir)
         self.SetFocus ()
         self.afterDirChange ()
-
-    def setDefaultSelection (self):
-        self.SetSelection (0, self.charsPerCol)
 
     def collectListInfo (self, cwd):
         items = []
@@ -202,10 +206,8 @@ class MySTC (stc.StyledTextCtrl):
 
         return filter (lambda (f): not f.isHidden, dirList + fileList)
 
-    def fillList (self, cwd):
+    def updateDisplayByItems (self):
         self.SetReadOnly (False)
-        allItems = self.collectListInfo (cwd)
-        self.items = self.constructListForFilling (allItems)
         self.numFullColumns = len (self.items) / self.linesPerCol
         print 'Number of files in the list:', len (self.items)
 
@@ -226,8 +228,13 @@ class MySTC (stc.StyledTextCtrl):
         self.SetReadOnly (True)
         self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
         self.SetViewEOL (True)
-        self.setDefaultSelection ()
+        self.setSelectionOnCurrItem ()
         self.applyDefaultStyles ()
+
+    def fillList (self, cwd):
+        allItems = self.collectListInfo (cwd)
+        self.items = self.constructListForFilling (allItems)
+        self.updateDisplayByItems ()
 
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
@@ -301,6 +308,9 @@ class MySTC (stc.StyledTextCtrl):
 
     def switchPane (self):
         self.GetParent ().GetParent ().switchPane ()
+
+    def switchSplittingMode (self):
+        self.GetParent ().GetParent ().switchSplittingMode ()
 
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
@@ -487,8 +497,7 @@ class Candy (wx.Frame):
 
         self.p1 = MySTC (self.splitter, -1)
         self.p2 = MySTC (self.splitter, -1)
-        #self.splitter.SplitVertically (self.p1, self.p2)
-        self.splitter.SplitHorizontally (self.p1, self.p2)
+        self.splitter.SplitVertically (self.p1, self.p2)
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
         self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
@@ -514,7 +523,14 @@ class Candy (wx.Frame):
 
     def splitEqual (self):
         size = self.GetSize ()
-        self.splitter.SetSashPosition (size.y / 2)
+
+        splitMode = self.splitter.GetSplitMode ()
+        sashDimension = size.x
+
+        if splitMode == wx.SPLIT_HORIZONTAL:
+            sashDimension = size.y
+
+        self.splitter.SetSashPosition (sashDimension / 2)
 
     def OnSize (self, event):
         self.splitEqual ()
@@ -530,6 +546,20 @@ class Candy (wx.Frame):
             self.activePane = self.p1
 
         self.activePane.SetFocus ()
+
+    def switchSplittingMode (self):
+        currSplitMode = self.splitter.GetSplitMode ()
+        newSplitMode = wx.SPLIT_VERTICAL
+        numColumns = 3
+
+        if currSplitMode == wx.SPLIT_VERTICAL:
+            newSplitMode = wx.SPLIT_HORIZONTAL
+            numColumns = 5
+
+        self.splitter.SetSplitMode (newSplitMode)
+        self.splitEqual ()
+        self.p1.initializeViewSettings (numColumns)
+        self.p2.initializeViewSettings (numColumns)
 
 def main ():
     app = wx.App (0)
