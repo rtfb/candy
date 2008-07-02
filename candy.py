@@ -90,6 +90,49 @@ def readColorScheme (fileName):
 
     return dict
 
+# Obviously excludes subdirectories
+def recursiveListDir (cwd):
+    allFiles = []
+
+    for root, dirs, files in os.walk (cwd):
+        allFiles.extend (files)
+
+    return allFiles
+
+def collectListInfo (isFlatDirectoryView, cwd):
+    items = []
+
+    if isFlatDirectoryView:
+        files = recursiveListDir (cwd)
+    else:
+        files = os.listdir (cwd)
+
+    if cwd != '/':
+        files.insert (0, '..')
+
+    for f in files:
+        item = ListItem (f)
+
+        if os.path.isdir (f):
+            item.style = STYLE_FOLDER
+            item.isDir = True
+
+        if f.startswith ('.') and f != '..':
+            item.isHidden = True
+
+        items.append (item)
+
+    return items
+
+def constructListForFilling (fullList):
+    dirList = filter (lambda (f): f.isDir, fullList)
+    dirList.sort ()
+
+    fileList = filter (lambda (f): not f.isDir, fullList)
+    fileList.sort ()
+
+    return filter (lambda (f): not f.isHidden, dirList + fileList)
+
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
@@ -118,18 +161,45 @@ class MySTC (stc.StyledTextCtrl):
         self.SetSelBackground (1, self.colorScheme['selection-inactive'])
         self.SetSelForeground (1, self.colorScheme['selection-fore'])
 
+        # Number of lines per single column
         self.linesPerCol = 0
+
+        # Number of characters per column width
         self.charsPerCol = 0
+
+        # Number of characters that can fit in whole width of the pane
         self.charsPerWidth = 0
+
+        # Number of columns in the whole-wide view, that are filled from top to bottom
         self.numFullColumns = 0
+
+        # List of filesystem items to be displayed. Only contains those that are to be
+        # actually displayed. E.g. no dot-files when hidden files are not displayed
         self.items = []
+
+        # Index of an item that is currently selected
         self.selectedItem = 0
+
+        # Signifies incremental search mode
         self.searchMode = False
+
+        # String being searched incrementally
         self.searchStr = ''
+
+        # Index of an item that is an accepted search match. Needed to know which
+        # next match should be focused upon go-to-next-match
         self.searchMatchIndex = -1
+
+        # Width of the column in pixels
         self.columnWidth = 0
+
+        # Working directory of the pane
         self.workingDir = os.path.expanduser ('~')
+
+        # Number of columns of items across all the width of the pane
         self.numberOfColumns = 3
+
+        # Signifies flattened directory view
         self.flatDirectoryView = False
 
         self.navigationModeMap = {
@@ -177,50 +247,6 @@ class MySTC (stc.StyledTextCtrl):
         self.SetFocus ()
         self.afterDirChange ()
 
-    # Obviously excludes subdirectories
-    def recursiveListDir (self, cwd):
-        allFiles = []
-
-        for root, dirs, files in os.walk (cwd):
-            allFiles.extend (files)
-
-        return allFiles
-
-    def collectListInfo (self, cwd):
-        items = []
-        self.workingDir = cwd
-
-        if self.flatDirectoryView:
-            files = self.recursiveListDir (cwd)
-        else:
-            files = os.listdir (cwd)
-
-        if cwd != '/':
-            files.insert (0, '..')
-
-        for f in files:
-            item = ListItem (f)
-
-            if os.path.isdir (f):
-                item.style = STYLE_FOLDER
-                item.isDir = True
-
-            if f.startswith ('.') and f != '..':
-                item.isHidden = True
-
-            items.append (item)
-
-        return items
-
-    def constructListForFilling (self, fullList):
-        dirList = filter (lambda (f): f.isDir, fullList)
-        dirList.sort ()
-
-        fileList = filter (lambda (f): not f.isDir, fullList)
-        fileList.sort ()
-
-        return filter (lambda (f): not f.isHidden, dirList + fileList)
-
     def updateDisplayByItems (self):
         self.SetReadOnly (False)
         self.numFullColumns = len (self.items) / self.linesPerCol
@@ -246,8 +272,9 @@ class MySTC (stc.StyledTextCtrl):
         self.applyDefaultStyles ()
 
     def fillList (self, cwd):
-        allItems = self.collectListInfo (cwd)
-        self.items = self.constructListForFilling (allItems)
+        allItems = collectListInfo (self.flatDirectoryView, cwd)
+        self.workingDir = cwd
+        self.items = constructListForFilling (allItems)
         self.updateDisplayByItems ()
 
     def flattenDirectory (self):
@@ -385,11 +412,10 @@ class MySTC (stc.StyledTextCtrl):
     def nextSearchMatch (self, initPos):
         # Construct a range of indices to produce wrapped search from current pos
         searchRange = range (initPos, len (self.items)) + range (initPos)
+        searchStrLower = self.searchStr.lower ()
 
         for i in searchRange:
-            match = self.items[i].fileName.lower ().find (self.searchStr.lower ())
-
-            if match != -1:
+            if searchStrLower in self.items[i].fileName.lower ():
                 return i
 
     def getLeftmostColumn (self):
