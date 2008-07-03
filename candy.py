@@ -231,7 +231,7 @@ class MySTC (stc.StyledTextCtrl):
         self.linesPerCol = height / lineHeight - 5
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
         self.charsPerCol = width / charWidth / self.numberOfColumns
-        print height, lineHeight, self.linesPerCol
+        #print height, lineHeight, self.linesPerCol
 
         self.charsPerWidth = width / charWidth
         self.clearScreen ()
@@ -568,7 +568,6 @@ class Candy (wx.Frame):
         self.statusBar = self.CreateStatusBar ()
         self.statusBar.SetStatusText (os.getcwd ())
         self.Center ()
-        self.Show (True)
 
         self.p2.initializeAndShowInitialView ()
         self.p1.initializeAndShowInitialView ()
@@ -620,6 +619,7 @@ class Candy (wx.Frame):
 def main ():
     app = wx.App (0)
     candy = Candy (None, -1, 'Candy')
+    candy.Show ()
     app.MainLoop ()
 
 if __name__ == '__main__':
