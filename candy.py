@@ -490,6 +490,10 @@ class MySTC (stc.StyledTextCtrl):
         if self.selectedItem < 0:
             self.selectedItem = len (self.items) - 1
 
+        # This can happen if self.items is empty
+        if self.selectedItem < 0:
+            self.selectedItem = 0
+
     def moveSelectionLeft (self):
         self.selectedItem -= self.linesPerCol
 
@@ -568,7 +572,9 @@ class Candy (wx.Frame):
         self.statusBar = self.CreateStatusBar ()
         self.statusBar.SetStatusText (os.getcwd ())
         self.Center ()
+        self.activePane = self.p1
 
+    def setUpAndShow (self):
         self.p2.initializeAndShowInitialView ()
         self.p1.initializeAndShowInitialView ()
         self.activePane = self.p1
@@ -620,6 +626,7 @@ def main ():
     app = wx.App (0)
     candy = Candy (None, -1, 'Candy')
     candy.Show ()
+    candy.setUpAndShow ()
     app.MainLoop ()
 
 if __name__ == '__main__':

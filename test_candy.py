@@ -24,10 +24,19 @@ class TestCandy (unittest.TestCase):
     def testInitialSelection (self):
         self.assertEqual (self.frame.activePane.selectedItem, 0)
 
-    # This one fails as of yet. Should make it pass to get rid of automatic listdir
     def testItemListIsEmpty (self):
         self.assertEquals (len (self.frame.p1.items), 0)
         self.assertEquals (len (self.frame.p2.items), 0)
+
+    def testSelectionDoesntGetAnywhereOnEmptyList (self):
+        self.frame.p1.moveSelectionUp ()
+        self.assertEquals (self.frame.p1.selectedItem, 0)
+        self.frame.p1.moveSelectionDown ()
+        self.assertEquals (self.frame.p1.selectedItem, 0)
+        self.frame.p1.moveSelectionLeft ()
+        self.assertEquals (self.frame.p1.selectedItem, 0)
+        self.frame.p1.moveSelectionRight ()
+        self.assertEquals (self.frame.p1.selectedItem, 0)
 
 def suite ():
     suite = unittest.makeSuite (TestCandy, 'test')
