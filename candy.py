@@ -515,10 +515,17 @@ class MySTC (stc.StyledTextCtrl):
             self.selectedItem = self.selectedItem % self.linesPerCol + 1
 
     def getItemStartChar (self, itemNo):
-        itemX = itemNo / self.linesPerCol
-        itemY = itemNo % self.linesPerCol
+        itemX = 0
+        itemY = 0
+        numFullLines = 0
+
+        # Avoid div0
+        if self.linesPerCol != 0:
+            itemX = itemNo / self.linesPerCol
+            itemY = itemNo % self.linesPerCol
+            numFullLines = len (self.items) % self.linesPerCol
+
         numNonEmptyColumns = self.numFullColumns + 1
-        numFullLines = len (self.items) % self.linesPerCol
 
         if itemY > numFullLines:
             selStart = numFullLines * numNonEmptyColumns * self.charsPerCol \

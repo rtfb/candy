@@ -38,6 +38,9 @@ class TestCandy (unittest.TestCase):
         self.frame.p1.moveSelectionRight ()
         self.assertEquals (self.frame.p1.selectedItem, 0)
 
+    def testItemStartCharIsZeroOnEmptyList (self):
+        self.assertEquals (self.frame.p1.getItemStartChar (0), 0)
+
 def suite ():
     suite = unittest.makeSuite (TestCandy, 'test')
     return suite
