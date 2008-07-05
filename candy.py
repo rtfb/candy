@@ -99,8 +99,8 @@ def recursiveListDir (cwd):
 
     return allFiles
 
-def collectListInfo (isFlatDirectoryView, cwd):
-    items = []
+def listFiles (isFlatDirectoryView, cwd):
+    files = []
 
     if isFlatDirectoryView:
         files = recursiveListDir (cwd)
@@ -109,6 +109,13 @@ def collectListInfo (isFlatDirectoryView, cwd):
 
     if cwd != '/':
         files.insert (0, '..')
+
+    return files
+
+def collectListInfo (isFlatDirectoryView, cwd):
+    items = []
+
+    files = listFiles (isFlatDirectoryView, cwd)
 
     for f in files:
         item = ListItem (f)
@@ -222,6 +229,11 @@ class MySTC (stc.StyledTextCtrl):
             ord ('Y'): self.switchSplittingMode,
             wx.WXK_F3: self.startViewer,
             ord ('V'): self.startViewer}
+
+    def clearList (self):
+        self.items = []
+        self.selectedItem = 0
+        self.numFullColumns = 0
 
     def initializeViewSettings (self, numColumns = 3):
         self.numberOfColumns = numColumns
@@ -350,7 +362,7 @@ class MySTC (stc.StyledTextCtrl):
                 os.system (commandLine % (selection.fileName))
 
     def onNextMatch (self):
-        self.searchMatchIndex = self.nextSearchMatch (self.selectedItem + 1)
+        self.searchMatchIndex = self.nextSearchMatch (self.searchStr, self.selectedItem + 1)
         self.selectedItem = self.searchMatchIndex
 
     def onStartIncSearch (self):
@@ -398,7 +410,7 @@ class MySTC (stc.StyledTextCtrl):
                 self.applyDefaultStyles ()  # Stop searching; clean matches
             else:
                 self.searchStr += chr (keyCode)
-                self.incrementalSearch ()
+                self.incrementalSearch (self.searchStr)
 
     def OnSetFocus (self, evt):
         self.SetSelBackground (1, self.colorScheme['selection-back'])
@@ -409,10 +421,10 @@ class MySTC (stc.StyledTextCtrl):
         self.SetSelBackground (1, self.colorScheme['selection-inactive'])
         self.SetSelForeground (1, self.colorScheme['selection-fore'])
 
-    def nextSearchMatch (self, initPos):
+    def nextSearchMatch (self, searchStr, initPos):
         # Construct a range of indices to produce wrapped search from current pos
         searchRange = range (initPos, len (self.items)) + range (initPos)
-        searchStrLower = self.searchStr.lower ()
+        searchStrLower = searchStr.lower ()
 
         for i in searchRange:
             if searchStrLower in self.items[i].fileName.lower ():
@@ -448,7 +460,7 @@ class MySTC (stc.StyledTextCtrl):
 
         self.MoveCaretInsideView ()
 
-    def incrementalSearch (self):
+    def incrementalSearch (self, searchStr):
         index = self.selectedItem       # start searching from curr selection
 
         # Construct a range of indices to produce wrapped search from current pos
@@ -461,7 +473,7 @@ class MySTC (stc.StyledTextCtrl):
         firstMatch = -1
 
         for i in searchRange:
-            match = self.items[i].fileName.lower ().find (self.searchStr.lower ())
+            match = self.items[i].fileName.lower ().find (searchStr.lower ())
 
             if match != -1:
                 if firstMatch == -1:
@@ -497,6 +509,10 @@ class MySTC (stc.StyledTextCtrl):
     def moveSelectionLeft (self):
         self.selectedItem -= self.linesPerCol
 
+        if len (self.items) == 0:
+            self.selectedItem = 0
+            return
+
         if self.selectedItem < 0:
             self.selectedItem += self.linesPerCol   # undo the decrement and start calculating from scratch
             numFullLines = len (self.items) % self.linesPerCol
@@ -509,6 +525,10 @@ class MySTC (stc.StyledTextCtrl):
 
     def moveSelectionRight (self):
         self.selectedItem += self.linesPerCol
+
+        if len (self.items) == 0:
+            self.selectedItem = 0
+            return
 
         if self.selectedItem > len (self.items):
             self.selectedItem -= self.linesPerCol
