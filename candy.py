@@ -14,6 +14,13 @@ STYLE_INC_SEARCH = 2
 
 ID_SPLITTER = 100
 
+class DirectoryViewFilter:
+    def __init__ (self, searchStr):
+        self.searchStr = searchStr.lower ()
+
+    def __call__ (self, item):
+        return self.searchStr in item.fileName.lower ()
+
 class ListItem:
     """An item to be stored in the list: basically, a filename with additional info
     """
@@ -131,14 +138,19 @@ def collectListInfo (isFlatDirectoryView, cwd):
 
     return items
 
-def constructListForFilling (fullList):
+def constructListForFilling (fullList, specialFilter):
     dirList = filter (lambda (f): f.isDir, fullList)
     dirList.sort ()
 
     fileList = filter (lambda (f): not f.isDir, fullList)
     fileList.sort ()
 
-    return filter (lambda (f): not f.isHidden, dirList + fileList)
+    notHidden = filter (lambda (f): not f.isHidden, dirList + fileList)
+
+    if specialFilter:
+        return filter (specialFilter, notHidden)
+    else:
+        return notHidden
 
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
@@ -208,6 +220,10 @@ class MySTC (stc.StyledTextCtrl):
 
         # Signifies flattened directory view
         self.flatDirectoryView = False
+
+        # Function Object that gets called to filter out directory view.
+        # Main use is for filtering out the contents by search matches.
+        self.directoryViewFilter = None
 
         self.navigationModeMap = {
             ord ('J'): self.moveSelectionDown,
@@ -286,7 +302,7 @@ class MySTC (stc.StyledTextCtrl):
     def fillList (self, cwd):
         allItems = collectListInfo (self.flatDirectoryView, cwd)
         self.workingDir = cwd
-        self.items = constructListForFilling (allItems)
+        self.items = constructListForFilling (allItems, self.directoryViewFilter)
         self.updateDisplayByItems ()
 
     def flattenDirectory (self):
@@ -301,6 +317,7 @@ class MySTC (stc.StyledTextCtrl):
         self.GetParent ().GetParent ().statusBar.SetStatusText (statusText)
 
     def updir (self):
+        self.directoryViewFilter = None
         # if we're in self.flatDirectoryView, all we want is to refresh the view of
         # self.workingDir without flattening
         if self.flatDirectoryView:
@@ -326,6 +343,7 @@ class MySTC (stc.StyledTextCtrl):
         self.afterDirChange ()
 
     def downdir (self, dirName):
+        self.directoryViewFilter = None
         os.chdir (dirName)
         self.clearScreen ()
         self.fillList (os.getcwd ())
@@ -386,6 +404,7 @@ class MySTC (stc.StyledTextCtrl):
 
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
+        keyMod = evt.GetModifiers ()
 
         if not self.searchMode:
             # Navigation mode:
@@ -402,15 +421,24 @@ class MySTC (stc.StyledTextCtrl):
         else:
             # Search mode:
             if keyCode == wx.WXK_RETURN:
-                self.searchMode = False
-                self.selectedItem = self.searchMatchIndex
-                self.setSelectionOnCurrItem ()
+                if keyMod == wx.MOD_CONTROL:
+                    self.directoryViewFilter = DirectoryViewFilter (self.searchStr)
+                    self.searchMode = False
+                    self.clearScreen ()
+                    self.fillList (self.workingDir)
+                    self.selectedItem = 0
+                    self.afterDirChange ()
+                else:
+                    self.searchMode = False
+                    self.selectedItem = self.searchMatchIndex
+                    self.setSelectionOnCurrItem ()
             elif keyCode == wx.WXK_ESCAPE:
                 self.searchMode = False
                 self.applyDefaultStyles ()  # Stop searching; clean matches
             else:
-                self.searchStr += chr (keyCode)
-                self.incrementalSearch (self.searchStr)
+                if keyCode < 256:
+                    self.searchStr += chr (keyCode)
+                    self.incrementalSearch (self.searchStr)
 
     def OnSetFocus (self, evt):
         self.SetSelBackground (1, self.colorScheme['selection-back'])
