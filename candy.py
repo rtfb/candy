@@ -152,33 +152,23 @@ def constructListForFilling (fullList, specialFilter):
     else:
         return notHidden
 
+def lJustAndCut (text, width):
+    newText = text.ljust (width)
+
+    if len (newText) > width:
+        newText = newText [:width]
+
+    return newText
+
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
 
-        self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
-        self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
-        self.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
-        self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
+        self.bindEvents ()
 
         projectDir = os.path.dirname (__file__)
         self.colorScheme = readColorScheme (os.path.join (projectDir, 'colorscheme-default.conf'))
-
-        # Set the styles according to color scheme
-        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
-                                                  % (pb, faceCourier,
-                                                     self.colorScheme['background'],
-                                                     self.colorScheme['default-text']))
-        self.StyleClearAll ()
-        self.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:%s"
-                                         % (pb, faceCourier,
-                                            self.colorScheme['folder']))
-        self.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:%s,back:%s"
-                                             % (pb, faceCourier,
-                                                self.colorScheme['search-highlight-fore'],
-                                                self.colorScheme['search-highlight-back']))
-        self.SetSelBackground (1, self.colorScheme['selection-inactive'])
-        self.SetSelForeground (1, self.colorScheme['selection-fore'])
+        self.setStyles ()
 
         # Number of lines per single column
         self.linesPerCol = 0
@@ -245,6 +235,29 @@ class MySTC (stc.StyledTextCtrl):
             ord ('Y'): self.switchSplittingMode,
             wx.WXK_F3: self.startViewer,
             ord ('V'): self.startViewer}
+
+    def bindEvents (self):
+        self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
+        self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
+
+    def setStyles (self):
+        # Set the styles according to color scheme
+        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
+                                                  % (pb, faceCourier,
+                                                     self.colorScheme['background'],
+                                                     self.colorScheme['default-text']))
+        self.StyleClearAll ()
+        self.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:%s"
+                                         % (pb, faceCourier,
+                                            self.colorScheme['folder']))
+        self.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:%s,back:%s"
+                                             % (pb, faceCourier,
+                                                self.colorScheme['search-highlight-fore'],
+                                                self.colorScheme['search-highlight-back']))
+        self.SetSelBackground (1, self.colorScheme['selection-inactive'])
+        self.SetSelForeground (1, self.colorScheme['selection-fore'])
 
     def clearList (self):
         self.items = []
@@ -406,39 +419,44 @@ class MySTC (stc.StyledTextCtrl):
         keyCode = evt.GetKeyCode ()
         keyMod = evt.GetModifiers ()
 
-        if not self.searchMode:
-            # Navigation mode:
-            func = None
-
-            try:
-                func = self.navigationModeMap[keyCode]
-            except KeyError:
-                pass
-
-            if func:
-                func ()
-                self.setSelectionOnCurrItem ()
+        if self.searchMode:
+            self.searchModeKeyDown (keyCode, keyMod)
         else:
-            # Search mode:
-            if keyCode == wx.WXK_RETURN:
-                if keyMod == wx.MOD_CONTROL:
-                    self.directoryViewFilter = DirectoryViewFilter (self.searchStr)
-                    self.searchMode = False
-                    self.clearScreen ()
-                    self.fillList (self.workingDir)
-                    self.selectedItem = 0
-                    self.afterDirChange ()
-                else:
-                    self.searchMode = False
-                    self.selectedItem = self.searchMatchIndex
-                    self.setSelectionOnCurrItem ()
-            elif keyCode == wx.WXK_ESCAPE:
+            self.navigationModeKeyDown (keyCode, keyMod)
+
+    def searchModeKeyDown (self, keyCode, keyMod):
+        if keyCode == wx.WXK_RETURN:
+            if keyMod == wx.MOD_CONTROL:
+                self.directoryViewFilter = DirectoryViewFilter (self.searchStr)
                 self.searchMode = False
-                self.applyDefaultStyles ()  # Stop searching; clean matches
+                self.clearScreen ()
+                self.fillList (self.workingDir)
+                self.selectedItem = 0
+                self.afterDirChange ()
             else:
-                if keyCode < 256:
-                    self.searchStr += chr (keyCode)
-                    self.incrementalSearch (self.searchStr)
+                self.searchMode = False
+                self.selectedItem = self.searchMatchIndex
+                self.setSelectionOnCurrItem ()
+        elif keyCode == wx.WXK_ESCAPE:
+            self.searchMode = False
+            self.applyDefaultStyles ()  # Stop searching; clean matches
+        else:
+            if keyCode < 256:
+                self.searchStr += chr (keyCode)
+                self.incrementalSearch (self.searchStr)
+
+    def navigationModeKeyDown (self, keyCode, keyMod):
+        # Navigation mode:
+        func = None
+
+        try:
+            func = self.navigationModeMap[keyCode]
+        except KeyError:
+            pass
+
+        if func:
+            func ()
+            self.setSelectionOnCurrItem ()
 
     def OnSetFocus (self, evt):
         self.SetSelBackground (1, self.colorScheme['selection-back'])
@@ -594,14 +612,6 @@ class MySTC (stc.StyledTextCtrl):
 
 faceCourier = 'Courier'
 pb = 12
-
-def lJustAndCut (text, width):
-    newText = text.ljust (width)
-
-    if len (newText) > width:
-        newText = newText [:width]
-
-    return newText
 
 class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
