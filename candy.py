@@ -323,11 +323,14 @@ class MySTC (stc.StyledTextCtrl):
         self.fillList (self.workingDir)
         self.afterDirChange ()
 
+    def getFrame (self):
+        return self.GetParent ().GetParent ()
+
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
         # in the line below, I'm subtracting 1 from number of items because of '..' pseudoitem
         statusText = '[Folder view]: %s\t%d item(s)' % (os.getcwd (), len (self.items) - 1)
-        self.GetParent ().GetParent ().statusBar.SetStatusText (statusText)
+        self.getFrame ().statusBar.SetStatusText (statusText)
 
     def updir (self):
         self.directoryViewFilter = None
@@ -410,10 +413,11 @@ class MySTC (stc.StyledTextCtrl):
         wnd.Show (True)
 
     def switchPane (self):
-        self.GetParent ().GetParent ().switchPane ()
+        self.getFrame ().switchPane ()
+        self.afterDirChange ()
 
     def switchSplittingMode (self):
-        self.GetParent ().GetParent ().switchSplittingMode ()
+        self.getFrame ().switchSplittingMode ()
 
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
