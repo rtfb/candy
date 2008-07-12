@@ -227,6 +227,7 @@ class MySTC (stc.StyledTextCtrl):
             ord ('Q'): self.quiter,
             ord ('F'): self.flattenDirectory,
             ord ('U'): self.updir,
+            ord ('`'): self.goHome,
             wx.WXK_RETURN: self.onEnter,
             wx.WXK_SPACE: self.onEnter,
             ord ('C'): self.clearScreen,
@@ -365,6 +366,14 @@ class MySTC (stc.StyledTextCtrl):
     def downdir (self, dirName):
         self.directoryViewFilter = None
         os.chdir (dirName)
+        self.clearScreen ()
+        self.fillList (os.getcwd ())
+        self.selectedItem = 0
+        self.afterDirChange ()
+
+    def goHome (self):
+        self.directoryViewFilter = None
+        os.chdir (os.path.expanduser ('~'))
         self.clearScreen ()
         self.fillList (os.getcwd ())
         self.selectedItem = 0
