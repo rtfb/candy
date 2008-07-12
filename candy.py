@@ -114,9 +114,6 @@ def listFiles (isFlatDirectoryView, cwd):
     else:
         files = os.listdir (cwd)
 
-    if cwd != '/':
-        files.insert (0, '..')
-
     return files
 
 def collectListInfo (isFlatDirectoryView, cwd):
@@ -131,7 +128,7 @@ def collectListInfo (isFlatDirectoryView, cwd):
             item.style = STYLE_FOLDER
             item.isDir = True
 
-        if f.startswith ('.') and f != '..':
+        if f.startswith ('.'):
             item.isHidden = True
 
         items.append (item)
@@ -146,6 +143,13 @@ def constructListForFilling (fullList, specialFilter):
     fileList.sort ()
 
     notHidden = filter (lambda (f): not f.isHidden, dirList + fileList)
+
+    dotDot = ListItem ('..')
+    dotDot.style = STYLE_FOLDER
+    dotDot.isDir = True
+    dotDot.isHidden = False
+    dotDot.visiblePartLength = len (dotDot.fileName)
+    notHidden.insert (0, dotDot)
 
     if specialFilter:
         return filter (specialFilter, notHidden)
