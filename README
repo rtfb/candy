@@ -1,0 +1,36 @@
+
+Candy
+=====
+              Current Web home: http://rtfb.gamedev.lt/projects/candy/
+
+Candy is a free implementation of the file system navigation and control
+utility generally known as "commander". Probably the best known
+implementation in the free software world is Midnight Commander. But
+Candy is not a clone.
+
+Candy stands for Commanders Are Not Dead Yet. And that's what it aims at.
+The main idea behind Candy is to demonstrate how commanders can still be
+useful on modern computers by taking a fresh view on effective file
+system manipulations and user interface design.
+
+Please report bugs in Candy to Vytautas.Shaltenis@gmail.com.
+
+Candy's home page is at <http://rtfb.gamedev.lt/projects/candy/>.
+
+MAINTAINER: Vytautas Saltenis <Vytautas.Shaltenis@gmail.com>
+
+Copyright (C) 2008, Vytautas Saltenis
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Candy. If not, see <http://www.gnu.org/licenses/>.
+
