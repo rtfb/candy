@@ -552,23 +552,6 @@ class MySTC (stc.StyledTextCtrl):
         stylingRegion = len (self.searchStr)
         self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
 
-    """
-    def moveItemIntoView (self, itemIndex):
-        selectionStart = self.getItemStartChar (itemIndex)
-        leftmostColumn = self.getLeftmostColumn ()
-        rightmostColumn = leftmostColumn + self.charsPerWidth
-        columnOfTheMatch = self.GetColumn (selectionStart)
-
-        # This is my lame approach to move search match into view
-        if columnOfTheMatch + len (self.searchStr) > rightmostColumn:
-            # we're to the right of the view:
-            self.GotoPos (selectionStart + self.charsPerCol)
-        elif columnOfTheMatch < leftmostColumn:
-            # we're to the left:
-            self.GotoPos (selectionStart)
-
-        self.MoveCaretInsideView ()
-    """
     def moveItemIntoView (self, itemNo):
         if len (self.items) <= 0:
             return
@@ -580,10 +563,10 @@ class MySTC (stc.StyledTextCtrl):
 
         if startCharOnLine < self.viewWindowLeftChar:
             # move view window left
-            self.viewWindowLeftChar -= self.charsPerCol
+            self.viewWindowLeftChar = startCharOnLine
         elif endCharOnLine > viewWindowRightChar:
             # move view window right
-            self.viewWindowLeftChar += self.charsPerCol
+            self.viewWindowLeftChar = endCharOnLine - self.charsPerWidth
         else:
             return      # The item is already in view
 
@@ -605,8 +588,16 @@ class MySTC (stc.StyledTextCtrl):
         self.SetReadOnly (True)
         self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
         self.SetViewEOL (True)
-        self.setSelectionOnCurrItem ()
         self.applyDefaultStyles ()
+
+    def setSelectionOnCurrItem (self):
+        if not self.isItemFullyInView (self.selectedItem):
+            self.moveItemIntoView (self.selectedItem)
+
+        selectionStart = self.getItemStartChar (self.selectedItem)
+        self.SetCurrentPos (selectionStart)
+        self.EnsureCaretVisible ()
+        self.SetSelection (selectionStart , selectionStart + self.charsPerCol)
 
     def incrementalSearch (self, searchStr):
         index = self.selectedItem       # start searching from curr selection
@@ -632,15 +623,6 @@ class MySTC (stc.StyledTextCtrl):
                     self.highlightSearchMatch (i, match)
 
         self.searchMatchIndex = firstMatch
-
-    def setSelectionOnCurrItem (self):
-        if not self.isItemFullyInView (self.selectedItem):
-            self.moveItemIntoView (self.selectedItem)
-
-        selectionStart = self.getItemStartChar (self.selectedItem)
-        self.SetCurrentPos (selectionStart)
-        self.EnsureCaretVisible ()
-        self.SetSelection (selectionStart , selectionStart + self.charsPerCol)
 
     def moveSelectionDown (self):
         self.selectedItem += 1
@@ -723,9 +705,6 @@ class MySTC (stc.StyledTextCtrl):
             itemX = itemNo / self.linesPerCol
             itemY = itemNo % self.linesPerCol
 
-            #if len (self.items) > 0 and self.items[itemNo].fileName == 'cont-wip.txt':
-                #pdb.set_trace ()
-
         return itemX, itemY
 
     # TODO: unused?
@@ -760,15 +739,33 @@ class MySTC (stc.StyledTextCtrl):
         return itemViewY * self.numColumns + itemViewX
 
     def itemIndexToViewWindowCoords (self, itemNo):
+        import math
         itemX, itemY = self.getItemCoordsByIndex (itemNo)
-        itemViewX = itemX - self.viewWindowLeftChar / self.charsPerCol
+        itemViewX = itemX - int (math.ceil (float (self.viewWindowLeftChar) / self.charsPerCol))
         itemViewY = itemY
-
         return itemViewX, itemViewY
+
+    # self.viewWindowLeftChar does not necessarily match corresponding item's
+    # fileName[0]-th char. So when calculating getItemStartChar, we need to
+    # compensate by the amount of mismatch. Think about this situation:
+    #
+    # 01234567890123456789
+    # item0  |  item1
+    #
+    # self.charsPerCol is 10 in this diagram. The '|' denotes self.viewWindowLeftChar.
+    # So this function would return 3 in this case.
+    def compensateViewWindowLeftChar (self):
+        leftPos = self.viewWindowLeftChar % self.charsPerCol
+
+        if leftPos != 0:
+            return self.charsPerCol - leftPos
+
+        return leftPos
 
     def getItemStartChar (self, itemNo):
         itemViewX, itemViewY = self.itemIndexToViewWindowCoords (itemNo)
-        return itemViewY * self.charsPerWidth + itemViewX * self.charsPerCol + itemViewY
+        return itemViewY * self.charsPerWidth + itemViewX * self.charsPerCol \
+               + itemViewY + self.compensateViewWindowLeftChar ()
 
     def applyDefaultStyles (self):
         for index, item in enumerate (self.items):
