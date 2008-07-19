@@ -135,26 +135,6 @@ def listFiles (isFlatDirectoryView, cwd):
 
     return files
 
-"""
-def listFiles (isFlatDirectoryView, cwd):
-    dirs = []
-    files = []
-    hidden = []
-
-    for i in range (10):
-        dirs.append ('dir' + str (i))
-
-    dirs.insert (0, '..')
-
-    for i in range (20):
-        files.append ('file' + str (i))
-
-    for i in range (5):
-        hidden.append ('.hid' + str (i))
-
-    return dirs + files + hidden
-"""
-
 def collectListInfo (isFlatDirectoryView, cwd):
     items = []
 
@@ -312,6 +292,7 @@ class MySTC (stc.StyledTextCtrl):
         self.SetSelBackground (1, self.colorScheme['selection-inactive'])
         self.SetSelForeground (1, self.colorScheme['selection-fore'])
 
+    # Used in tests
     def clearList (self):
         self.items = []
         self.selectedItem = 0
@@ -526,7 +507,6 @@ class MySTC (stc.StyledTextCtrl):
                 self.incrementalSearch (self.searchStr)
 
     def navigationModeKeyDown (self, keyCode, keyMod):
-        # Navigation mode:
         func = None
 
         try:
@@ -555,13 +535,6 @@ class MySTC (stc.StyledTextCtrl):
         for i in searchRange:
             if searchStrLower in self.items[i].fileName.lower ():
                 return i
-
-    # Now this one is superseded by self.viewWindowLeftChar
-    def getLeftmostColumn (self):
-        point = wx.Point ()
-        point.x = self.GetXOffset ()
-        point.y = 0
-        return self.GetColumn (self.PositionFromPoint (point))
 
     def highlightSearchMatch (self, itemIndex, matchOffset):
         selectionStart = self.getItemStartChar (itemIndex) + matchOffset
@@ -725,37 +698,6 @@ class MySTC (stc.StyledTextCtrl):
             itemY = itemNo % self.linesPerCol
 
         return itemX, itemY
-
-    # TODO: unused?
-    def getItemStartCharByFullWidthLines (self, itemNo):
-        itemX, itemY = self.getItemCoordsByIndex (itemNo)
-        numFullLines = 0
-
-        # Avoid div0
-        if self.linesPerCol != 0:
-            numFullLines = len (self.items) % self.linesPerCol
-
-        # TODO: there might be a bug in this line:
-        numNonEmptyColumns = self.numFullColumns + 1
-
-        if itemY > numFullLines:
-            selStart = numFullLines * numNonEmptyColumns * self.charsPerCol \
-                       + (itemY - numFullLines) * self.numFullColumns * self.charsPerCol \
-                       + (itemX * self.charsPerCol) + itemY
-        else:
-            selStart = itemY * numNonEmptyColumns * self.charsPerCol + (itemX * self.charsPerCol) + itemY
-
-        return selStart
-
-    def getTopLeftItemIndexForViewWindow (self):
-        return self.viewWindowLeftChar / self.charsPerCol
-
-    # View window index works just as the full index. Top left index is 0,
-    # index increments to the right and down. Goes through all at least
-    # partially visible items.
-    def itemIndexToViewWindowIndex (self, itemNo):
-        itemViewX, itemViewY = self.itemIndexToViewWindowCoords (itemNo)
-        return itemViewY * self.numColumns + itemViewX
 
     def itemIndexToViewWindowCoords (self, itemNo):
         import math
