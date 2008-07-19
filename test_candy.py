@@ -4,6 +4,7 @@ import unittest
 import candy
 import wx
 import os
+import pdb
 
 def fakeFileLister (isFlatDirectoryView, cwd):
     dirs = []
@@ -29,6 +30,12 @@ class TestCandy (unittest.TestCase):
     def setUp (self):
         self.app = wx.PySimpleApp ()
         self.frame = candy.Candy (None, -1, 'foo')
+
+        # Let application know its dimensions
+        self.frame.Show (True)
+        self.frame.Show (False)
+
+        # Now when dimensions are known, lets proceed initializing
         self.frame.setUpAndShow ()
 
     def tearDown (self):
@@ -79,6 +86,15 @@ class TestCandy (unittest.TestCase):
         currPos = self.frame.p1.searchMatchIndex
         match = self.frame.p1.nextSearchMatch (searchStr, self.frame.p1.searchMatchIndex + 1)
         self.assertEquals (match, currPos + 1)
+
+    def testItemStartChar (self):
+        #pdb.set_trace ()
+        self.assertEquals (self.frame.p1.getItemStartChar (0), 0)
+
+        for index in range (len (self.frame.p1.items)):
+            self.assertEquals (self.frame.p1.getItemStartChar (index),
+                               index * self.frame.p1.charsPerCol \
+                               * self.frame.p1.numberOfColumns - index * 2)
 
 def suite ():
     suite = unittest.makeSuite (TestCandy, 'test')

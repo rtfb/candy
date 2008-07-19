@@ -116,6 +116,26 @@ def listFiles (isFlatDirectoryView, cwd):
 
     return files
 
+"""
+def listFiles (isFlatDirectoryView, cwd):
+    dirs = []
+    files = []
+    hidden = []
+
+    for i in range (10):
+        dirs.append ('dir' + str (i))
+
+    dirs.insert (0, '..')
+
+    for i in range (20):
+        files.append ('file' + str (i))
+
+    for i in range (5):
+        hidden.append ('.hid' + str (i))
+
+    return dirs + files + hidden
+"""
+
 def collectListInfo (isFlatDirectoryView, cwd):
     items = []
 
@@ -219,6 +239,15 @@ class MySTC (stc.StyledTextCtrl):
         # Main use is for filtering out the contents by search matches.
         self.directoryViewFilter = None
 
+        # List of full-width lines, containing the text of the items.
+        # Only sublines of these lines are displayed both for performance
+        # reasons and to bypass a bug in STC, failing to display extremely
+        # long lines correctly.
+        self.fullTextLines = []
+
+        # How much characters to the right is the view window
+        self.viewWindowLeftChar = 0
+
         self.navigationModeMap = {
             ord ('J'): self.moveSelectionDown,
             ord ('K'): self.moveSelectionUp,
@@ -277,7 +306,10 @@ class MySTC (stc.StyledTextCtrl):
         self.linesPerCol = height / lineHeight - 5
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
         self.charsPerCol = width / charWidth / self.numberOfColumns
-        #print height, lineHeight, self.linesPerCol
+
+        # Even if it's not, it will be brought back to life
+        # when doing moveItemIntoView:
+        self.viewWindowLeftChar = 0
 
         self.charsPerWidth = width / charWidth
         self.clearScreen ()
@@ -287,7 +319,7 @@ class MySTC (stc.StyledTextCtrl):
         self.initializeViewSettings ()
 
         dir = os.path.expanduser ('~')
-        #dir = '/usr/lib'
+        #dir = '/usr/share'
         os.chdir (dir)
         self.fillList (dir)
         self.SetFocus ()
@@ -297,19 +329,25 @@ class MySTC (stc.StyledTextCtrl):
         self.SetReadOnly (False)
         self.numFullColumns = len (self.items) / self.linesPerCol
 
-        linesToAdd = ['' for i in range (self.linesPerCol)]
+        self.fullTextLines = ['' for i in range (self.linesPerCol)]
 
         currLine = 0
         for item in self.items:
             visiblePart = lJustAndCut (item.fileName, self.charsPerCol)
-            linesToAdd[currLine] += visiblePart
+            self.fullTextLines[currLine] += visiblePart
             item.visiblePartLength = len (visiblePart)
             currLine += 1
 
             if currLine > self.linesPerCol - 1:
                 currLine = 0
 
-        self.SetText ('\n'.join (linesToAdd))
+        visibleSublines = []
+
+        for line in self.fullTextLines:
+            subLine = line[:self.charsPerWidth].ljust (self.charsPerWidth, ' ')
+            visibleSublines.append (subLine)
+
+        self.SetText ('\n'.join (visibleSublines))
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
         self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
@@ -367,8 +405,8 @@ class MySTC (stc.StyledTextCtrl):
         self.directoryViewFilter = None
         os.chdir (dirName)
         self.clearScreen ()
-        self.fillList (os.getcwd ())
         self.selectedItem = 0
+        self.fillList (os.getcwd ())
         self.afterDirChange ()
 
     def goHome (self):
@@ -451,9 +489,15 @@ class MySTC (stc.StyledTextCtrl):
                 self.selectedItem = 0
                 self.afterDirChange ()
             else:
+                # Here we want to stop searching and set focus on first search match.
+                # But if there was no match, we want to behave more like when we
+                # click Escape. Except we've no matches to clear, since no match means
+                # nothing was highlighted
                 self.searchMode = False
-                self.selectedItem = self.searchMatchIndex
-                self.setSelectionOnCurrItem ()
+
+                if self.searchMatchIndex != -1:
+                    self.selectedItem = self.searchMatchIndex
+                    self.setSelectionOnCurrItem ()
         elif keyCode == wx.WXK_ESCAPE:
             self.searchMode = False
             self.applyDefaultStyles ()  # Stop searching; clean matches
@@ -493,6 +537,7 @@ class MySTC (stc.StyledTextCtrl):
             if searchStrLower in self.items[i].fileName.lower ():
                 return i
 
+    # Now this one is superseded by self.viewWindowLeftChar
     def getLeftmostColumn (self):
         point = wx.Point ()
         point.x = self.GetXOffset ()
@@ -507,6 +552,7 @@ class MySTC (stc.StyledTextCtrl):
         stylingRegion = len (self.searchStr)
         self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
 
+    """
     def moveItemIntoView (self, itemIndex):
         selectionStart = self.getItemStartChar (itemIndex)
         leftmostColumn = self.getLeftmostColumn ()
@@ -522,6 +568,45 @@ class MySTC (stc.StyledTextCtrl):
             self.GotoPos (selectionStart)
 
         self.MoveCaretInsideView ()
+    """
+    def moveItemIntoView (self, itemNo):
+        if len (self.items) <= 0:
+            return
+
+        itemX, itemY = self.getItemCoordsByIndex (itemNo)
+        startCharOnLine = itemX * self.charsPerCol
+        endCharOnLine = startCharOnLine + self.charsPerCol
+        viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
+
+        if startCharOnLine < self.viewWindowLeftChar:
+            # move view window left
+            self.viewWindowLeftChar -= self.charsPerCol
+        elif endCharOnLine > viewWindowRightChar:
+            # move view window right
+            self.viewWindowLeftChar += self.charsPerCol
+        else:
+            return      # The item is already in view
+
+        self.updateDisplay ()
+
+    def updateDisplay (self):
+        self.clearScreen ()
+        self.SetReadOnly (False)
+        visibleSublines = []
+
+        for line in self.fullTextLines:
+            viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
+            rawSubLine = line[self.viewWindowLeftChar : viewWindowRightChar]
+            subLine = rawSubLine.ljust (self.charsPerWidth, ' ')
+            visibleSublines.append (subLine)
+
+        self.SetText ('\n'.join (visibleSublines))
+        self.EmptyUndoBuffer ()
+        self.SetReadOnly (True)
+        self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
+        self.SetViewEOL (True)
+        self.setSelectionOnCurrItem ()
+        self.applyDefaultStyles ()
 
     def incrementalSearch (self, searchStr):
         index = self.selectedItem       # start searching from curr selection
@@ -543,11 +628,15 @@ class MySTC (stc.StyledTextCtrl):
                     firstMatch = i
                     self.moveItemIntoView (i)
 
-                self.highlightSearchMatch (i, match)
+                if self.isItemPartiallyInView (i):
+                    self.highlightSearchMatch (i, match)
 
         self.searchMatchIndex = firstMatch
 
     def setSelectionOnCurrItem (self):
+        if not self.isItemFullyInView (self.selectedItem):
+            self.moveItemIntoView (self.selectedItem)
+
         selectionStart = self.getItemStartChar (self.selectedItem)
         self.SetCurrentPos (selectionStart)
         self.EnsureCaretVisible ()
@@ -597,17 +686,58 @@ class MySTC (stc.StyledTextCtrl):
             self.selectedItem -= self.linesPerCol
             self.selectedItem = self.selectedItem % self.linesPerCol + 1
 
-    def getItemStartChar (self, itemNo):
+    # TODO: these two buddies are almost the same. Collapse them.
+    def isItemPartiallyInView (self, itemNo):
+        if len (self.items) <= 0:
+            return False
+
+        itemX, itemY = self.getItemCoordsByIndex (itemNo)
+        startCharOnLine = itemX * self.charsPerCol
+        viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
+
+        if startCharOnLine >= self.viewWindowLeftChar and startCharOnLine <= viewWindowRightChar:
+            return True
+
+        return False
+
+    def isItemFullyInView (self, itemNo):
+        if len (self.items) <= 0:
+            return False
+
+        itemX, itemY = self.getItemCoordsByIndex (itemNo)
+        startCharOnLine = itemX * self.charsPerCol
+        endCharOnLine = startCharOnLine + self.charsPerCol
+        viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
+
+        if startCharOnLine >= self.viewWindowLeftChar and endCharOnLine <= viewWindowRightChar:
+           return True
+
+        return False
+
+    def getItemCoordsByIndex (self, itemNo):
         itemX = 0
         itemY = 0
-        numFullLines = 0
 
         # Avoid div0
         if self.linesPerCol != 0:
             itemX = itemNo / self.linesPerCol
             itemY = itemNo % self.linesPerCol
+
+            #if len (self.items) > 0 and self.items[itemNo].fileName == 'cont-wip.txt':
+                #pdb.set_trace ()
+
+        return itemX, itemY
+
+    # TODO: unused?
+    def getItemStartCharByFullWidthLines (self, itemNo):
+        itemX, itemY = self.getItemCoordsByIndex (itemNo)
+        numFullLines = 0
+
+        # Avoid div0
+        if self.linesPerCol != 0:
             numFullLines = len (self.items) % self.linesPerCol
 
+        # TODO: there might be a bug in this line:
         numNonEmptyColumns = self.numFullColumns + 1
 
         if itemY > numFullLines:
@@ -619,13 +749,49 @@ class MySTC (stc.StyledTextCtrl):
 
         return selStart
 
+    def getTopLeftItemIndexForViewWindow (self):
+        return self.viewWindowLeftChar / self.charsPerCol
+
+    # View window index works just as the full index. Top left index is 0,
+    # index increments to the right and down. Goes through all at least
+    # partially visible items.
+    def itemIndexToViewWindowIndex (self, itemNo):
+        itemViewX, itemViewY = self.itemIndexToViewWindowCoords (itemNo)
+        return itemViewY * self.numColumns + itemViewX
+
+    def itemIndexToViewWindowCoords (self, itemNo):
+        itemX, itemY = self.getItemCoordsByIndex (itemNo)
+        itemViewX = itemX - self.viewWindowLeftChar / self.charsPerCol
+        itemViewY = itemY
+
+        return itemViewX, itemViewY
+
+    def getItemStartChar (self, itemNo):
+        itemViewX, itemViewY = self.itemIndexToViewWindowCoords (itemNo)
+        return itemViewY * self.charsPerWidth + itemViewX * self.charsPerCol + itemViewY
+
     def applyDefaultStyles (self):
-        # Now set some text to those styles...  Normally this would be
-        # done in an event handler that happens when text needs displayed.
         for index, item in enumerate (self.items):
-            selStart = self.getItemStartChar (index)
-            self.StartStyling (selStart, 0xff)
-            self.SetStyling (min (len (item.fileName), item.visiblePartLength), item.style)
+            if self.isItemPartiallyInView (index):
+                selStart = self.getItemStartChar (index)
+                self.StartStyling (selStart, 0xff)
+
+                # By default, style whole item name:
+                itemNameLen = len (item.fileName)
+
+                # ...unless the whole name is wider than column:
+                visiblePartLen = item.visiblePartLength
+
+                # AND unless we're dealing with an item with only
+                # few first characters visible on the right of the
+                # view window:
+                itemX, itemY = self.getItemCoordsByIndex (index)
+                startCharOnLine = itemX * self.charsPerCol
+                firstFewChars = self.charsPerWidth - (startCharOnLine - self.viewWindowLeftChar)
+
+                # Now choose the smallest from the above:
+                stylingRange = min (itemNameLen, item.visiblePartLength, firstFewChars)
+                self.SetStyling (stylingRange, item.style)
 
 faceCourier = 'Courier'
 pb = 12
