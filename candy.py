@@ -583,7 +583,7 @@ class MySTC (stc.StyledTextCtrl):
         self.applyDefaultStyles ()
 
     def setSelectionOnCurrItem (self):
-        if not self.isItemFullyInView (self.selectedItem):
+        if not self.isItemInView (self.selectedItem, fully = True):
             self.moveItemIntoView (self.selectedItem)
 
         selectionStart = self.getItemStartChar (self.selectedItem)
@@ -611,7 +611,7 @@ class MySTC (stc.StyledTextCtrl):
                     firstMatch = i
                     self.moveItemIntoView (i)
 
-                if self.isItemPartiallyInView (i):
+                if self.isItemInView (i):
                     self.highlightSearchMatch (i, match)
 
         self.searchMatchIndex = firstMatch
@@ -660,21 +660,7 @@ class MySTC (stc.StyledTextCtrl):
             self.selectedItem -= self.linesPerCol
             self.selectedItem = self.selectedItem % self.linesPerCol + 1
 
-    # TODO: these two buddies are almost the same. Collapse them.
-    def isItemPartiallyInView (self, itemNo):
-        if len (self.items) <= 0:
-            return False
-
-        itemX, itemY = self.getItemCoordsByIndex (itemNo)
-        startCharOnLine = itemX * self.charsPerCol
-        viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
-
-        if startCharOnLine >= self.viewWindowLeftChar and startCharOnLine <= viewWindowRightChar:
-            return True
-
-        return False
-
-    def isItemFullyInView (self, itemNo):
+    def isItemInView (self, itemNo, **kwd):
         if len (self.items) <= 0:
             return False
 
@@ -683,8 +669,18 @@ class MySTC (stc.StyledTextCtrl):
         endCharOnLine = startCharOnLine + self.charsPerCol
         viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
 
-        if startCharOnLine >= self.viewWindowLeftChar and endCharOnLine <= viewWindowRightChar:
-           return True
+        secondCriterion = startCharOnLine
+
+        try:
+            fullyInView = kwd['fully']
+            if fullyInView:
+                secondCriterion = endCharOnLine
+        except:
+            pass
+
+        if startCharOnLine >= self.viewWindowLeftChar \
+           and secondCriterion <= viewWindowRightChar:
+            return True
 
         return False
 
@@ -694,8 +690,7 @@ class MySTC (stc.StyledTextCtrl):
 
         # Avoid div0
         if self.linesPerCol != 0:
-            itemX = itemNo / self.linesPerCol
-            itemY = itemNo % self.linesPerCol
+            itemX, itemY = divmod (itemNo, self.linesPerCol)
 
         return itemX, itemY
 
@@ -730,7 +725,7 @@ class MySTC (stc.StyledTextCtrl):
 
     def applyDefaultStyles (self):
         for index, item in enumerate (self.items):
-            if self.isItemPartiallyInView (index):
+            if self.isItemInView (index):
                 selStart = self.getItemStartChar (index)
                 self.StartStyling (selStart, 0xff)
 
@@ -751,6 +746,7 @@ class MySTC (stc.StyledTextCtrl):
                 stylingRange = min (itemNameLen, item.visiblePartLength, firstFewChars)
                 self.SetStyling (stylingRange, item.style)
 
+# TODO: read these from general.conf
 faceCourier = 'Courier'
 pb = 12
 
