@@ -194,7 +194,7 @@ class MySTC (stc.StyledTextCtrl):
         self.setStyles ()
 
         # Number of lines per single column
-        self.linesPerCol = 0
+        self.viewWindowHeight = 0
 
         # Number of characters per column width
         self.charsPerCol = 0
@@ -303,7 +303,7 @@ class MySTC (stc.StyledTextCtrl):
         width, height = self.GetClientSizeTuple ()
         self.columnWidth = width / self.numberOfColumns
         lineHeight = self.TextHeight (0)
-        self.linesPerCol = height / lineHeight - 5
+        self.viewWindowHeight = height / lineHeight - 5
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
         self.charsPerCol = width / charWidth / self.numberOfColumns
 
@@ -327,9 +327,9 @@ class MySTC (stc.StyledTextCtrl):
 
     def updateDisplayByItems (self):
         self.SetReadOnly (False)
-        self.numFullColumns = len (self.items) / self.linesPerCol
+        self.numFullColumns = len (self.items) / self.viewWindowHeight
 
-        self.fullTextLines = ['' for i in range (self.linesPerCol)]
+        self.fullTextLines = ['' for i in range (self.viewWindowHeight)]
 
         currLine = 0
         for item in self.items:
@@ -338,7 +338,7 @@ class MySTC (stc.StyledTextCtrl):
             item.visiblePartLength = len (visiblePart)
             currLine += 1
 
-            if currLine > self.linesPerCol - 1:
+            if currLine > self.viewWindowHeight - 1:
                 currLine = 0
 
         visibleSublines = []
@@ -633,32 +633,32 @@ class MySTC (stc.StyledTextCtrl):
             self.selectedItem = 0
 
     def moveSelectionLeft (self):
-        self.selectedItem -= self.linesPerCol
+        self.selectedItem -= self.viewWindowHeight
 
         if len (self.items) == 0:
             self.selectedItem = 0
             return
 
         if self.selectedItem < 0:
-            self.selectedItem += self.linesPerCol   # undo the decrement and start calculating from scratch
-            numFullLines = len (self.items) % self.linesPerCol
-            bottomRightIndex = self.linesPerCol * (self.numFullColumns + 1) - 1
+            self.selectedItem += self.viewWindowHeight   # undo the decrement and start calculating from scratch
+            numFullLines = len (self.items) % self.viewWindowHeight
+            bottomRightIndex = self.viewWindowHeight * (self.numFullColumns + 1) - 1
 
-            if self.selectedItem % self.linesPerCol > numFullLines:
-                bottomRightIndex = self.linesPerCol * self.numFullColumns - 1
+            if self.selectedItem % self.viewWindowHeight > numFullLines:
+                bottomRightIndex = self.viewWindowHeight * self.numFullColumns - 1
 
-            self.selectedItem = self.selectedItem - self.linesPerCol + bottomRightIndex
+            self.selectedItem = self.selectedItem - self.viewWindowHeight + bottomRightIndex
 
     def moveSelectionRight (self):
-        self.selectedItem += self.linesPerCol
+        self.selectedItem += self.viewWindowHeight
 
         if len (self.items) == 0:
             self.selectedItem = 0
             return
 
         if self.selectedItem > len (self.items):
-            self.selectedItem -= self.linesPerCol
-            self.selectedItem = self.selectedItem % self.linesPerCol + 1
+            self.selectedItem -= self.viewWindowHeight
+            self.selectedItem = self.selectedItem % self.viewWindowHeight + 1
 
     def isItemInView (self, itemNo, **kwd):
         if len (self.items) <= 0:
@@ -689,8 +689,8 @@ class MySTC (stc.StyledTextCtrl):
         itemY = 0
 
         # Avoid div0
-        if self.linesPerCol != 0:
-            itemX, itemY = divmod (itemNo, self.linesPerCol)
+        if self.viewWindowHeight != 0:
+            itemX, itemY = divmod (itemNo, self.viewWindowHeight)
 
         return itemX, itemY
 
