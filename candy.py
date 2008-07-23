@@ -222,9 +222,6 @@ class MySTC (stc.StyledTextCtrl):
         # next match should be focused upon go-to-next-match
         self.searchMatchIndex = -1
 
-        # Width of the column in pixels
-        self.columnWidth = 0
-
         # Working directory of the pane
         self.workingDir = os.path.expanduser ('~')
 
@@ -301,7 +298,6 @@ class MySTC (stc.StyledTextCtrl):
     def initializeViewSettings (self, numColumns = 3):
         self.numberOfColumns = numColumns
         width, height = self.GetClientSizeTuple ()
-        self.columnWidth = width / self.numberOfColumns
         lineHeight = self.TextHeight (0)
         self.linesPerCol = height / lineHeight - 5
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
