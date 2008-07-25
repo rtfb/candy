@@ -183,6 +183,24 @@ def lJustAndCut (text, width):
 
     return newText
 
+# The width/height/left/right are in characters
+class ViewWindow:
+    def __init__ (self, width, height):
+        # Number of characters that can fit in whole width of the pane
+        self.width = width
+
+        # Number of lines per single column
+        self.height = height
+
+        # How much characters to the right is the view window
+        self.left = 0
+
+        # Number of columns of items across all the width of the pane
+        self.numColumns = 0
+
+    def right (self):
+        return self.left + self.width
+
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
@@ -193,14 +211,10 @@ class MySTC (stc.StyledTextCtrl):
         self.colorScheme = readColorScheme (os.path.join (projectDir, 'colorscheme-default.conf'))
         self.setStyles ()
 
-        # Number of lines per single column
-        self.linesPerCol = 0
+        self.viewWindow = None
 
         # Number of characters per column width
         self.charsPerCol = 0
-
-        # Number of characters that can fit in whole width of the pane
-        self.charsPerWidth = 0
 
         # Number of columns in the whole-wide view, that are filled from top to bottom
         self.numFullColumns = 0
@@ -225,9 +239,6 @@ class MySTC (stc.StyledTextCtrl):
         # Working directory of the pane
         self.workingDir = os.path.expanduser ('~')
 
-        # Number of columns of items across all the width of the pane
-        self.numberOfColumns = 3
-
         # Signifies flattened directory view
         self.flatDirectoryView = False
 
@@ -240,9 +251,6 @@ class MySTC (stc.StyledTextCtrl):
         # reasons and to bypass a bug in STC, failing to display extremely
         # long lines correctly.
         self.fullTextLines = []
-
-        # How much characters to the right is the view window
-        self.viewWindowLeftChar = 0
 
         self.navigationModeMap = {
             ord ('J'): self.moveSelectionDown,
@@ -296,18 +304,16 @@ class MySTC (stc.StyledTextCtrl):
         self.numFullColumns = 0
 
     def initializeViewSettings (self, numColumns = 3):
-        self.numberOfColumns = numColumns
         width, height = self.GetClientSizeTuple ()
         lineHeight = self.TextHeight (0)
-        self.linesPerCol = height / lineHeight - 5
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
-        self.charsPerCol = width / charWidth / self.numberOfColumns
 
-        # Even if it's not, it will be brought back to life
-        # when doing moveItemIntoView:
-        self.viewWindowLeftChar = 0
-
-        self.charsPerWidth = width / charWidth
+        # Here viewWindow.left will be set to 0. Even if it's not,
+        # it will be brought back to life when doing moveItemIntoView:
+        self.viewWindow = ViewWindow (width / charWidth,
+                                      height / lineHeight - 5)
+        self.viewWindow.numColumns = numColumns
+        self.charsPerCol = width / charWidth / self.viewWindow.numColumns
         self.clearScreen ()
         self.updateDisplayByItems ()
 
@@ -323,9 +329,9 @@ class MySTC (stc.StyledTextCtrl):
 
     def updateDisplayByItems (self):
         self.SetReadOnly (False)
-        self.numFullColumns = len (self.items) / self.linesPerCol
+        self.numFullColumns = len (self.items) / self.viewWindow.height
 
-        self.fullTextLines = ['' for i in range (self.linesPerCol)]
+        self.fullTextLines = ['' for i in range (self.viewWindow.height)]
 
         currLine = 0
         for item in self.items:
@@ -334,13 +340,13 @@ class MySTC (stc.StyledTextCtrl):
             item.visiblePartLength = len (visiblePart)
             currLine += 1
 
-            if currLine > self.linesPerCol - 1:
+            if currLine > self.viewWindow.height - 1:
                 currLine = 0
 
         visibleSublines = []
 
         for line in self.fullTextLines:
-            subLine = line[:self.charsPerWidth].ljust (self.charsPerWidth, ' ')
+            subLine = line[:self.viewWindow.width].ljust (self.viewWindow.width, ' ')
             visibleSublines.append (subLine)
 
         self.SetText ('\n'.join (visibleSublines))
@@ -547,14 +553,13 @@ class MySTC (stc.StyledTextCtrl):
         itemX, itemY = self.getItemCoordsByIndex (itemNo)
         startCharOnLine = itemX * self.charsPerCol
         endCharOnLine = startCharOnLine + self.charsPerCol
-        viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
 
-        if startCharOnLine < self.viewWindowLeftChar:
+        if startCharOnLine < self.viewWindow.left:
             # move view window left
-            self.viewWindowLeftChar = startCharOnLine
-        elif endCharOnLine > viewWindowRightChar:
+            self.viewWindow.left = startCharOnLine
+        elif endCharOnLine > self.viewWindow.right ():
             # move view window right
-            self.viewWindowLeftChar = endCharOnLine - self.charsPerWidth
+            self.viewWindow.left = endCharOnLine - self.viewWindow.width
         else:
             return      # The item is already in view
 
@@ -566,9 +571,8 @@ class MySTC (stc.StyledTextCtrl):
         visibleSublines = []
 
         for line in self.fullTextLines:
-            viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
-            rawSubLine = line[self.viewWindowLeftChar : viewWindowRightChar]
-            subLine = rawSubLine.ljust (self.charsPerWidth, ' ')
+            rawSubLine = line[self.viewWindow.left : self.viewWindow.right ()]
+            subLine = rawSubLine.ljust (self.viewWindow.width, ' ')
             visibleSublines.append (subLine)
 
         self.SetText ('\n'.join (visibleSublines))
@@ -629,32 +633,32 @@ class MySTC (stc.StyledTextCtrl):
             self.selectedItem = 0
 
     def moveSelectionLeft (self):
-        self.selectedItem -= self.linesPerCol
+        self.selectedItem -= self.viewWindow.height
 
         if len (self.items) == 0:
             self.selectedItem = 0
             return
 
         if self.selectedItem < 0:
-            self.selectedItem += self.linesPerCol   # undo the decrement and start calculating from scratch
-            numFullLines = len (self.items) % self.linesPerCol
-            bottomRightIndex = self.linesPerCol * (self.numFullColumns + 1) - 1
+            self.selectedItem += self.viewWindow.height   # undo the decrement and start calculating from scratch
+            numFullLines = len (self.items) % self.viewWindow.height
+            bottomRightIndex = self.viewWindow.height * (self.numFullColumns + 1) - 1
 
-            if self.selectedItem % self.linesPerCol > numFullLines:
-                bottomRightIndex = self.linesPerCol * self.numFullColumns - 1
+            if self.selectedItem % self.viewWindow.height > numFullLines:
+                bottomRightIndex = self.viewWindow.height * self.numFullColumns - 1
 
-            self.selectedItem = self.selectedItem - self.linesPerCol + bottomRightIndex
+            self.selectedItem = self.selectedItem - self.viewWindow.height + bottomRightIndex
 
     def moveSelectionRight (self):
-        self.selectedItem += self.linesPerCol
+        self.selectedItem += self.viewWindow.height
 
         if len (self.items) == 0:
             self.selectedItem = 0
             return
 
         if self.selectedItem > len (self.items):
-            self.selectedItem -= self.linesPerCol
-            self.selectedItem = self.selectedItem % self.linesPerCol + 1
+            self.selectedItem -= self.viewWindow.height
+            self.selectedItem = self.selectedItem % self.viewWindow.height + 1
 
     def isItemInView (self, itemNo, **kwd):
         if len (self.items) <= 0:
@@ -663,7 +667,6 @@ class MySTC (stc.StyledTextCtrl):
         itemX, itemY = self.getItemCoordsByIndex (itemNo)
         startCharOnLine = itemX * self.charsPerCol
         endCharOnLine = startCharOnLine + self.charsPerCol
-        viewWindowRightChar = self.viewWindowLeftChar + self.charsPerWidth
 
         secondCriterion = startCharOnLine
 
@@ -674,8 +677,8 @@ class MySTC (stc.StyledTextCtrl):
         except:
             pass
 
-        if startCharOnLine >= self.viewWindowLeftChar \
-           and secondCriterion <= viewWindowRightChar:
+        if startCharOnLine >= self.viewWindow.left \
+           and secondCriterion <= self.viewWindow.right ():
             return True
 
         return False
@@ -685,29 +688,29 @@ class MySTC (stc.StyledTextCtrl):
         itemY = 0
 
         # Avoid div0
-        if self.linesPerCol != 0:
-            itemX, itemY = divmod (itemNo, self.linesPerCol)
+        if self.viewWindow.height != 0:
+            itemX, itemY = divmod (itemNo, self.viewWindow.height)
 
         return itemX, itemY
 
     def itemIndexToViewWindowCoords (self, itemNo):
         import math
         itemX, itemY = self.getItemCoordsByIndex (itemNo)
-        itemViewX = itemX - int (math.ceil (float (self.viewWindowLeftChar) / self.charsPerCol))
+        itemViewX = itemX - int (math.ceil (float (self.viewWindow.left) / self.charsPerCol))
         itemViewY = itemY
         return itemViewX, itemViewY
 
-    # self.viewWindowLeftChar does not necessarily match corresponding item's
+    # self.viewWindow.left does not necessarily match corresponding item's
     # fileName[0]-th char. So when calculating getItemStartChar, we need to
     # compensate by the amount of mismatch. Think about this situation:
     #
     # 01234567890123456789
     # item0  |  item1
     #
-    # self.charsPerCol is 10 in this diagram. The '|' denotes self.viewWindowLeftChar.
+    # self.charsPerCol is 10 in this diagram. The '|' denotes self.viewWindow.left.
     # So this function would return 3 in this case.
     def compensateViewWindowLeftChar (self):
-        leftPos = self.viewWindowLeftChar % self.charsPerCol
+        leftPos = self.viewWindow.left % self.charsPerCol
 
         if leftPos != 0:
             return self.charsPerCol - leftPos
@@ -716,7 +719,7 @@ class MySTC (stc.StyledTextCtrl):
 
     def getItemStartChar (self, itemNo):
         itemViewX, itemViewY = self.itemIndexToViewWindowCoords (itemNo)
-        return itemViewY * self.charsPerWidth + itemViewX * self.charsPerCol \
+        return itemViewY * self.viewWindow.width + itemViewX * self.charsPerCol \
                + itemViewY + self.compensateViewWindowLeftChar ()
 
     def applyDefaultStyles (self):
@@ -736,7 +739,7 @@ class MySTC (stc.StyledTextCtrl):
                 # view window:
                 itemX, itemY = self.getItemCoordsByIndex (index)
                 startCharOnLine = itemX * self.charsPerCol
-                firstFewChars = self.charsPerWidth - (startCharOnLine - self.viewWindowLeftChar)
+                firstFewChars = self.viewWindow.width - (startCharOnLine - self.viewWindow.left)
 
                 # Now choose the smallest from the above:
                 stylingRange = min (itemNameLen, item.visiblePartLength, firstFewChars)
