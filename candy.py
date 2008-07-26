@@ -27,6 +27,7 @@ import os
 import time
 import sys
 import pdb
+import math
 
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
@@ -175,13 +176,31 @@ def constructListForFilling (fullList, specialFilter):
     else:
         return notHidden
 
-def lJustAndCut (text, width):
-    newText = text.ljust (width)
+def intDivCeil (a, b):
+    return int (math.ceil (float (a) / b))
 
-    if len (newText) > width:
-        newText = newText [:width]
+def intDivFloor (a, b):
+    return int (math.floor (float (a) / b))
 
-    return newText
+class SmartJustifier:
+    def __init__ (self, width):
+        self.width = width
+
+    def justify (self, text):
+        if len (text) <= self.width:
+            return text.ljust (self.width)
+
+        root, ext = os.path.splitext (text)
+        newWidth = self.width - 3       # The 3 positions are for dots
+
+        if ext != '':
+            newWidth -= len (ext)
+
+        halfWidthCeil = intDivCeil (newWidth, 2)
+        halfWidthFloor = intDivFloor (newWidth, 2)
+        newText = root[:halfWidthCeil] + '...' + root[-halfWidthFloor:] + ext
+
+        return newText
 
 # The width/height/left/right are in characters
 class ViewWindow:
@@ -208,7 +227,8 @@ class MySTC (stc.StyledTextCtrl):
         self.bindEvents ()
 
         projectDir = os.path.dirname (__file__)
-        self.colorScheme = readColorScheme (os.path.join (projectDir, 'colorscheme-default.conf'))
+        colorConf = os.path.join (projectDir, 'colorscheme-default.conf')
+        self.colorScheme = readColorScheme (colorConf)
         self.setStyles ()
 
         self.viewWindow = None
@@ -334,8 +354,10 @@ class MySTC (stc.StyledTextCtrl):
         self.fullTextLines = ['' for i in range (self.viewWindow.height)]
 
         currLine = 0
+        sj = SmartJustifier (self.charsPerCol - 1)
+
         for item in self.items:
-            visiblePart = lJustAndCut (item.fileName, self.charsPerCol)
+            visiblePart = sj.justify (item.fileName) + ' '
             self.fullTextLines[currLine] += visiblePart
             item.visiblePartLength = len (visiblePart)
             currLine += 1
@@ -694,9 +716,8 @@ class MySTC (stc.StyledTextCtrl):
         return itemX, itemY
 
     def itemIndexToViewWindowCoords (self, itemNo):
-        import math
         itemX, itemY = self.getItemCoordsByIndex (itemNo)
-        itemViewX = itemX - int (math.ceil (float (self.viewWindow.left) / self.charsPerCol))
+        itemViewX = itemX - intDivCeil (self.viewWindow.left, self.charsPerCol)
         itemViewY = itemY
         return itemViewX, itemViewY
 

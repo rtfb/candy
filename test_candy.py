@@ -44,6 +44,35 @@ def fakeFileLister (isFlatDirectoryView, cwd):
 
 candy.listFiles = fakeFileLister
 
+class TestSmartJustifier (unittest.TestCase):
+    def setUp (self):
+        pass
+
+    def tearDown (self):
+        pass
+
+    def testBasicJustification (self):
+        sj = candy.SmartJustifier (5)
+        self.assertEquals ('abc  ', sj.justify ('abc'))
+
+    def testDotsInTheMiddle (self):
+        target = 'long...name.txt'
+        sj = candy.SmartJustifier (len (target))
+        self.assertEquals (target, sj.justify ('longTHIS_SHOULD_GET_REMOVEDname.txt'))
+
+    def testOddNumberOfCharsAndDots (self):
+        target = 'long...ame.txt'
+        sj = candy.SmartJustifier (len (target))
+        self.assertEquals (target, sj.justify ('longTHIS_SHOULD_GET_REMOVEDame.txt'))
+
+    def testEmptyLine (self):
+        sj = candy.SmartJustifier (3)
+        self.assertEquals ('   ', sj.justify (''))
+
+    def testOneChar (self):
+        sj = candy.SmartJustifier (3)
+        self.assertEquals ('a  ', sj.justify ('a'))
+
 class TestCandy (unittest.TestCase):
     def setUp (self):
         self.app = wx.PySimpleApp ()
@@ -59,10 +88,9 @@ class TestCandy (unittest.TestCase):
     def tearDown (self):
         self.frame.Destroy ()
 
-    # only passes if frame is shown... :-/
-    #def testSplitEqual (self):
-        #size = self.frame.GetSize ()
-        #self.assertEqual (size.x / 2, self.frame.splitter.GetSashPosition ())
+    def testSplitEqual (self):
+        size = self.frame.GetSize ()
+        self.assertEqual (size.x / 2, self.frame.splitter.GetSashPosition ())
 
     def testInitialDirectoryOnActivePane (self):
         self.assertEqual (self.frame.activePane.workingDir, os.path.expanduser ('~'))
@@ -115,8 +143,9 @@ class TestCandy (unittest.TestCase):
             self.assertEquals (self.frame.p1.getItemStartChar (index), index * 73)
 
 def suite ():
-    suite = unittest.makeSuite (TestCandy, 'test')
-    return suite
+    candySuite = unittest.makeSuite (TestCandy, 'test')
+    smartJustifierSuite = unittest.makeSuite (TestSmartJustifier, 'test')
+    return unittest.TestSuite ([candySuite, smartJustifierSuite])
 
 if __name__ == '__main__':
     unittest.main (defaultTest = 'suite')
