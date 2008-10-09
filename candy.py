@@ -357,6 +357,14 @@ class MySTC (stc.StyledTextCtrl):
         self.SetFocus ()
         self.afterDirChange ()
 
+    def setDebugWhitespace (self):
+        if generalConfig['debug-whitespace'].lower () == 'true':
+            self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
+            self.SetViewEOL (True)
+        else:
+            self.SetViewWhiteSpace (stc.STC_WS_INVISIBLE)
+            self.SetViewEOL (False)
+
     def updateDisplayByItems (self):
         self.SetReadOnly (False)
         self.numFullColumns = len (self.items) / self.viewWindow.height
@@ -384,8 +392,7 @@ class MySTC (stc.StyledTextCtrl):
         self.SetText ('\n'.join (visibleSublines))
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
-        self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
-        self.SetViewEOL (True)
+        self.setDebugWhitespace ()
         self.setSelectionOnCurrItem ()
         self.applyDefaultStyles ()
 
@@ -610,8 +617,7 @@ class MySTC (stc.StyledTextCtrl):
         self.SetText ('\n'.join (visibleSublines))
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
-        self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
-        self.SetViewEOL (True)
+        self.setDebugWhitespace ()
         self.applyDefaultStyles ()
 
     def setSelectionOnCurrItem (self):
