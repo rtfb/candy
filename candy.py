@@ -90,7 +90,7 @@ def resolveCommandByFileExt (ext):
 
     return cmd
 
-def colorNameToHtmlValue (name):
+def resolveColorNameOrReturn (name):
     # http://html-color-codes.com/
     dict = {
         'black':  '#000000',
@@ -102,9 +102,12 @@ def colorNameToHtmlValue (name):
         'grey':   '#999999',
         }
 
-    return dict[name]
+    if name in dict.keys ():
+        return dict[name]
 
-def readColorScheme (fileName):
+    return name
+
+def readConfig (fileName):
     lines = open (fileName).readlines ()
     dict = {}
 
@@ -113,7 +116,7 @@ def readColorScheme (fileName):
             continue
 
         name, value = l.split (':')
-        dict.setdefault (name.strip (), colorNameToHtmlValue (value.strip ()))
+        dict.setdefault (name.strip (), resolveColorNameOrReturn (value.strip ()))
 
     return dict
 
@@ -228,7 +231,7 @@ class MySTC (stc.StyledTextCtrl):
 
         projectDir = os.path.dirname (__file__)
         colorConf = os.path.join (projectDir, 'colorscheme-default.conf')
-        self.colorScheme = readColorScheme (colorConf)
+        self.colorScheme = readConfig (colorConf)
         self.setStyles ()
 
         self.viewWindow = None
