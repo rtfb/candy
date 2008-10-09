@@ -34,6 +34,40 @@ STYLE_INC_SEARCH = 2
 
 ID_SPLITTER = 100
 
+def resolveColorNameOrReturn (name):
+    # http://html-color-codes.com/
+    dict = {
+        'black':  '#000000',
+        'white':  '#ffffff',
+        'yellow': '#ffff00',
+        'blue':   '#0000ff',
+        'red':    '#ff0000',
+        'lgrey':  '#cccccc',
+        'grey':   '#999999',
+        }
+
+    if name in dict.keys ():
+        return dict[name]
+
+    return name
+
+def readConfig (fileName):
+    lines = open (fileName).readlines ()
+    dict = {}
+
+    for l in lines:
+        if l.strip () == '':
+            continue
+
+        name, value = l.split (':')
+        dict.setdefault (name.strip (), resolveColorNameOrReturn (value.strip ()))
+
+    return dict
+
+projectDir = os.path.dirname (__file__)
+generalConfPath = os.path.join (projectDir, 'general.conf')
+generalConfig = readConfig (generalConfPath)
+
 class DirectoryViewFilter:
     def __init__ (self, searchStr):
         self.searchStr = searchStr.lower ()
@@ -89,36 +123,6 @@ def resolveCommandByFileExt (ext):
         pass
 
     return cmd
-
-def resolveColorNameOrReturn (name):
-    # http://html-color-codes.com/
-    dict = {
-        'black':  '#000000',
-        'white':  '#ffffff',
-        'yellow': '#ffff00',
-        'blue':   '#0000ff',
-        'red':    '#ff0000',
-        'lgrey':  '#cccccc',
-        'grey':   '#999999',
-        }
-
-    if name in dict.keys ():
-        return dict[name]
-
-    return name
-
-def readConfig (fileName):
-    lines = open (fileName).readlines ()
-    dict = {}
-
-    for l in lines:
-        if l.strip () == '':
-            continue
-
-        name, value = l.split (':')
-        dict.setdefault (name.strip (), resolveColorNameOrReturn (value.strip ()))
-
-    return dict
 
 # Obviously excludes subdirectories
 def recursiveListDir (cwd):
@@ -304,6 +308,9 @@ class MySTC (stc.StyledTextCtrl):
         self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
 
     def setStyles (self):
+        faceCourier = generalConfig['font-face'] # 'Courier'
+        pb = int (generalConfig['font-size']) # 12
+
         # Set the styles according to color scheme
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
                                                   % (pb, faceCourier,
@@ -768,10 +775,6 @@ class MySTC (stc.StyledTextCtrl):
                 # Now choose the smallest from the above:
                 stylingRange = min (itemNameLen, item.visiblePartLength, firstFewChars)
                 self.SetStyling (stylingRange, item.style)
-
-# TODO: read these from general.conf
-faceCourier = 'Courier'
-pb = 12
 
 class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
