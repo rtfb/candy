@@ -830,8 +830,9 @@ class Candy (wx.Frame):
         self.sizer.Add (self.splitter, 1, wx.EXPAND)
         self.SetSizer (self.sizer)
 
-        size = wx.DisplaySize ()
-        self.SetSize (size)
+        displaySize = wx.DisplaySize ()
+        appSize = (displaySize[0] / 2, displaySize[1] / 2)
+        self.SetSize (appSize)
 
         self.statusBar = self.CreateStatusBar ()
         self.statusBar.SetStatusText (os.getcwd ())
