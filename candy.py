@@ -28,6 +28,13 @@ import time
 import sys
 import pdb
 import math
+import platform
+
+if platform.system () == 'Windows':
+    try:
+        import win32api
+    except ImportError:
+        print 'You seem to be running Windows and don\'t have win32api. Tisk tisk tisk...'
 
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
@@ -162,6 +169,25 @@ def collectListInfo (isFlatDirectoryView, cwd):
 
     return items
 
+def collectDriveLetters ():
+    items = []
+    driveLetters = win32api.GetLogicalDriveStrings ().split ('\x00')[:-1]
+
+    for d in driveLetters:
+        item = ListItem (d)
+        item.style = STYLE_FOLDER
+        item.isDir = True
+
+        items.append (item)
+
+    return items
+
+def isRootOfDrive (path):
+    letters = [chr (n) for n in range (ord ('a'), ord ('z') + 1)]
+    return len (path) == 3 \
+           and path.lower ()[0] in letters \
+           and path[1:] == ':\\'
+
 def constructListForFilling (fullList, specialFilter):
     dirList = filter (lambda (f): f.isDir, fullList)
     dirList.sort ()
@@ -291,6 +317,7 @@ class MySTC (stc.StyledTextCtrl):
             wx.WXK_RETURN: self.onEnter,
             wx.WXK_SPACE: self.onEnter,
             ord ('C'): self.clearScreen,
+            ord ('D'): self.listDriveLetters,
             ord ('N'): self.onNextMatch,
             ord ('/'): self.onStartIncSearch,
             wx.WXK_F4: self.startEditor,
@@ -402,6 +429,15 @@ class MySTC (stc.StyledTextCtrl):
         self.items = constructListForFilling (allItems, self.directoryViewFilter)
         self.updateDisplayByItems ()
 
+    def listDriveLetters (self):
+        if platform.system () != 'Windows':
+            return
+
+        self.selectedItem = 0
+        self.items = collectDriveLetters ()
+        self.updateDisplayByItems ()
+        self.afterDirChange ()
+
     def flattenDirectory (self):
         self.flatDirectoryView = True
         self.fillList (self.workingDir)
@@ -417,6 +453,11 @@ class MySTC (stc.StyledTextCtrl):
         self.getFrame ().statusBar.SetStatusText (statusText)
 
     def updir (self):
+        if platform.system () == 'Windows':
+            if isRootOfDrive (self.workingDir):
+                self.listDriveLetters ()
+                return
+
         self.directoryViewFilter = None
         # if we're in self.flatDirectoryView, all we want is to refresh the view of
         # self.workingDir without flattening
@@ -800,8 +841,9 @@ class Candy (wx.Frame):
         self.sizer.Add (self.splitter, 1, wx.EXPAND)
         self.SetSizer (self.sizer)
 
-        size = wx.DisplaySize ()
-        self.SetSize (size)
+        displaySize = wx.DisplaySize ()
+        appSize = (displaySize[0] / 2, displaySize[1] / 2)
+        self.SetSize (appSize)
 
         self.statusBar = self.CreateStatusBar ()
         self.statusBar.SetStatusText (os.getcwd ())
