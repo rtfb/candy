@@ -257,6 +257,9 @@ class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
 
+        # No margins over here!
+        self.SetMarginWidth (1, 0)
+
         self.bindEvents ()
 
         projectDir = os.path.dirname (__file__)
@@ -867,6 +870,8 @@ class Candy (wx.Frame):
         if splitMode == wx.SPLIT_HORIZONTAL:
             sashDimension = size.y
 
+        # compensate for the five pixels of sash itself (dammit!)
+        sashDimension -= 5
         self.splitter.SetSashPosition (sashDimension / 2)
 
     def OnSize (self, event):
