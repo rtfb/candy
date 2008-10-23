@@ -90,7 +90,8 @@ class TestCandy (unittest.TestCase):
 
     def testSplitEqual (self):
         size = self.frame.GetSize ()
-        self.assertEqual (size.x / 2, self.frame.splitter.GetSashPosition ())
+        # -5 is to compensate for the sash width of 5 pixels. Same in the code.
+        self.assertEqual ((size.x - 5) / 2, self.frame.splitter.GetSashPosition ())
 
     def testInitialDirectoryOnActivePane (self):
         self.assertEqual (self.frame.activePane.workingDir, os.path.expanduser ('~'))
@@ -138,9 +139,11 @@ class TestCandy (unittest.TestCase):
         self.assertEquals (self.frame.p1.getItemStartChar (0), 0)
 
         for index in range (len (self.frame.p1.items)):
-            # 73 is a magic number here. Based on last evidence that works.
-            # Only works out for the 0th column, but that's mostly all what I need ATM
-            self.assertEquals (self.frame.p1.getItemStartChar (index), index * 73)
+            # 37 is a magic ViewWindow.width number here. Based on last
+            # evidence that works. Only works out for the 0th column, so
+            # this test will be failing for now, until I get rid of this
+            # magic
+            self.assertEquals (self.frame.p1.getItemStartChar (index), index * 37)
 
 def suite ():
     candySuite = unittest.makeSuite (TestCandy, 'test')

@@ -253,6 +253,10 @@ class ViewWindow:
     def right (self):
         return self.left + self.width
 
+    # only handles horizontal dimension
+    def charInView (self, charPos):
+        return charPos >= self.left and charPos <= self.right ()
+
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
@@ -750,17 +754,21 @@ class MySTC (stc.StyledTextCtrl):
         startCharOnLine = itemX * self.charsPerCol
         endCharOnLine = startCharOnLine + self.charsPerCol
 
-        secondCriterion = startCharOnLine
+        fully = False
 
         try:
-            fullyInView = kwd['fully']
-            if fullyInView:
-                secondCriterion = endCharOnLine
+            fully = kwd['fully']
         except:
             pass
 
-        if startCharOnLine >= self.viewWindow.left \
-           and secondCriterion <= self.viewWindow.right ():
+        if self.viewWindow.charInView (startCharOnLine):
+            if fully:
+                return self.viewWindow.charInView (endCharOnLine)
+            return True
+
+        if self.viewWindow.charInView (endCharOnLine):
+            if fully:
+                return self.viewWindow.charInView (startCharOnLine)
             return True
 
         return False
