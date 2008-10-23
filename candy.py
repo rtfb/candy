@@ -869,6 +869,15 @@ class Candy (wx.Frame):
     def OnExit (self, e):
         self.Close (True)
 
+    def updatePanesOnSize (self):
+        numColumns = 3
+
+        if self.splitter.GetSplitMode () == wx.SPLIT_HORIZONTAL:
+            numColumns = 5
+
+        self.p1.initializeViewSettings (numColumns)
+        self.p2.initializeViewSettings (numColumns)
+
     def splitEqual (self):
         size = self.GetSize ()
 
@@ -881,6 +890,7 @@ class Candy (wx.Frame):
         # compensate for the five pixels of sash itself (dammit!)
         sashDimension -= 5
         self.splitter.SetSashPosition (sashDimension / 2)
+        self.updatePanesOnSize ()
 
     def OnSize (self, event):
         self.splitEqual ()
