@@ -847,6 +847,7 @@ class Candy (wx.Frame):
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
         self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
+        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged, id = ID_SPLITTER)
 
         self.sizer = wx.BoxSizer (wx.VERTICAL)
         self.sizer.Add (self.splitter, 1, wx.EXPAND)
@@ -898,6 +899,11 @@ class Candy (wx.Frame):
 
     def OnDoubleClick (self, event):
         self.splitEqual ()
+
+    def OnSashPosChanged (self, event):
+        self.splitter.UpdateSize ()
+        self.updatePanesOnSize ()
+        event.Skip ()
 
     def switchPane (self):
         if self.activePane == self.p1:
