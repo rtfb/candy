@@ -375,7 +375,7 @@ class MySTC (stc.StyledTextCtrl):
         # Here viewWindow.left will be set to 0. Even if it's not,
         # it will be brought back to life when doing moveItemIntoView:
         self.viewWindow = ViewWindow (width / charWidth,
-                                      height / lineHeight - 5)
+                                      height / lineHeight)
         self.viewWindow.numColumns = numColumns
         self.charsPerCol = width / charWidth / self.viewWindow.numColumns
         self.clearScreen ()
