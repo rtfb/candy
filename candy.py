@@ -218,20 +218,34 @@ def intDivFloor (a, b):
 class SmartJustifier:
     def __init__ (self, width):
         self.width = width
+        self.numDots = 3
 
     def justify (self, text):
         if len (text) <= self.width:
             return text.ljust (self.width)
 
         root, ext = os.path.splitext (text)
-        newWidth = self.width - 3       # The 3 positions are for dots
+        newWidth = self.width - self.numDots
 
         if ext != '':
             newWidth -= len (ext)
 
-        halfWidthCeil = intDivCeil (newWidth, 2)
-        halfWidthFloor = intDivFloor (newWidth, 2)
-        newText = root[:halfWidthCeil] + '...' + root[-halfWidthFloor:] + ext
+        if newWidth <= 5:       # 5 = len ('a...b')
+            halfWidthCeil = 1
+            halfWidthFloor = 1
+            extTop = self.width - halfWidthCeil - halfWidthFloor - self.numDots
+        else:
+            halfWidthCeil = intDivCeil (newWidth, 2)
+            halfWidthFloor = intDivFloor (newWidth, 2)
+            extTop = len (ext)
+
+        if extTop > len (ext):
+            halfWidthCeil += extTop - len (ext)
+
+        dots = '.' * self.numDots
+        leftPart = root[:halfWidthCeil]
+        rightPart = root[-halfWidthFloor:]
+        newText = leftPart + dots + rightPart + ext[:extTop]
 
         return newText
 

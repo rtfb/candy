@@ -73,6 +73,18 @@ class TestSmartJustifier (unittest.TestCase):
         sj = candy.SmartJustifier (3)
         self.assertEquals ('a  ', sj.justify ('a'))
 
+    def testWidth (self):
+        targetWidth = 10
+        sj = candy.SmartJustifier (targetWidth)
+        self.assertEquals (targetWidth, len (sj.justify ('0123456789.gnumeric')))
+        self.assertEquals (targetWidth, len (sj.justify ('Jim_Hefferon_-_Linear_Algebra.pdf')))
+        self.assertEquals (targetWidth, len (sj.justify ('a')))
+
+    def testGnumeric (self):
+        target = '0...9.gnumeri'
+        sj = candy.SmartJustifier (len (target))
+        self.assertEquals (target, sj.justify ('0123456789.gnumeric'))
+
 class TestCandy (unittest.TestCase):
     def setUp (self):
         self.app = wx.PySimpleApp ()
@@ -139,11 +151,11 @@ class TestCandy (unittest.TestCase):
         self.assertEquals (self.frame.p1.getItemStartChar (0), 0)
 
         for index in range (len (self.frame.p1.items)):
-            # 37 is a magic ViewWindow.width number here. Based on last
+            # 36 is a magic ViewWindow.width number here. Based on last
             # evidence that works. Only works out for the 0th column, so
             # this test will be failing for now, until I get rid of this
             # magic
-            self.assertEquals (self.frame.p1.getItemStartChar (index), index * 37)
+            self.assertEquals (self.frame.p1.getItemStartChar (index), index * 36)
 
 def suite ():
     candySuite = unittest.makeSuite (TestCandy, 'test')
