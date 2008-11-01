@@ -158,9 +158,11 @@ class TestCandy (unittest.TestCase):
             self.assertEquals (self.frame.p1.getItemStartChar (index), index * 36)
 
 def suite ():
+    import test_keyboard
     candySuite = unittest.makeSuite (TestCandy, 'test')
     smartJustifierSuite = unittest.makeSuite (TestSmartJustifier, 'test')
-    return unittest.TestSuite ([candySuite, smartJustifierSuite])
+    keyboardSuite = unittest.makeSuite (test_keyboard.TestKeyboardEventHandler)
+    return unittest.TestSuite ([smartJustifierSuite, keyboardSuite, candySuite])
 
 if __name__ == '__main__':
     unittest.main (defaultTest = 'suite')
