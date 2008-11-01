@@ -261,8 +261,9 @@ class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
 
-        # No margins over here!
+        # No margins and scroll bars over here!
         self.SetMarginWidth (1, 0)
+        self.SetUseHorizontalScrollBar (0)
 
         self.bindEvents ()
 
