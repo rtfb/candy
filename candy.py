@@ -29,6 +29,7 @@ import sys
 import pdb
 import math
 import platform
+import keyboard
 
 if platform.system () == 'Windows':
     try:
@@ -327,30 +328,11 @@ class MySTC (stc.StyledTextCtrl):
         # long lines correctly.
         self.fullTextLines = []
 
-        self.navigationModeMap = {
-            ord ('J'): self.moveSelectionDown,
-            ord ('K'): self.moveSelectionUp,
-            ord ('H'): self.moveSelectionLeft,
-            ord ('L'): self.moveSelectionRight,
-            ord ('Q'): self.quiter,
-            ord ('F'): self.flattenDirectory,
-            ord ('U'): self.updir,
-            ord ('`'): self.goHome,
-            wx.WXK_RETURN: self.onEnter,
-            wx.WXK_SPACE: self.onEnter,
-            ord ('C'): self.clearScreen,
-            ord ('D'): self.listDriveLetters,
-            ord ('N'): self.onNextMatch,
-            ord ('/'): self.onStartIncSearch,
-            wx.WXK_F4: self.startEditor,
-            ord ('E'): self.startEditor,
-            wx.WXK_TAB: self.switchPane,
-            ord ('X'): self.switchSplittingMode,
-            ord ('Y'): self.switchSplittingMode,
-            wx.WXK_F3: self.startViewer,
-            ord ('V'): self.startViewer}
+        self.keys = keyboard.KeyboardConfig ()
+        self.keys.load ('keys.conf', self)
 
     def bindEvents (self):
+        self.Bind (wx.EVT_CHAR, self.OnChar)
         self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
         self.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
@@ -574,14 +556,23 @@ class MySTC (stc.StyledTextCtrl):
     def switchSplittingMode (self):
         self.getFrame ().switchSplittingMode ()
 
-    def OnKeyDown (self, evt):
-        keyCode = evt.GetKeyCode ()
-        keyMod = evt.GetModifiers ()
-
+    def handleKeyEvent (self, evt, keyCode, keyMod):
         if self.searchMode:
             self.searchModeKeyDown (keyCode, keyMod)
         else:
-            self.navigationModeKeyDown (keyCode, keyMod)
+            skipper = lambda *a, **k: evt.Skip ()
+            func = self.keys.getFunc (skipper, keyCode, keyMod)
+            func ()
+            self.setSelectionOnCurrItem ()
+
+    def OnKeyDown (self, evt):
+        keyCode = evt.GetKeyCode ()
+        keyMod = evt.GetModifiers ()
+        self.handleKeyEvent (evt, keyCode, keyMod)
+
+    def OnChar (self, evt):
+        keyCode = evt.GetKeyCode ()
+        self.handleKeyEvent (evt, keyCode, None)
 
     def searchModeKeyDown (self, keyCode, keyMod):
         if keyCode == wx.WXK_RETURN:
@@ -609,18 +600,6 @@ class MySTC (stc.StyledTextCtrl):
             if keyCode < 256:
                 self.searchStr += chr (keyCode)
                 self.incrementalSearch (self.searchStr)
-
-    def navigationModeKeyDown (self, keyCode, keyMod):
-        func = None
-
-        try:
-            func = self.navigationModeMap[keyCode]
-        except KeyError:
-            pass
-
-        if func:
-            func ()
-            self.setSelectionOnCurrItem ()
 
     def OnSetFocus (self, evt):
         self.SetSelBackground (1, self.colorScheme['selection-back'])

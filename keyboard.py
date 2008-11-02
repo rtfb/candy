@@ -31,8 +31,9 @@ class EventParseError (exceptions.Exception):
         return 'Failed to parse event \'%s\'' % (self.eventStr)
 
 class KeyboardEvent:
-    def __init__ (self):
+    def __init__ (self, command = ''):
         self.reset ()
+        self.command = command
 
     def reset (self):
         self.char = ''
@@ -120,4 +121,45 @@ class KeyboardEvent:
             self.keyCode = ord (str)
             self.modShift = True
             return
+
+class KeyboardConfig:
+    def __init__ (self):
+        self.events = {}
+
+    def getFunc (self, notFound, keyCode, keyMod):
+        for e in self.events:
+            if keyCode == e.keyCode:
+                if not keyMod:
+                    return self.events[e]
+
+                if keyMod == e.modifiersBitMask ():
+                    return self.events[e]
+
+        return notFound
+
+    def _parseBindings (self, command, bindings):
+        bs = bindings.split (',')
+        events = []
+
+        for b in bs:
+            event = KeyboardEvent (command)
+            event.parse (b.strip ())
+            events.append (event)
+
+        return events
+
+    def load (self, fileName, panel):
+        lines = open (fileName).readlines ()
+
+        for line in lines:
+            if line.strip () == '':
+                continue
+
+            command, bindings = line.strip ().split (':')
+            for e in self._parseBindings (command, bindings):
+                try:
+                    func = eval ('panel.' + e.command)
+                    self.events.setdefault (e, func)
+                except AttributeError:
+                    print 'Key binding error: no such command "%s"' % (e.command)
 
