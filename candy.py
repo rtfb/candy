@@ -41,6 +41,7 @@ STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
 
 ID_SPLITTER = 100
+ID_STATUS_LINE = 101
 
 def resolveColorNameOrReturn (name):
     # http://html-color-codes.com/
@@ -75,6 +76,8 @@ def readConfig (fileName):
 projectDir = os.path.dirname (__file__)
 generalConfPath = os.path.join (projectDir, 'general.conf')
 generalConfig = readConfig (generalConfPath)
+colorConf = os.path.join (projectDir, 'colorscheme-default.conf')
+colorScheme = readConfig (colorConf)
 
 class DirectoryViewFilter:
     def __init__ (self, searchStr):
@@ -272,6 +275,22 @@ class ViewWindow:
     def charInView (self, charPos):
         return charPos >= self.left and charPos <= self.right ()
 
+class StatusLine (stc.StyledTextCtrl):
+    def __init__ (self, parent, id, width):
+        stc.StyledTextCtrl.__init__ (self, parent, id, size = (width, 20))
+        self.SetMarginWidth (1, 0)
+        self.SetUseHorizontalScrollBar (0)
+
+        faceCourier = generalConfig['font-face'] # 'Courier'
+        pb = int (generalConfig['font-size']) # 12
+
+        # Set the styles according to color scheme
+        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
+                                                  % (pb, faceCourier,
+                                                     colorScheme['background'],
+                                                     colorScheme['default-text']))
+        self.StyleClearAll ()
+
 class MySTC (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
@@ -281,10 +300,6 @@ class MySTC (stc.StyledTextCtrl):
         self.SetUseHorizontalScrollBar (0)
 
         self.bindEvents ()
-
-        projectDir = os.path.dirname (__file__)
-        colorConf = os.path.join (projectDir, 'colorscheme-default.conf')
-        self.colorScheme = readConfig (colorConf)
         self.setStyles ()
 
         self.viewWindow = None
@@ -345,18 +360,18 @@ class MySTC (stc.StyledTextCtrl):
         # Set the styles according to color scheme
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
                                                   % (pb, faceCourier,
-                                                     self.colorScheme['background'],
-                                                     self.colorScheme['default-text']))
+                                                     colorScheme['background'],
+                                                     colorScheme['default-text']))
         self.StyleClearAll ()
         self.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:%s"
                                          % (pb, faceCourier,
-                                            self.colorScheme['folder']))
+                                            colorScheme['folder']))
         self.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:%s,back:%s"
                                              % (pb, faceCourier,
-                                                self.colorScheme['search-highlight-fore'],
-                                                self.colorScheme['search-highlight-back']))
-        self.SetSelBackground (1, self.colorScheme['selection-inactive'])
-        self.SetSelForeground (1, self.colorScheme['selection-fore'])
+                                                colorScheme['search-highlight-fore'],
+                                                colorScheme['search-highlight-back']))
+        self.SetSelBackground (1, colorScheme['selection-inactive'])
+        self.SetSelForeground (1, colorScheme['selection-fore'])
 
     # Used in tests
     def clearList (self):
@@ -602,13 +617,13 @@ class MySTC (stc.StyledTextCtrl):
                 self.incrementalSearch (self.searchStr)
 
     def OnSetFocus (self, evt):
-        self.SetSelBackground (1, self.colorScheme['selection-back'])
-        self.SetSelForeground (1, self.colorScheme['selection-fore'])
+        self.SetSelBackground (1, colorScheme['selection-back'])
+        self.SetSelForeground (1, colorScheme['selection-fore'])
         os.chdir (self.workingDir)
 
     def OnLoseFocus (self, evt):
-        self.SetSelBackground (1, self.colorScheme['selection-inactive'])
-        self.SetSelForeground (1, self.colorScheme['selection-fore'])
+        self.SetSelBackground (1, colorScheme['selection-inactive'])
+        self.SetSelForeground (1, colorScheme['selection-fore'])
 
     def nextSearchMatch (self, searchStr, initPos):
         # Construct a range of indices to produce wrapped search from current pos
@@ -843,13 +858,16 @@ class Candy (wx.Frame):
         self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
         self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged, id = ID_SPLITTER)
 
-        self.sizer = wx.BoxSizer (wx.VERTICAL)
-        self.sizer.Add (self.splitter, 1, wx.EXPAND)
-        self.SetSizer (self.sizer)
-
         displaySize = wx.DisplaySize ()
         appSize = (displaySize[0] / 2, displaySize[1] / 2)
         self.SetSize (appSize)
+
+        self.sizer = wx.BoxSizer (wx.VERTICAL)
+        self.sizer.Add (self.splitter, 1, wx.EXPAND)
+        self.statusLine = StatusLine (self, ID_STATUS_LINE, appSize[0])
+        self.sizer.AddSpacer (2)
+        self.sizer.Add (self.statusLine, 0, wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND)
+        self.SetSizer (self.sizer)
 
         self.statusBar = self.CreateStatusBar ()
         self.statusBar.SetStatusText (os.getcwd ())
