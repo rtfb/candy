@@ -21,6 +21,7 @@
 # Keyboard Binding Handler
 
 import wx
+import os
 import exceptions
 
 class EventParseError (exceptions.Exception):
@@ -149,7 +150,9 @@ class KeyboardConfig:
         return events
 
     def load (self, fileName, panel):
-        lines = open (fileName).readlines ()
+        projectDir = os.path.dirname (__file__)
+        keysConfPath = os.path.join (projectDir, fileName)
+        lines = open (keysConfPath).readlines ()
 
         for line in lines:
             if line.strip () == '':
