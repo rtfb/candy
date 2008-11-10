@@ -86,8 +86,48 @@ class DirectoryViewFilter:
     def __call__ (self, item):
         return self.searchStr in item.fileName.lower ()
 
+class RawItem:
+    """
+    An item to hold the representation close to the one outside of the program.
+    E.g. if the external item is a filename, this one will hold things like
+    filename, path, attributes, etc. Number of these objects is the number of
+    the real objects external to our app, e.g. len (os.listdir ()).
+    """
+    pass
+
+class VisualItem:
+    """
+    An item to hold visual representation and a reference to RawItem. E.g. if
+    the external item is a filename, this one will hold things like ref to
+    RawItem, x/y coords in the view, justified name, startChar and the like.
+    Number of these objects is the number RawItems that actually fit on screen
+    (at least partially).
+    """
+    def __init__ (self):
+        # Points to the RawItem, which is a representative of the external entity
+        self.rawItem = None
+
+        # X/Y coordinates in column/row space
+        self.coords = (0, 0)
+
+        # Character on the row-representing string, which is the str[0]-th
+        # char of this item's visual representation
+        self.startCharOnLine = 0
+
+        # The first byte in the string, representing the line that contains
+        # this item. This is needed because of silly implementation detail
+        # of STC: it needs to start (and apply) styling according to bytes,
+        # not the characters. So for Unicode strings, I have to keep track
+        # of bytes, not only characters.
+        self.startByteOnLine = 0
+
+        # Length of the item's visual repr, expressed in bytes (same reasons
+        # as with startByteOnLine).
+        self.lenInBytes = 0
+
 class ListItem:
-    """An item to be stored in the list: basically, a filename with additional info
+    """
+    An item to be stored in the list: basically, a filename with additional info
     """
     def __init__ (self, fileName):
         self.fileName = fileName
@@ -411,10 +451,18 @@ class MySTC (stc.StyledTextCtrl):
             self.SetViewWhiteSpace (stc.STC_WS_INVISIBLE)
             self.SetViewEOL (False)
 
-    def updateDisplayByItems (self):
-        self.SetReadOnly (False)
-        self.numFullColumns = len (self.items) / self.viewWindow.height
+    def extractVisibleSubLines (self):
+        visibleSublines = []
 
+        for line in self.fullTextLines:
+            rawSubLine = line[self.viewWindow.left : self.viewWindow.right ()]
+            subLine = rawSubLine.ljust (self.viewWindow.width)
+            visibleSublines.append (subLine)
+
+        return u'\n'.join (visibleSublines).encode ('utf-8')
+
+    def constructFullTextLines (self):
+        self.numFullColumns = len (self.items) / self.viewWindow.height
         self.fullTextLines = ['' for i in range (self.viewWindow.height)]
 
         currLine = 0
@@ -429,18 +477,22 @@ class MySTC (stc.StyledTextCtrl):
             if currLine > self.viewWindow.height - 1:
                 currLine = 0
 
-        visibleSublines = []
+    def updateDisplayByItems (self, constructFullLines = True,
+                              setSelection = True):
+        self.clearScreen ()
+        self.SetReadOnly (False)
 
-        for line in self.fullTextLines:
-            subLine = line[:self.viewWindow.width].ljust (self.viewWindow.width)
-            visibleSublines.append (subLine)
-            print repr (subLine)
+        if constructFullLines:
+            self.constructFullTextLines ()
 
-        self.SetTextUTF8 (u'\n'.join (visibleSublines).encode ('utf-8'))
+        self.SetTextUTF8 (self.extractVisibleSubLines ())
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
         self.setDebugWhitespace ()
-        self.setSelectionOnCurrItem ()
+
+        if setSelection:
+            self.setSelectionOnCurrItem ()
+
         self.applyDefaultStyles ()
 
     def fillList (self, cwd):
@@ -660,23 +712,7 @@ class MySTC (stc.StyledTextCtrl):
         else:
             return      # The item is already in view
 
-        self.updateDisplay ()
-
-    def updateDisplay (self):
-        self.clearScreen ()
-        self.SetReadOnly (False)
-        visibleSublines = []
-
-        for line in self.fullTextLines:
-            rawSubLine = line[self.viewWindow.left : self.viewWindow.right ()]
-            subLine = rawSubLine.ljust (self.viewWindow.width)
-            visibleSublines.append (subLine)
-
-        self.SetTextUTF8 (u'\n'.join (visibleSublines).encode ('utf-8'))
-        self.EmptyUndoBuffer ()
-        self.SetReadOnly (True)
-        self.setDebugWhitespace ()
-        self.applyDefaultStyles ()
+        self.updateDisplayByItems (False, False)
 
     def setSelectionOnCurrItem (self):
         if not self.isItemInView (self.selectedItem, fully = True):
