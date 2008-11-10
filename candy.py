@@ -160,7 +160,7 @@ def collectListInfo (isFlatDirectoryView, cwd):
     files = listFiles (isFlatDirectoryView, cwd)
 
     for f in files:
-        item = ListItem (f)
+        item = ListItem (unicode (f, 'utf-8'))
 
         if os.path.isdir (f):
             item.style = STYLE_FOLDER
@@ -201,7 +201,7 @@ def constructListForFilling (fullList, specialFilter):
 
     notHidden = filter (lambda (f): not f.isHidden, dirList + fileList)
 
-    dotDot = ListItem ('..')
+    dotDot = ListItem (u'..')
     dotDot.style = STYLE_FOLDER
     dotDot.isDir = True
     dotDot.isHidden = False
@@ -246,7 +246,7 @@ class SmartJustifier:
         if extTop > len (ext):
             halfWidthCeil += extTop - len (ext)
 
-        dots = '.' * self.numDots
+        dots = u'.' * self.numDots
         leftPart = root[:halfWidthCeil]
         rightPart = root[-halfWidthFloor:]
         newText = leftPart + dots + rightPart + ext[:extTop]
@@ -421,9 +421,9 @@ class MySTC (stc.StyledTextCtrl):
         sj = SmartJustifier (self.charsPerCol - 1)
 
         for item in self.items:
-            visiblePart = sj.justify (item.fileName) + ' '
+            visiblePart = sj.justify (item.fileName) + u' '
             self.fullTextLines[currLine] += visiblePart
-            item.visiblePartLength = len (visiblePart)
+            item.visiblePartLength = len (visiblePart) - 1  # -1 to compensate for +u' '
             currLine += 1
 
             if currLine > self.viewWindow.height - 1:
@@ -432,10 +432,11 @@ class MySTC (stc.StyledTextCtrl):
         visibleSublines = []
 
         for line in self.fullTextLines:
-            subLine = line[:self.viewWindow.width].ljust (self.viewWindow.width, ' ')
+            subLine = line[:self.viewWindow.width].ljust (self.viewWindow.width)
             visibleSublines.append (subLine)
+            print repr (subLine)
 
-        self.SetText ('\n'.join (visibleSublines))
+        self.SetTextUTF8 (u'\n'.join (visibleSublines).encode ('utf-8'))
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
         self.setDebugWhitespace ()
@@ -668,10 +669,10 @@ class MySTC (stc.StyledTextCtrl):
 
         for line in self.fullTextLines:
             rawSubLine = line[self.viewWindow.left : self.viewWindow.right ()]
-            subLine = rawSubLine.ljust (self.viewWindow.width, ' ')
+            subLine = rawSubLine.ljust (self.viewWindow.width)
             visibleSublines.append (subLine)
 
-        self.SetText ('\n'.join (visibleSublines))
+        self.SetTextUTF8 (u'\n'.join (visibleSublines).encode ('utf-8'))
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
         self.setDebugWhitespace ()
@@ -684,7 +685,16 @@ class MySTC (stc.StyledTextCtrl):
         selectionStart = self.getItemStartChar (self.selectedItem)
         self.SetCurrentPos (selectionStart)
         self.EnsureCaretVisible ()
-        self.SetSelection (selectionStart , selectionStart + self.charsPerCol)
+
+        if self.selectedItem < len (self.items):
+            item = self.items[self.selectedItem]
+            sj = SmartJustifier (self.charsPerCol - 1)
+            visiblePart = sj.justify (item.fileName) + u' '
+            numCharsToSelect = len (visiblePart.encode ('utf-8'))
+        else:
+            numCharsToSelect = self.charsPerCol
+
+        self.SetSelection (selectionStart, selectionStart + numCharsToSelect)
 
     def incrementalSearch (self, searchStr):
         index = self.selectedItem       # start searching from curr selection
@@ -841,7 +851,10 @@ class MySTC (stc.StyledTextCtrl):
 
                 # Now choose the smallest from the above:
                 stylingRange = min (itemNameLen, item.visiblePartLength, firstFewChars)
-                self.SetStyling (stylingRange, item.style)
+
+                stylingPart = item.fileName[:stylingRange]
+                utf = stylingPart.encode ('utf-8')
+                self.SetStyling (len (utf), item.style)
 
 class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
