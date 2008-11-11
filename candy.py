@@ -115,17 +115,10 @@ class VisualItem:
         # as with startByteOnLine).
         self.visLenInBytes = 0
 
-    # Signifies whether an item represented by this visual repr is
-    # currently fully/partially visible.
-    def fullyOnScreen (self, viewWindow):
-        endCharOnLine = self.startCharOnLine + self.visLenInChars
-        return viewWindow.charInView (self.startCharOnLine) and \
-               viewWindow.charInView (endCharOnLine )
-
-    def partiallyOnScreen (self, viewWindow):
-        endCharOnLine = self.startCharOnLine + self.visLenInChars
-        return viewWindow.charInView (self.startCharOnLine) or \
-               viewWindow.charInView (endCharOnLine)
+        # Since objects of this class only represent things that are
+        # on-screen, there's no need for special check. We only need to
+        # record whether the whole item was fit to screen
+        self.fullyInView = False
 
     def setStartByte (self, fullTextLine):
         charsBeforeThisItem = fullTextLine[:self.startCharOnLine]
@@ -474,17 +467,30 @@ class MySTC (stc.StyledTextCtrl):
     def createVisualItem (self, rawItem):
         row = rawItem.coords[1]
         vi = VisualItem ()
+
+        # Fully in view:
         vi.startCharOnLine = rawItem.startCharOnLine - self.viewWindow.left
         vi.visLenInChars = len (rawItem.visiblePart)
         vi.setStartByte (self.fullTextLines[row])
         vi.visLenInBytes = len (rawItem.visiblePart.encode ('utf-8'))
+        vi.fullyInView = True
 
+        # Partially, to the left of ViewWindow:
         if vi.startCharOnLine < 0:
             vi.visLenInChars = vi.startCharOnLine + len (rawItem.visiblePart)
             vi.startCharOnLine = 0
             vi.setStartByte (self.fullTextLines[row])
             tail = rawItem.visiblePart[-vi.visLenInChars:]
             vi.visLenInBytes = len (tail.encode ('utf-8'))
+            vi.fullyInView = False
+
+        # Partially, to the right of ViewWindow:
+        if vi.startCharOnLine + vi.visLenInChars >= self.viewWindow.width:
+            vi.visLenInChars = self.viewWindow.width - vi.startCharOnLine
+            vi.setStartByte (self.fullTextLines[row])
+            tail = rawItem.visiblePart[-vi.visLenInChars:]
+            vi.visLenInBytes = len (tail.encode ('utf-8'))
+            vi.fullyInView = False
 
         return vi
 
@@ -772,7 +778,11 @@ class MySTC (stc.StyledTextCtrl):
         self.updateDisplayByItems (False, False)
 
     def setSelectionOnCurrItem (self):
-        if not self.isItemInView (self.selectedItem, fully = True):
+        if len (self.items) <= 0:
+            return
+
+        visItem = self.items[self.selectedItem].visualItem
+        if not visItem or not visItem.fullyInView:
             self.moveItemIntoView (self.selectedItem)
 
         selectionStart = self.getItemStartByte (self.selectedItem)
@@ -807,7 +817,7 @@ class MySTC (stc.StyledTextCtrl):
                     firstMatch = i
                     self.moveItemIntoView (i)
 
-                if self.isItemInView (i):
+                if self.items[i].visualItem:
                     self.highlightSearchMatch (i, match)
 
         self.searchMatchIndex = firstMatch
@@ -856,51 +866,6 @@ class MySTC (stc.StyledTextCtrl):
             self.selectedItem -= self.viewWindow.height
             self.selectedItem = self.selectedItem % self.viewWindow.height + 1
 
-    def isItemInView (self, itemNo, **kwd):
-        # TODO: figure this buddy out
-        """
-        if len (self.items) <= 0:
-            return False
-
-        fully = False
-
-        try:
-            fully = kwd['fully']
-        except:
-            pass
-
-        if fully:
-            return self.items[itemNo].visualItem.fullyOnScreen (self.viewWindow)
-        else:
-            return self.items[itemNo].visualItem.partiallyOnScreen (self.viewWindow)
-        """
-
-        if len (self.items) <= 0:
-            return False
-
-        itemX, itemY = self.items[itemNo].coords
-        startCharOnLine = itemX * self.charsPerCol
-        endCharOnLine = startCharOnLine + self.charsPerCol
-
-        fully = False
-
-        try:
-            fully = kwd['fully']
-        except:
-            pass
-
-        if self.viewWindow.charInView (startCharOnLine):
-            if fully:
-                return self.viewWindow.charInView (endCharOnLine)
-            return True
-
-        if self.viewWindow.charInView (endCharOnLine):
-            if fully:
-                return self.viewWindow.charInView (startCharOnLine)
-            return True
-
-        return False
-
     def getItemStartByte (self, itemNo):
         if itemNo >= len (self.items):
             return 0
@@ -916,7 +881,7 @@ class MySTC (stc.StyledTextCtrl):
 
     def applyDefaultStyles (self):
         for index, item in enumerate (self.items):
-            if self.isItemInView (index):
+            if item.visualItem:
                 selStart = self.getItemStartByte (index)
                 self.StartStyling (selStart, 0xff)
 
