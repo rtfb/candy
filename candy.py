@@ -86,33 +86,19 @@ class DirectoryViewFilter:
     def __call__ (self, item):
         return self.searchStr in item.fileName.lower ()
 
-class RawItem:
-    """
-    An item to hold the representation close to the one outside of the program.
-    E.g. if the external item is a filename, this one will hold things like
-    filename, path, attributes, etc. Number of these objects is the number of
-    the real objects external to our app, e.g. len (os.listdir ()).
-    """
-    pass
-
 class VisualItem:
     """
-    An item to hold visual representation and a reference to RawItem. E.g. if
-    the external item is a filename, this one will hold things like ref to
-    RawItem, x/y coords in the view, justified name, startChar and the like.
-    Number of these objects is the number RawItems that actually fit on screen
-    (at least partially).
+    An item to hold visual representation. E.g. if the external item is a
+    filename, this one will hold things like justified name, startChar in
+    the ViewWindow coords and the like. Number of these objects is the number
+    RawItems that actually fit on screen (at least partially).
     """
     def __init__ (self):
-        # Points to the RawItem, which is a representative of the external entity
-        self.rawItem = None
-
-        # X/Y coordinates in column/row space
-        self.coords = (0, 0)
-
         # Character on the row-representing string, which is the str[0]-th
         # char of this item's visual representation
         self.startCharOnLine = 0
+
+        self.visLenInChars = 0
 
         # The first byte in the string, representing the line that contains
         # this item. This is needed because of silly implementation detail
@@ -123,18 +109,44 @@ class VisualItem:
 
         # Length of the item's visual repr, expressed in bytes (same reasons
         # as with startByteOnLine).
-        self.lenInBytes = 0
+        self.visLenInBytes = 0
 
-class ListItem:
+    # Signifies whether an item represented by this visual repr is
+    # currently fully/partially visible.
+    def fullyOnScreen (self, viewWindow):
+        endCharOnLine = self.startCharOnLine + self.visLenInChars
+        return viewWindow.charInView (self.startCharOnLine) and \
+               viewWindow.charInView (endCharOnLine )
+
+    def partiallyOnScreen (self, viewWindow):
+        endCharOnLine = self.startCharOnLine + self.visLenInChars
+        return viewWindow.charInView (self.startCharOnLine) or \
+               viewWindow.charInView (endCharOnLine)
+
+    def setStartByte (self, fullTextLine):
+        charsBeforeThisItem = fullTextLine[:self.startCharOnLine]
+        self.startByteOnLine = len (charsBeforeThisItem.encode ('utf-8'))
+
+class RawItem:
     """
-    An item to be stored in the list: basically, a filename with additional info
+    An item to hold the representation close to the one outside of the program.
+    E.g. if the external item is a filename, this one will hold things like
+    filename, path, attributes, etc. Number of these objects is the number of
+    the real objects external to our app, e.g. len (os.listdir ()).
     """
     def __init__ (self, fileName):
         self.fileName = fileName
         self.style = stc.STC_STYLE_DEFAULT
         self.isDir = False
         self.isHidden = False
-        self.visiblePartLength = 0
+        self.visualItem = None
+        self.visiblePart = ''
+
+        # All of the below are relative to fullTextLines (i.e. are absolute
+        # coords/counts)
+        self.coords = (0, 0)
+        self.startCharOnLine = 0
+        self.startByteOnLine = 0
 
     def __eq__ (self, fileName):
         return self.fileName == fileName
@@ -200,7 +212,7 @@ def collectListInfo (isFlatDirectoryView, cwd):
     files = listFiles (isFlatDirectoryView, cwd)
 
     for f in files:
-        item = ListItem (unicode (f, 'utf-8'))
+        item = RawItem (unicode (f, 'utf-8'))
 
         if os.path.isdir (f):
             item.style = STYLE_FOLDER
@@ -218,7 +230,7 @@ def collectDriveLetters ():
     driveLetters = win32api.GetLogicalDriveStrings ().split ('\x00')[:-1]
 
     for d in driveLetters:
-        item = ListItem (d)
+        item = RawItem (d)
         item.style = STYLE_FOLDER
         item.isDir = True
 
@@ -241,7 +253,7 @@ def constructListForFilling (fullList, specialFilter):
 
     notHidden = filter (lambda (f): not f.isHidden, dirList + fileList)
 
-    dotDot = ListItem (u'..')
+    dotDot = RawItem (u'..')
     dotDot.style = STYLE_FOLDER
     dotDot.isDir = True
     dotDot.isHidden = False
@@ -354,6 +366,10 @@ class MySTC (stc.StyledTextCtrl):
         # actually displayed. E.g. no dot-files when hidden files are not displayed
         self.items = []
 
+        # A set of VisualItems that are referenced from subset of self.items
+        # and represent visible parts of them on screen.
+        self.visualItems = []
+
         # Index of an item that is currently selected
         self.selectedItem = 0
 
@@ -451,6 +467,27 @@ class MySTC (stc.StyledTextCtrl):
             self.SetViewWhiteSpace (stc.STC_WS_INVISIBLE)
             self.SetViewEOL (False)
 
+    def createVisualItem (self, rawItem):
+        row = rawItem.coords[1]
+        vi = VisualItem ()
+        vi.startCharOnLine = rawItem.startCharOnLine - self.viewWindow.left
+        vi.visLenInChars = len (rawItem.visiblePart)
+        vi.setStartByte (self.fullTextLines[row])
+        vi.visLenInBytes = len (rawItem.visiblePart.encode ('utf-8'))
+        return vi
+
+    def extractVisualItems (self):
+        self.visualItems = []
+
+        for i in self.items:
+            startCharInView = self.viewWindow.charInView (i.startCharOnLine)
+            endCharPos = i.startCharOnLine + len (i.visiblePart)
+            endCharInView = self.viewWindow.charInView (endCharPos)
+
+            if startCharInView or endCharInView:
+                i.visualItem = self.createVisualItem (i)
+                self.visualItems.append (i.visualItem)
+
     def extractVisibleSubLines (self):
         visibleSublines = []
 
@@ -459,23 +496,30 @@ class MySTC (stc.StyledTextCtrl):
             subLine = rawSubLine.ljust (self.viewWindow.width)
             visibleSublines.append (subLine)
 
+        self.extractVisualItems ()
         return u'\n'.join (visibleSublines).encode ('utf-8')
 
     def constructFullTextLines (self):
         self.numFullColumns = len (self.items) / self.viewWindow.height
         self.fullTextLines = ['' for i in range (self.viewWindow.height)]
 
-        currLine = 0
+        row = 0
+        column = 0
         sj = SmartJustifier (self.charsPerCol - 1)
 
         for item in self.items:
             visiblePart = sj.justify (item.fileName) + u' '
-            self.fullTextLines[currLine] += visiblePart
-            item.visiblePartLength = len (visiblePart) - 1  # -1 to compensate for +u' '
-            currLine += 1
+            item.coords = (column, row)
+            item.startCharOnLine = len (self.fullTextLines[row])
+            utf8Line = self.fullTextLines[row].encode ('utf-8')
+            item.startByteOnLine = len (utf8Line)
+            item.visiblePart = visiblePart
+            self.fullTextLines[row] += visiblePart
+            row += 1
 
-            if currLine > self.viewWindow.height - 1:
-                currLine = 0
+            if row > self.viewWindow.height - 1:
+                row = 0
+                column += 1
 
     def updateDisplayByItems (self, constructFullLines = True,
                               setSelection = True):
@@ -546,6 +590,7 @@ class MySTC (stc.StyledTextCtrl):
         oldDir = os.path.split (os.getcwd ())[1]
         os.chdir ('..')
         self.clearScreen ()
+        self.selectedItem = 0
         self.fillList (os.getcwd ())
 
         try:
@@ -688,7 +733,7 @@ class MySTC (stc.StyledTextCtrl):
                 return i
 
     def highlightSearchMatch (self, itemIndex, matchOffset):
-        selectionStart = self.getItemStartChar (itemIndex) + matchOffset
+        selectionStart = self.getItemStartByte (itemIndex) + matchOffset
 
         # Set the style for the new match:
         self.StartStyling (selectionStart, 0xff)
@@ -699,7 +744,7 @@ class MySTC (stc.StyledTextCtrl):
         if len (self.items) <= 0:
             return
 
-        itemX, itemY = self.getItemCoordsByIndex (itemNo)
+        itemX, itemY = self.items[itemNo].coords
         startCharOnLine = itemX * self.charsPerCol
         endCharOnLine = startCharOnLine + self.charsPerCol
 
@@ -718,15 +763,13 @@ class MySTC (stc.StyledTextCtrl):
         if not self.isItemInView (self.selectedItem, fully = True):
             self.moveItemIntoView (self.selectedItem)
 
-        selectionStart = self.getItemStartChar (self.selectedItem)
+        selectionStart = self.getItemStartByte (self.selectedItem)
         self.SetCurrentPos (selectionStart)
         self.EnsureCaretVisible ()
 
         if self.selectedItem < len (self.items):
-            item = self.items[self.selectedItem]
-            sj = SmartJustifier (self.charsPerCol - 1)
-            visiblePart = sj.justify (item.fileName) + u' '
-            numCharsToSelect = len (visiblePart.encode ('utf-8'))
+            visItem = self.items[self.selectedItem].visualItem
+            numCharsToSelect = visItem.visLenInBytes
         else:
             numCharsToSelect = self.charsPerCol
 
@@ -802,10 +845,28 @@ class MySTC (stc.StyledTextCtrl):
             self.selectedItem = self.selectedItem % self.viewWindow.height + 1
 
     def isItemInView (self, itemNo, **kwd):
+        # TODO: figure this buddy out
+        """
         if len (self.items) <= 0:
             return False
 
-        itemX, itemY = self.getItemCoordsByIndex (itemNo)
+        fully = False
+
+        try:
+            fully = kwd['fully']
+        except:
+            pass
+
+        if fully:
+            return self.items[itemNo].visualItem.fullyOnScreen (self.viewWindow)
+        else:
+            return self.items[itemNo].visualItem.partiallyOnScreen (self.viewWindow)
+        """
+
+        if len (self.items) <= 0:
+            return False
+
+        itemX, itemY = self.items[itemNo].coords
         startCharOnLine = itemX * self.charsPerCol
         endCharOnLine = startCharOnLine + self.charsPerCol
 
@@ -828,69 +889,32 @@ class MySTC (stc.StyledTextCtrl):
 
         return False
 
-    def getItemCoordsByIndex (self, itemNo):
-        itemX = 0
-        itemY = 0
+    def getItemStartByte (self, itemNo):
+        if itemNo >= len (self.items):
+            return 0
 
-        # Avoid div0
-        if self.viewWindow.height != 0:
-            itemX, itemY = divmod (itemNo, self.viewWindow.height)
+        # -1 below because I want to get byte count for the lines [0..currLine)
+        row = self.items[itemNo].coords[1] - 1
 
-        return itemX, itemY
+        # +1 below because GetLineEndPosition doesn't account for newlines
+        # TODO: why not +row? If it skips newlines, it should've skipped all
+        sumBytes = self.GetLineEndPosition (row) + 1
 
-    def itemIndexToViewWindowCoords (self, itemNo):
-        itemX, itemY = self.getItemCoordsByIndex (itemNo)
-        itemViewX = itemX - intDivCeil (self.viewWindow.left, self.charsPerCol)
-        itemViewY = itemY
-        return itemViewX, itemViewY
-
-    # self.viewWindow.left does not necessarily match corresponding item's
-    # fileName[0]-th char. So when calculating getItemStartChar, we need to
-    # compensate by the amount of mismatch. Think about this situation:
-    #
-    # 01234567890123456789
-    # item0  |  item1
-    #
-    # self.charsPerCol is 10 in this diagram. The '|' denotes self.viewWindow.left.
-    # So this function would return 3 in this case.
-    def compensateViewWindowLeftChar (self):
-        leftPos = self.viewWindow.left % self.charsPerCol
-
-        if leftPos != 0:
-            return self.charsPerCol - leftPos
-
-        return leftPos
-
-    def getItemStartChar (self, itemNo):
-        itemViewX, itemViewY = self.itemIndexToViewWindowCoords (itemNo)
-        return itemViewY * self.viewWindow.width + itemViewX * self.charsPerCol \
-               + itemViewY + self.compensateViewWindowLeftChar ()
+        return sumBytes + self.items[itemNo].visualItem.startByteOnLine
 
     def applyDefaultStyles (self):
         for index, item in enumerate (self.items):
             if self.isItemInView (index):
-                selStart = self.getItemStartChar (index)
+                selStart = self.getItemStartByte (index)
                 self.StartStyling (selStart, 0xff)
 
-                # By default, style whole item name:
-                itemNameLen = len (item.fileName)
-
-                # ...unless the whole name is wider than column:
-                visiblePartLen = item.visiblePartLength
-
-                # AND unless we're dealing with an item with only
-                # few first characters visible on the right of the
-                # view window:
-                itemX, itemY = self.getItemCoordsByIndex (index)
-                startCharOnLine = itemX * self.charsPerCol
-                firstFewChars = self.viewWindow.width - (startCharOnLine - self.viewWindow.left)
+                itemNameLen = item.visualItem.visLenInBytes
+                # TODO: we should have bytes here:
+                firstFewChars = self.viewWindow.width - (item.startCharOnLine - self.viewWindow.left)
 
                 # Now choose the smallest from the above:
-                stylingRange = min (itemNameLen, item.visiblePartLength, firstFewChars)
-
-                stylingPart = item.fileName[:stylingRange]
-                utf = stylingPart.encode ('utf-8')
-                self.SetStyling (len (utf), item.style)
+                stylingRange = min (itemNameLen, firstFewChars)
+                self.SetStyling (stylingRange, item.style)
 
 class Candy (wx.Frame):
     def __init__ (self, parent, id, title):

@@ -130,7 +130,7 @@ class TestCandy (unittest.TestCase):
         self.assertEquals (self.frame.p1.selectedItem, 0)
 
     def testItemStartCharIsZeroOnEmptyList (self):
-        self.assertEquals (self.frame.p1.getItemStartChar (0), 0)
+        self.assertEquals (self.frame.p1.items[0].visualItem.startCharOnLine, 0)
 
     def testItemsListIsNotEmpty (self):
         self.assertTrue (len (self.frame.p1.items) > 0)
@@ -146,16 +146,25 @@ class TestCandy (unittest.TestCase):
         match = self.frame.p1.nextSearchMatch (searchStr, self.frame.p1.searchMatchIndex + 1)
         self.assertEquals (match, currPos + 1)
 
+    def testItemStartCharOnLine (self):
+        self.assertEquals (self.frame.p1.items[0].visualItem.startCharOnLine, 0)
+
+        for index in range (len (self.frame.p1.items)):
+            col = self.frame.p1.items[index].coords[0]
+            # 11 is a magic column width number here. Based on last evidence
+            # that works.
+            self.assertEquals (self.frame.p1.items[index].visualItem.startCharOnLine, col * 11)
+
     def testItemStartChar (self):
         #pdb.set_trace ()
-        self.assertEquals (self.frame.p1.getItemStartChar (0), 0)
+        self.assertEquals (self.frame.p1.getItemStartByte (0), 0)
 
         for index in range (len (self.frame.p1.items)):
             # 36 is a magic ViewWindow.width number here. Based on last
-            # evidence that works. Only works out for the 0th column, so
-            # this test will be failing for now, until I get rid of this
-            # magic
-            self.assertEquals (self.frame.p1.getItemStartChar (index), index * 36)
+            # evidence that works. Only works out for the 0th column, so this
+            # test will be failing for now, until I get rid of this magic.
+            # Also, getItemStartByte only works in this ASCII test case.
+            self.assertEquals (self.frame.p1.getItemStartByte (index), index * 36)
 
 def suite ():
     import test_keyboard
