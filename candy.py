@@ -95,9 +95,13 @@ class VisualItem:
     """
     def __init__ (self):
         # Character on the row-representing string, which is the str[0]-th
-        # char of this item's visual representation
+        # char of this item's visual representation. Will not be negative,
+        # since objects of this class represent only visible things, even
+        # if only a part of the thing is visible
         self.startCharOnLine = 0
 
+        # Length of the visible item in characters. Will be as much characters
+        # as actually visible
         self.visLenInChars = 0
 
         # The first byte in the string, representing the line that contains
@@ -474,6 +478,14 @@ class MySTC (stc.StyledTextCtrl):
         vi.visLenInChars = len (rawItem.visiblePart)
         vi.setStartByte (self.fullTextLines[row])
         vi.visLenInBytes = len (rawItem.visiblePart.encode ('utf-8'))
+
+        if vi.startCharOnLine < 0:
+            vi.visLenInChars = vi.startCharOnLine + len (rawItem.visiblePart)
+            vi.startCharOnLine = 0
+            vi.setStartByte (self.fullTextLines[row])
+            tail = rawItem.visiblePart[-vi.visLenInChars:]
+            vi.visLenInBytes = len (tail.encode ('utf-8'))
+
         return vi
 
     def extractVisualItems (self):
