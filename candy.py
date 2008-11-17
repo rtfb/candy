@@ -120,8 +120,8 @@ class VisualItem:
         # record whether the whole item was fit to screen
         self.fullyInView = False
 
-    def setStartByte (self, fullTextLine):
-        charsBeforeThisItem = fullTextLine[:self.startCharOnLine]
+    def setStartByte (self, visibleTextLine):
+        charsBeforeThisItem = visibleTextLine[:self.startCharOnLine]
         self.startByteOnLine = len (charsBeforeThisItem.encode ('utf-8'))
 
 class RawItem:
@@ -322,7 +322,7 @@ class ViewWindow:
 
     # only handles horizontal dimension
     def charInView (self, charPos):
-        return charPos >= self.left and charPos <= self.right ()
+        return charPos >= self.left and charPos < self.right ()
 
 class StatusLine (stc.StyledTextCtrl):
     def __init__ (self, parent, id, width):
@@ -467,37 +467,44 @@ class MySTC (stc.StyledTextCtrl):
     def createVisualItem (self, rawItem):
         row = rawItem.coords[1]
         vi = VisualItem ()
-
-        # Fully in view:
-        vi.startCharOnLine = rawItem.startCharOnLine - self.viewWindow.left
-        vi.visLenInChars = len (rawItem.visiblePart)
-        vi.setStartByte (self.fullTextLines[row])
-        vi.visLenInBytes = len (rawItem.visiblePart.encode ('utf-8'))
-        vi.fullyInView = True
+        startCharOnLine = rawItem.startCharOnLine - self.viewWindow.left
+        endCharOnLine = startCharOnLine + len (rawItem.visiblePart)
+        visibleLine = self.GetLine (row)
 
         # Partially, to the left of ViewWindow:
-        if vi.startCharOnLine < 0:
-            vi.visLenInChars = vi.startCharOnLine + len (rawItem.visiblePart)
+        if startCharOnLine < 0 and endCharOnLine >= 0:
+            vi.visLenInChars = startCharOnLine + len (rawItem.visiblePart)
             vi.startCharOnLine = 0
-            vi.setStartByte (self.fullTextLines[row])
+            vi.setStartByte (visibleLine)
             tail = rawItem.visiblePart[-vi.visLenInChars:]
             vi.visLenInBytes = len (tail.encode ('utf-8'))
             vi.fullyInView = False
+            return vi
 
         # Partially, to the right of ViewWindow:
-        if vi.startCharOnLine + vi.visLenInChars >= self.viewWindow.width:
+        if endCharOnLine >= self.viewWindow.width \
+           and startCharOnLine < self.viewWindow.width:
+            vi.startCharOnLine = startCharOnLine
             vi.visLenInChars = self.viewWindow.width - vi.startCharOnLine
-            vi.setStartByte (self.fullTextLines[row])
-            tail = rawItem.visiblePart[-vi.visLenInChars:]
-            vi.visLenInBytes = len (tail.encode ('utf-8'))
+            vi.setStartByte (visibleLine)
+            head = rawItem.visiblePart[:vi.visLenInChars]
+            vi.visLenInBytes = len (head.encode ('utf-8'))
             vi.fullyInView = False
+            return vi
 
+        # Fully in view:
+        vi.startCharOnLine = startCharOnLine
+        vi.visLenInChars = len (rawItem.visiblePart)
+        vi.setStartByte (visibleLine)
+        vi.visLenInBytes = len (rawItem.visiblePart.encode ('utf-8'))
+        vi.fullyInView = True
         return vi
 
     def extractVisualItems (self):
         self.visualItems = []
 
         for i in self.items:
+            i.visualItem = None
             startCharInView = self.viewWindow.charInView (i.startCharOnLine)
             endCharPos = i.startCharOnLine + len (i.visiblePart)
             endCharInView = self.viewWindow.charInView (endCharPos)
@@ -514,7 +521,6 @@ class MySTC (stc.StyledTextCtrl):
             subLine = rawSubLine.ljust (self.viewWindow.width)
             visibleSublines.append (subLine)
 
-        self.extractVisualItems ()
         return u'\n'.join (visibleSublines).encode ('utf-8')
 
     def constructFullTextLines (self):
@@ -548,6 +554,7 @@ class MySTC (stc.StyledTextCtrl):
             self.constructFullTextLines ()
 
         self.SetTextUTF8 (self.extractVisibleSubLines ())
+        self.extractVisualItems ()
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
         self.setDebugWhitespace ()
@@ -593,15 +600,13 @@ class MySTC (stc.StyledTextCtrl):
                 return
 
         self.directoryViewFilter = None
-        # if we're in self.flatDirectoryView, all we want is to refresh the view of
-        # self.workingDir without flattening
+        # if we're in self.flatDirectoryView, all we want is to refresh the
+        # view of self.workingDir without flattening
         if self.flatDirectoryView:
             self.flatDirectoryView = False
+            self.selectedItem = 0 # forget the selection of the flattened view
             self.clearScreen ()
             self.fillList (os.getcwd ())
-
-            # forget the selection of the flattened view
-            self.selectedItem = 0
             self.afterDirChange ()
             return
 
@@ -872,10 +877,12 @@ class MySTC (stc.StyledTextCtrl):
 
         # -1 below because I want to get byte count for the lines [0..currLine)
         row = self.items[itemNo].coords[1] - 1
+        sumBytes = 0
 
-        # +1 below because GetLineEndPosition doesn't account for newlines
-        # TODO: why not +row? If it skips newlines, it should've skipped all
-        sumBytes = self.GetLineEndPosition (row) + 1
+        if row >= 0:
+            # +1 below because GetLineEndPosition doesn't account for newlines
+            # TODO: why not +row? If it skips newlines, it should've skipped all
+            sumBytes = self.GetLineEndPosition (row) + 1
 
         return sumBytes + self.items[itemNo].visualItem.startByteOnLine
 
@@ -886,12 +893,7 @@ class MySTC (stc.StyledTextCtrl):
                 self.StartStyling (selStart, 0xff)
 
                 itemNameLen = item.visualItem.visLenInBytes
-                # TODO: we should have bytes here:
-                firstFewChars = self.viewWindow.width - (item.startCharOnLine - self.viewWindow.left)
-
-                # Now choose the smallest from the above:
-                stylingRange = min (itemNameLen, firstFewChars)
-                self.SetStyling (stylingRange, item.style)
+                self.SetStyling (itemNameLen, item.style)
 
 class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
