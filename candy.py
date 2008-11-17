@@ -767,9 +767,9 @@ class MySTC (stc.StyledTextCtrl):
         if len (self.items) <= 0:
             return
 
-        itemX, itemY = self.items[itemNo].coords
-        startCharOnLine = itemX * self.charsPerCol
-        endCharOnLine = startCharOnLine + self.charsPerCol
+        item = self.items[itemNo]
+        startCharOnLine = item.startCharOnLine
+        endCharOnLine = startCharOnLine + len (item.visiblePart)
 
         if startCharOnLine < self.viewWindow.left:
             # move view window left
