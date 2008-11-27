@@ -80,14 +80,14 @@ generalConfig = readConfig (generalConfPath)
 colorConf = os.path.join (projectDir, 'colorscheme-default.conf')
 colorScheme = readConfig (colorConf)
 
-class DirectoryViewFilter:
+class DirectoryViewFilter (object):
     def __init__ (self, searchStr):
         self.searchStr = searchStr.lower ()
 
     def __call__ (self, item):
         return self.searchStr in item.fileName.lower ()
 
-class VisualItem:
+class VisualItem (object):
     """
     An item to hold visual representation. E.g. if the external item is a
     filename, this one will hold things like justified name, startChar in
@@ -125,7 +125,7 @@ class VisualItem:
         charsBeforeThisItem = visibleTextLine[:self.startCharOnLine]
         self.startByteOnLine = len (charsBeforeThisItem.encode ('utf-8'))
 
-class RawItem:
+class RawItem (object):
     """
     An item to hold the representation close to the one outside of the program.
     E.g. if the external item is a filename, this one will hold things like
@@ -269,7 +269,7 @@ def intDivCeil (a, b):
 def intDivFloor (a, b):
     return int (math.floor (float (a) / b))
 
-class SmartJustifier:
+class SmartJustifier (object):
     def __init__ (self, width):
         self.width = width
         self.numDots = 3
@@ -304,7 +304,7 @@ class SmartJustifier:
         return newText
 
 # The width/height/left/right are in characters
-class ViewWindow:
+class ViewWindow (object):
     def __init__ (self, width, height):
         # Number of characters that can fit in whole width of the pane
         self.width = width
@@ -422,7 +422,7 @@ class Panel (stc.StyledTextCtrl):
         styleSpec = "size:%d,bold,face:%s,fore:%s" \
                     % (pb, faceCourier, colorScheme['folder'])
         self.StyleSetSpec (STYLE_FOLDER, styleSpec)
-        styleSpec = "size:%d,bold,face:%s,fore:%s,back:%s"
+        styleSpec = "size:%d,bold,face:%s,fore:%s,back:%s" \
                     % (pb, faceCourier, colorScheme['search-highlight-fore'],
                        colorScheme['search-highlight-back'])
         self.StyleSetSpec (STYLE_INC_SEARCH, styleSpec)
