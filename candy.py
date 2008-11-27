@@ -340,7 +340,7 @@ class StatusLine (stc.StyledTextCtrl):
                                                      colorScheme['default-text']))
         self.StyleClearAll ()
 
-class MySTC (stc.StyledTextCtrl):
+class Panel (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
         stc.StyledTextCtrl.__init__ (self, parent, ID)
 
@@ -902,8 +902,8 @@ class Candy (wx.Frame):
         self.splitter = wx.SplitterWindow (self, ID_SPLITTER, style = wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize (50)
 
-        self.p1 = MySTC (self.splitter, -1)
-        self.p2 = MySTC (self.splitter, -1)
+        self.p1 = Panel (self.splitter, -1)
+        self.p2 = Panel (self.splitter, -1)
         self.splitter.SplitVertically (self.p1, self.p2)
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
