@@ -69,7 +69,8 @@ def readConfig (fileName):
             continue
 
         name, value = l.split (':')
-        dict.setdefault (name.strip (), resolveColorNameOrReturn (value.strip ()))
+        val = resolveColorNameOrReturn (value.strip ())
+        dict.setdefault (name.strip (), val)
 
     return dict
 
@@ -334,10 +335,10 @@ class StatusLine (stc.StyledTextCtrl):
         pb = int (generalConfig['font-size']) # 12
 
         # Set the styles according to color scheme
-        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
-                                                  % (pb, faceCourier,
-                                                     colorScheme['background'],
-                                                     colorScheme['default-text']))
+        styleSpec = "size:%d,face:%s,back:%s,fore:%s" \
+                    % (pb, faceCourier, colorScheme['background'],
+                       colorScheme['default-text'])
+        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll ()
 
 class Panel (stc.StyledTextCtrl):
@@ -356,11 +357,13 @@ class Panel (stc.StyledTextCtrl):
         # Number of characters per column width
         self.charsPerCol = 0
 
-        # Number of columns in the whole-wide view, that are filled from top to bottom
+        # Number of columns in the whole-wide view, that are filled from top
+        # to bottom
         self.numFullColumns = 0
 
-        # List of filesystem items to be displayed. Only contains those that are to be
-        # actually displayed. E.g. no dot-files when hidden files are not displayed
+        # List of filesystem items to be displayed. Only contains those that
+        # are to be actually displayed. E.g. no dot-files when hidden files
+        # are not displayed
         self.items = []
 
         # A set of VisualItems that are referenced from subset of self.items
@@ -376,8 +379,8 @@ class Panel (stc.StyledTextCtrl):
         # String being searched incrementally
         self.searchStr = ''
 
-        # Index of an item that is an accepted search match. Needed to know which
-        # next match should be focused upon go-to-next-match
+        # Index of an item that is an accepted search match. Needed to know
+        # which next match should be focused upon go-to-next-match
         self.searchMatchIndex = -1
 
         # Working directory of the pane
@@ -411,18 +414,18 @@ class Panel (stc.StyledTextCtrl):
         pb = int (generalConfig['font-size']) # 12
 
         # Set the styles according to color scheme
-        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
-                                                  % (pb, faceCourier,
-                                                     colorScheme['background'],
-                                                     colorScheme['default-text']))
+        styleSpec = "size:%d,face:%s,back:%s,fore:%s" \
+                    % (pb, faceCourier, colorScheme['background'],
+                       colorScheme['default-text'])
+        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll ()
-        self.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:%s"
-                                         % (pb, faceCourier,
-                                            colorScheme['folder']))
-        self.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:%s,back:%s"
-                                             % (pb, faceCourier,
-                                                colorScheme['search-highlight-fore'],
-                                                colorScheme['search-highlight-back']))
+        styleSpec = "size:%d,bold,face:%s,fore:%s" \
+                    % (pb, faceCourier, colorScheme['folder'])
+        self.StyleSetSpec (STYLE_FOLDER, styleSpec)
+        styleSpec = "size:%d,bold,face:%s,fore:%s,back:%s"
+                    % (pb, faceCourier, colorScheme['search-highlight-fore'],
+                       colorScheme['search-highlight-back'])
+        self.StyleSetSpec (STYLE_INC_SEARCH, styleSpec)
         self.SetSelBackground (1, colorScheme['selection-inactive'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
 
@@ -589,8 +592,10 @@ class Panel (stc.StyledTextCtrl):
 
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
-        # in the line below, I'm subtracting 1 from number of items because of '..' pseudoitem
-        statusText = '[Folder view]: %s\t%d item(s)' % (os.getcwd (), len (self.items) - 1)
+        # in the line below, I'm subtracting 1 from number of items because
+        # of '..' pseudoitem
+        statusText = '[Folder view]: %s\t%d item(s)' \
+                     % (os.getcwd (), len (self.items) - 1)
         self.getFrame ().statusBar.SetStatusText (statusText)
 
     def updir (self):
@@ -669,7 +674,8 @@ class Panel (stc.StyledTextCtrl):
                 os.system (commandLine % (selection.fileName))
 
     def onNextMatch (self):
-        self.searchMatchIndex = self.nextSearchMatch (self.searchStr, self.selectedItem + 1)
+        item = self.selectedItem + 1
+        self.searchMatchIndex = self.nextSearchMatch (self.searchStr, item)
         self.selectedItem = self.searchMatchIndex
 
     def onStartIncSearch (self):
@@ -720,10 +726,10 @@ class Panel (stc.StyledTextCtrl):
                 self.selectedItem = 0
                 self.afterDirChange ()
             else:
-                # Here we want to stop searching and set focus on first search match.
-                # But if there was no match, we want to behave more like when we
-                # click Escape. Except we've no matches to clear, since no match means
-                # nothing was highlighted
+                # Here we want to stop searching and set focus on first search
+                # match. But if there was no match, we want to behave more like
+                # when we click Escape. Except we've no matches to clear, since
+                # no match means nothing was highlighted
                 self.searchMode = False
 
                 if self.searchMatchIndex != -1:
@@ -747,7 +753,8 @@ class Panel (stc.StyledTextCtrl):
         self.SetSelForeground (1, colorScheme['selection-fore'])
 
     def nextSearchMatch (self, searchStr, initPos):
-        # Construct a range of indices to produce wrapped search from current pos
+        # Construct a range of indices to produce wrapped search from
+        # current position
         searchRange = range (initPos, len (self.items)) + range (initPos)
         searchStrLower = searchStr.lower ()
 
@@ -805,7 +812,8 @@ class Panel (stc.StyledTextCtrl):
     def incrementalSearch (self, searchStr):
         index = self.selectedItem       # start searching from curr selection
 
-        # Construct a range of indices to produce wrapped search from current pos
+        # Construct a range of indices to produce wrapped search from
+        # current position
         searchRange = range (index, len (self.items)) + range (index)
 
         # First of all, clean previous matches
@@ -881,7 +889,8 @@ class Panel (stc.StyledTextCtrl):
 
         if row >= 0:
             # +1 below because GetLineEndPosition doesn't account for newlines
-            # TODO: why not +row? If it skips newlines, it should've skipped all
+            # TODO: why not +row? If it skips newlines, it should have
+            # skipped all
             sumBytes = self.GetLineEndPosition (row) + 1
 
         return sumBytes + self.items[itemNo].visualItem.startByteOnLine
