@@ -426,7 +426,7 @@ class PanelController (object):
         else:
             if keyCode < 256:
                 self.searchStr += chr (keyCode)
-                self.searchMatchIndex = self.view.incrementalSearch (self.searchStr)
+                self.searchMatchIndex = self.incrementalSearch (self.searchStr)
 
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
@@ -550,24 +550,63 @@ class PanelController (object):
 
     def onNextMatch (self):
         item = self.view.selectedItem + 1
-        self.searchMatchIndex = self.view.nextSearchMatch (self.searchStr, item)
+        self.searchMatchIndex = self.nextSearchMatch (self.searchStr, item)
         self.view.selectedItem = self.searchMatchIndex
+
+    def nextSearchMatch (self, searchStr, initPos):
+        # Construct a range of indices to produce wrapped search from
+        # current position
+        searchRange = range (initPos, len (self.view.items)) + range (initPos)
+        searchStrLower = searchStr.lower ()
+
+        for i in searchRange:
+            if searchStrLower in self.view.items[i].fileName.lower ():
+                return i
+
+    def incrementalSearch (self, searchStr):
+        index = self.view.selectedItem       # start searching from curr selection
+
+        # Construct a range of indices to produce wrapped search from
+        # current position
+        searchRange = range (index, len (self.view.items)) + range (index)
+
+        # First of all, clean previous matches
+        self.view.applyDefaultStyles ()
+
+        # We only want to remember first match
+        firstMatch = -1
+
+        for i in searchRange:
+            match = self.view.items[i].fileName.lower ().find (searchStr.lower ())
+
+            if match != -1:
+                if firstMatch == -1:
+                    firstMatch = i
+                    self.view.moveItemIntoView (i)
+
+                if self.view.items[i].visualItem:
+                    self.view.highlightSearchMatch (i, match, searchStr)
+
+        return firstMatch
 
     def onStartIncSearch (self):
         self.searchStr = ''
         self.searchMode = True
 
     def startEditor (self):
-        self.view.startEditor ()
+        os.system ('gvim ' + self.view.items[self.view.selectedItem].fileName)
+
+    def startViewer (self):
+        import viewr
+        file = self.view.items[self.view.selectedItem].fileName
+        wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
+        wnd.Show (True)
 
     def switchPane (self):
         self.view.switchPane ()
 
     def switchSplittingMode (self):
         self.view.switchSplittingMode ()
-
-    def startViewer (self):
-        self.view.startViewer ()
 
 class Panel (stc.StyledTextCtrl):
     def __init__ (self, parent):
@@ -790,15 +829,6 @@ class Panel (stc.StyledTextCtrl):
         self.ClearAll ()
         self.SetReadOnly (True)
 
-    def startEditor (self):
-        os.system ('gvim ' + self.items[self.selectedItem].fileName)
-
-    def startViewer (self):
-        import viewr
-        file = self.items[self.selectedItem].fileName
-        wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
-        wnd.Show (True)
-
     def switchPane (self):
         self.getFrame ().switchPane ()
         self.afterDirChange ()
@@ -813,16 +843,6 @@ class Panel (stc.StyledTextCtrl):
     def OnLoseFocus (self, evt):
         self.SetSelBackground (1, colorScheme['selection-inactive'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
-
-    def nextSearchMatch (self, searchStr, initPos):
-        # Construct a range of indices to produce wrapped search from
-        # current position
-        searchRange = range (initPos, len (self.items)) + range (initPos)
-        searchStrLower = searchStr.lower ()
-
-        for i in searchRange:
-            if searchStrLower in self.items[i].fileName.lower ():
-                return i
 
     def highlightSearchMatch (self, itemIndex, matchOffset, searchStr):
         selectionStart = self.getItemStartByte (itemIndex) + matchOffset
@@ -871,32 +891,6 @@ class Panel (stc.StyledTextCtrl):
             numCharsToSelect = self.charsPerCol
 
         self.SetSelection (selectionStart, selectionStart + numCharsToSelect)
-
-    def incrementalSearch (self, searchStr):
-        index = self.selectedItem       # start searching from curr selection
-
-        # Construct a range of indices to produce wrapped search from
-        # current position
-        searchRange = range (index, len (self.items)) + range (index)
-
-        # First of all, clean previous matches
-        self.applyDefaultStyles ()
-
-        # We only want to remember first match
-        firstMatch = -1
-
-        for i in searchRange:
-            match = self.items[i].fileName.lower ().find (searchStr.lower ())
-
-            if match != -1:
-                if firstMatch == -1:
-                    firstMatch = i
-                    self.moveItemIntoView (i)
-
-                if self.items[i].visualItem:
-                    self.highlightSearchMatch (i, match, searchStr)
-
-        return firstMatch
 
     def moveSelectionDown (self):
         self.selectedItem += 1

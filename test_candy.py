@@ -139,12 +139,12 @@ class TestCandy (unittest.TestCase):
         self.assertTrue (len (self.p1.items) > 0)
 
     def testSimpleIncSearch (self):
-        self.assertEquals (self.p1.incrementalSearch ('dir'), 1)
+        self.assertEquals (self.frame.p1.incrementalSearch ('dir'), 1)
 
     def testNextSearchMatch (self):
         searchStr = 'file'
-        currPos = self.p1.incrementalSearch (searchStr)
-        match = self.p1.nextSearchMatch (searchStr, currPos + 1)
+        currPos = self.frame.p1.incrementalSearch (searchStr)
+        match = self.frame.p1.nextSearchMatch (searchStr, currPos + 1)
         self.assertEquals (match, currPos + 1)
 
     def testItemStartCharOnLine (self):
