@@ -553,10 +553,13 @@ class PanelController (object):
         self.searchMatchIndex = self.nextSearchMatch (self.searchStr, item)
         self.view.selectedItem = self.searchMatchIndex
 
-    def nextSearchMatch (self, searchStr, initPos):
+    def wrappedRange (self, start, length):
         # Construct a range of indices to produce wrapped search from
-        # current position
-        searchRange = range (initPos, len (self.view.items)) + range (initPos)
+        # given position
+        return range (start, length) + range (start)
+
+    def nextSearchMatch (self, searchStr, initPos):
+        searchRange = self.wrappedRange (initPos, len (self.view.items))
         searchStrLower = searchStr.lower ()
 
         for i in searchRange:
@@ -565,10 +568,7 @@ class PanelController (object):
 
     def incrementalSearch (self, searchStr):
         index = self.view.selectedItem       # start searching from curr selection
-
-        # Construct a range of indices to produce wrapped search from
-        # current position
-        searchRange = range (index, len (self.view.items)) + range (index)
+        searchRange = self.wrappedRange (index, len (self.view.items))
 
         # First of all, clean previous matches
         self.view.applyDefaultStyles ()
