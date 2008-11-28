@@ -112,25 +112,27 @@ class TestCandy (unittest.TestCase):
         self.assertEqual (self.frame.activePane.model.workingDir, os.path.expanduser ('~'))
 
     def testInitialSelection (self):
-        self.assertEqual (self.frame.activePane.view.selectedItem, 0)
+        self.assertEqual (self.frame.activePane.selectedItem, 0)
 
     def testItemListIsEmpty (self):
-        self.p1.clearList ()
-        self.p2.clearList ()
+        self.frame.p1.clearList ()
+        self.frame.p2.clearList ()
         self.assertEquals (len (self.p1.items), 0)
         self.assertEquals (len (self.p2.items), 0)
 
     def testSelectionDoesntGetAnywhereOnEmptyList (self):
-        self.p1.clearList ()
-        self.p2.clearList ()
-        self.p1.moveSelectionUp ()
-        self.assertEquals (self.p1.selectedItem, 0)
-        self.p1.moveSelectionDown ()
-        self.assertEquals (self.p1.selectedItem, 0)
-        self.p1.moveSelectionLeft ()
-        self.assertEquals (self.p1.selectedItem, 0)
-        self.p1.moveSelectionRight ()
-        self.assertEquals (self.p1.selectedItem, 0)
+        c1 = self.frame.p1
+        c2 = self.frame.p2
+        c1.clearList ()
+        c2.clearList ()
+        c1.moveSelectionUp ()
+        self.assertEquals (c1.selectedItem, 0)
+        c1.moveSelectionDown ()
+        self.assertEquals (c1.selectedItem, 0)
+        c1.moveSelectionLeft ()
+        self.assertEquals (c1.selectedItem, 0)
+        c1.moveSelectionRight ()
+        self.assertEquals (c1.selectedItem, 0)
 
     def testItemStartCharIsZeroOnEmptyList (self):
         self.assertEquals (self.p1.items[0].visualItem.startCharOnLine, 0)

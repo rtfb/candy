@@ -375,8 +375,17 @@ class PanelController (object):
         # Main use (for now) is for filtering out the contents by search matches.
         self.directoryViewFilter = None
 
+        # Index of an item that is currently selected
+        self.selectedItem = 0
+
         self.keys = keyboard.KeyboardConfig ()
         self.keys.load ('keys.conf', self)
+
+    # Used in tests
+    def clearList (self):
+        self.view.items = []
+        self.selectedItem = 0
+        self.view.numFullColumns = 0
 
     def initializeAndShowInitialView (self):
         self.view.initializeViewSettings ()
@@ -386,7 +395,7 @@ class PanelController (object):
         os.chdir (dir)
         self.fillList (dir, False)
         self.view.SetFocus ()
-        self.view.afterDirChange ()
+        self.afterDirChange ()
 
     def newWorkingDir (self, message):
         # Really? It's fillList that changes the workingDir! Dead loop here.
@@ -404,7 +413,7 @@ class PanelController (object):
             skipper = lambda *a, **k: evt.Skip ()
             func = self.keys.getFunc (skipper, keyCode, keyMod)
             func ()
-            self.view.setSelectionOnCurrItem ()
+            self.setSelectionOnCurrItem ()
 
     def searchModeKeyDown (self, keyCode, keyMod):
         if keyCode == wx.WXK_RETURN:
@@ -418,8 +427,8 @@ class PanelController (object):
                 # when we cancel search. Except we've no matches to clear, since
                 # no match means nothing was highlighted
                 if self.searchMatchIndex != -1:
-                    self.view.selectedItem = self.searchMatchIndex
-                    self.view.setSelectionOnCurrItem ()
+                    self.selectedItem = self.searchMatchIndex
+                    self.setSelectionOnCurrItem ()
         elif keyCode == wx.WXK_ESCAPE:
             self.searchMode = False
             self.view.stopSearchMode ()
@@ -473,62 +482,76 @@ class PanelController (object):
         oldDir = os.path.split (os.getcwd ())[1]
         os.chdir ('..')
         self.view.clearScreen ()
-        self.view.selectedItem = 0
+        self.selectedItem = 0
         self.fillList (os.getcwd (), self.flatDirectoryView)
-        self.view.setSelectedItemByDir (oldDir)
-        self.view.afterDirChange ()
+        self.setSelectedItemByDir (oldDir)
+        self.afterDirChange ()
+
+    def setSelectedItemByDir (self, dir):
+        try:
+            self.selectedItem = self.view.items.index (dir)
+        except ValueError:
+            pass
 
     def fillList (self, cwd, flatDirView):
         allItems = collectListInfo (flatDirView, cwd)
         self.model.workingDir = cwd
         self.view.items = constructListForFilling (allItems, self.directoryViewFilter)
-        self.view.updateDisplayByItems ()
+        self.view.updateDisplayByItems (self.setSelectionOnCurrItem)
 
     def listDriveLetters (self):
         if platform.system () != 'Windows':
             return
 
-        self.view.selectedItem = 0
+        self.selectedItem = 0
         self.view.items = collectDriveLetters ()
-        self.view.updateDisplayByItems ()
-        self.view.afterDirChange ()
+        self.view.updateDisplayByItems (self.setSelectionOnCurrItem)
+        self.afterDirChange ()
 
     def flattenDirectory (self):
         self.flatDirectoryView = True
         self.fillList (self.model.workingDir, True)
-        self.view.afterDirChange ()
+        self.afterDirChange ()
 
     def unflattenDirectory (self):
-        self.view.selectedItem = 0 # forget the selection of the flattened view
+        self.selectedItem = 0 # forget the selection of the flattened view
         self.view.clearScreen ()
         self.fillList (os.getcwd (), False)    # getcwd? Really? Why not model.workingDir?
-        self.view.afterDirChange ()
+        self.afterDirChange ()
 
     def listSearchMatches (self, flatDirView, searchStr):
         self.directoryViewFilter = DirectoryViewFilter (searchStr)
         self.view.clearScreen ()
         self.fillList (self.model.workingDir, flatDirView)
-        self.view.selectedItem = 0
-        self.view.afterDirChange ()
+        self.selectedItem = 0
+        self.afterDirChange ()
 
     def downdir (self, dirName, flatDirView):
         self.directoryViewFilter = None
         os.chdir (dirName)
         self.view.clearScreen ()
-        self.view.selectedItem = 0
+        self.selectedItem = 0
         self.fillList (os.getcwd (), flatDirView)
-        self.view.afterDirChange ()
+        self.afterDirChange ()
 
     def goHome (self):
         self.directoryViewFilter = None
         os.chdir (os.path.expanduser ('~'))
         self.view.clearScreen ()
         self.fillList (os.getcwd (), self.flatDirectoryView)
-        self.view.selectedItem = 0
-        self.view.afterDirChange ()
+        self.selectedItem = 0
+        self.afterDirChange ()
+
+    def afterDirChange (self):
+        self.setSelectionOnCurrItem ()
+        # in the line below, I'm subtracting 1 from number of items because
+        # of '..' pseudoitem
+        statusText = '[Folder view]: %s\t%d item(s)' \
+                     % (os.getcwd (), len (self.view.items) - 1)
+        self.view.getFrame ().statusBar.SetStatusText (statusText)
 
     def onEnter (self):
-        selection = self.view.items[self.view.selectedItem]
+        selection = self.view.items[self.selectedItem]
 
         if selection.isDir:
             if selection.fileName == '..':
@@ -549,9 +572,9 @@ class PanelController (object):
         self.view.listDriveLetters ()
 
     def onNextMatch (self):
-        item = self.view.selectedItem + 1
+        item = self.selectedItem + 1
         self.searchMatchIndex = self.nextSearchMatch (self.searchStr, item)
-        self.view.selectedItem = self.searchMatchIndex
+        self.selectedItem = self.searchMatchIndex
 
     def wrappedRange (self, start, length):
         # Construct a range of indices to produce wrapped search from
@@ -567,7 +590,7 @@ class PanelController (object):
                 return i
 
     def incrementalSearch (self, searchStr):
-        index = self.view.selectedItem       # start searching from curr selection
+        index = self.selectedItem       # start searching from curr selection
         searchRange = self.wrappedRange (index, len (self.view.items))
 
         # First of all, clean previous matches
@@ -593,17 +616,73 @@ class PanelController (object):
         self.searchStr = ''
         self.searchMode = True
 
+    def setSelectionOnCurrItem (self):
+        if len (self.view.items) <= 0:
+            return
+
+        visItem = self.view.items[self.selectedItem].visualItem
+        if not visItem or not visItem.fullyInView:
+            self.view.moveItemIntoView (self.selectedItem)
+
+        selectionStart = self.view.getItemStartByte (self.selectedItem)
+
+        item = None
+
+        if self.selectedItem < len (self.view.items):
+            item = self.view.items[self.selectedItem]
+
+        self.view.setSelectionOnItem (selectionStart, item)
+
+    def moveSelectionDown (self):
+        self.selectedItem += 1
+
+        if self.selectedItem >= len (self.view.items):
+            self.selectedItem = 0
+
+    def moveSelectionUp (self):
+        self.selectedItem -= 1
+
+        if self.selectedItem < 0:
+            self.selectedItem = len (self.view.items) - 1
+
+        # This can happen if self.view.items is empty
+        if self.selectedItem < 0:
+            self.selectedItem = 0
+
+    def moveSelectionLeft (self):
+        self.selectedItem -= self.view.viewWindow.height
+
+        if len (self.view.items) == 0:
+            self.selectedItem = 0
+            return
+
+        if self.selectedItem < 0:
+            self.selectedItem += self.view.viewWindow.height   # undo the decrement and start calculating from scratch
+            self.selectedItem = self.view.updateSelectedItemLeft (self.selectedItem)
+
+    def moveSelectionRight (self):
+        self.selectedItem += self.view.viewWindow.height
+
+        if len (self.view.items) == 0:
+            self.selectedItem = 0
+            return
+
+        if self.selectedItem > len (self.view.items):
+            self.selectedItem -= self.view.viewWindow.height
+            self.selectedItem = self.selectedItem % self.view.viewWindow.height + 1
+
     def startEditor (self):
-        os.system ('gvim ' + self.view.items[self.view.selectedItem].fileName)
+        os.system ('gvim ' + self.view.items[self.selectedItem].fileName)
 
     def startViewer (self):
         import viewr
-        file = self.view.items[self.view.selectedItem].fileName
+        file = self.view.items[self.selectedItem].fileName
         wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
         wnd.Show (True)
 
     def switchPane (self):
-        self.view.switchPane ()
+        self.view.getFrame ().switchPane ()
+        self.afterDirChange ()
 
     def switchSplittingMode (self):
         self.view.switchSplittingMode ()
@@ -637,9 +716,6 @@ class Panel (stc.StyledTextCtrl):
         # and represent visible parts of them on screen.
         self.visualItems = []
 
-        # Index of an item that is currently selected
-        self.selectedItem = 0
-
         # List of full-width lines, containing the text of the items.
         # Only sublines of these lines are displayed both for performance
         # reasons and to bypass a bug in STC, failing to display extremely
@@ -669,12 +745,6 @@ class Panel (stc.StyledTextCtrl):
         self.StyleSetSpec (STYLE_INC_SEARCH, styleSpec)
         self.SetSelBackground (1, colorScheme['selection-inactive'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
-
-    # Used in tests
-    def clearList (self):
-        self.items = []
-        self.selectedItem = 0
-        self.numFullColumns = 0
 
     def initializeViewSettings (self, numColumns = 3):
         width, height = self.GetClientSizeTuple ()
@@ -779,8 +849,8 @@ class Panel (stc.StyledTextCtrl):
                 row = 0
                 column += 1
 
-    def updateDisplayByItems (self, constructFullLines = True,
-                              setSelection = True):
+    def updateDisplayByItems (self, itemSelector = None,
+                              constructFullLines = True):
         self.clearScreen ()
         self.SetReadOnly (False)
 
@@ -793,8 +863,8 @@ class Panel (stc.StyledTextCtrl):
         self.SetReadOnly (True)
         self.setDebugWhitespace ()
 
-        if setSelection:
-            self.setSelectionOnCurrItem ()
+        if itemSelector:
+            itemSelector ()
 
         self.applyDefaultStyles ()
 
@@ -803,20 +873,6 @@ class Panel (stc.StyledTextCtrl):
 
     def getFrame (self):
         return self.GetParent ().GetParent ()
-
-    def afterDirChange (self):
-        self.setSelectionOnCurrItem ()
-        # in the line below, I'm subtracting 1 from number of items because
-        # of '..' pseudoitem
-        statusText = '[Folder view]: %s\t%d item(s)' \
-                     % (os.getcwd (), len (self.items) - 1)
-        self.getFrame ().statusBar.SetStatusText (statusText)
-
-    def setSelectedItemByDir (self, dir):
-        try:
-            self.selectedItem = self.items.index (dir)
-        except ValueError:
-            pass
 
     def OnDestroy (self, evt):
         # This is how the clipboard contents can be preserved after
@@ -828,10 +884,6 @@ class Panel (stc.StyledTextCtrl):
         self.SetReadOnly (False)
         self.ClearAll ()
         self.SetReadOnly (True)
-
-    def switchPane (self):
-        self.getFrame ().switchPane ()
-        self.afterDirChange ()
 
     def switchSplittingMode (self):
         self.getFrame ().switchSplittingMode ()
@@ -869,72 +921,28 @@ class Panel (stc.StyledTextCtrl):
         else:
             return      # The item is already in view
 
-        self.updateDisplayByItems (False, False)
+        self.updateDisplayByItems (None, False)
 
     # Note: problematic WRT to extracting self.items
-    def setSelectionOnCurrItem (self):
-        if len (self.items) <= 0:
-            return
-
-        visItem = self.items[self.selectedItem].visualItem
-        if not visItem or not visItem.fullyInView:
-            self.moveItemIntoView (self.selectedItem)
-
-        selectionStart = self.getItemStartByte (self.selectedItem)
+    def setSelectionOnItem (self, selectionStart, item):
         self.SetCurrentPos (selectionStart)
         self.EnsureCaretVisible ()
 
-        if self.selectedItem < len (self.items):
-            visItem = self.items[self.selectedItem].visualItem
-            numCharsToSelect = visItem.visLenInBytes
+        if item:
+            numCharsToSelect = item.visualItem.visLenInBytes
         else:
             numCharsToSelect = self.charsPerCol
 
         self.SetSelection (selectionStart, selectionStart + numCharsToSelect)
 
-    def moveSelectionDown (self):
-        self.selectedItem += 1
+    def updateSelectedItemLeft (self, selectedItem):
+        numFullLines = len (self.items) % self.viewWindow.height
+        bottomRightIndex = self.viewWindow.height * (self.numFullColumns + 1) - 1
 
-        if self.selectedItem >= len (self.items):
-            self.selectedItem = 0
+        if selectedItem % self.viewWindow.height > numFullLines:
+            bottomRightIndex = self.viewWindow.height * self.numFullColumns - 1
 
-    def moveSelectionUp (self):
-        self.selectedItem -= 1
-
-        if self.selectedItem < 0:
-            self.selectedItem = len (self.items) - 1
-
-        # This can happen if self.items is empty
-        if self.selectedItem < 0:
-            self.selectedItem = 0
-
-    def moveSelectionLeft (self):
-        self.selectedItem -= self.viewWindow.height
-
-        if len (self.items) == 0:
-            self.selectedItem = 0
-            return
-
-        if self.selectedItem < 0:
-            self.selectedItem += self.viewWindow.height   # undo the decrement and start calculating from scratch
-            numFullLines = len (self.items) % self.viewWindow.height
-            bottomRightIndex = self.viewWindow.height * (self.numFullColumns + 1) - 1
-
-            if self.selectedItem % self.viewWindow.height > numFullLines:
-                bottomRightIndex = self.viewWindow.height * self.numFullColumns - 1
-
-            self.selectedItem = self.selectedItem - self.viewWindow.height + bottomRightIndex
-
-    def moveSelectionRight (self):
-        self.selectedItem += self.viewWindow.height
-
-        if len (self.items) == 0:
-            self.selectedItem = 0
-            return
-
-        if self.selectedItem > len (self.items):
-            self.selectedItem -= self.viewWindow.height
-            self.selectedItem = self.selectedItem % self.viewWindow.height + 1
+        return selectedItem - self.viewWindow.height + bottomRightIndex
 
     # Note: problematic WRT to extracting self.items
     def getItemStartByte (self, itemNo):
