@@ -371,8 +371,22 @@ class PanelController (object):
         # which next match should be focused upon go-to-next-match
         self.searchMatchIndex = -1
 
+        # Function Object that gets called to filter out directory view.
+        # Main use (for now) is for filtering out the contents by search matches.
+        self.directoryViewFilter = None
+
         self.keys = keyboard.KeyboardConfig ()
         self.keys.load ('keys.conf', self)
+
+    def initializeAndShowInitialView (self):
+        self.view.initializeViewSettings ()
+
+        dir = os.path.expanduser ('~')
+        #dir = '/usr/share'
+        os.chdir (dir)
+        self.fillList (dir, False)     # view.workingDir gets changed here
+        self.view.SetFocus ()
+        self.view.afterDirChange ()
 
     def newWorkingDir (self, message):
         self.view.fillList (message.data)
@@ -436,28 +450,76 @@ class PanelController (object):
     def quiter (self):
         sys.exit (0)
 
-    def flattenDirectory (self):
-        self.flatDirectoryView = True
-        self.view.flattenDirectory ()
-
     def updir (self):
         if platform.system () == 'Windows':
             if isRootOfDrive (self.model.workingDir):
                 self.listDriveLetters ()
                 return
 
-        self.view.directoryViewFilter = None
+        self.directoryViewFilter = None
         # if we're in self.flatDirectoryView, all we want is to refresh the
-        # view of self.workingDir without flattening
+        # view of view.workingDir without flattening
         if self.flatDirectoryView:
             self.flatDirectoryView = False
-            self.view.unflattenDirectory ()
+            self.unflattenDirectory ()
             return
 
-        self.view.updir (self.flatDirectoryView)
+        oldDir = os.path.split (os.getcwd ())[1]
+        os.chdir ('..')
+        self.view.clearScreen ()
+        self.view.selectedItem = 0
+        self.fillList (os.getcwd (), self.flatDirectoryView)    # view.workingDir gets changed here
+        self.view.setSelectedItemByDir (oldDir)
+        self.view.afterDirChange ()
+
+    def fillList (self, cwd, flatDirView):
+        allItems = collectListInfo (flatDirView, cwd)
+        self.view.workingDir = cwd
+        self.view.items = constructListForFilling (allItems, self.directoryViewFilter)
+        self.view.updateDisplayByItems ()
+
+    def listDriveLetters (self):
+        if platform.system () != 'Windows':
+            return
+
+        self.view.selectedItem = 0
+        self.view.items = collectDriveLetters ()
+        self.view.updateDisplayByItems ()
+        self.view.afterDirChange ()
+
+    def flattenDirectory (self):
+        self.flatDirectoryView = True
+        self.fillList (self.view.workingDir, True)     # No actual change of cwd here
+        self.view.afterDirChange ()
+
+    def unflattenDirectory (self):
+        self.view.selectedItem = 0 # forget the selection of the flattened view
+        self.view.clearScreen ()
+        self.fillList (os.getcwd (), False)    # getcwd? Really? Why not view.workingDir?
+        self.view.afterDirChange ()
+
+    def listSearchMatches (self, flatDirView, searchStr):
+        self.directoryViewFilter = DirectoryViewFilter (searchStr)
+        self.view.clearScreen ()
+        self.fillList (self.workingDir, flatDirView) # No change in cwd
+        self.view.selectedItem = 0
+        self.view.afterDirChange ()
+
+    def downdir (self, dirName, flatDirView):
+        self.directoryViewFilter = None
+        os.chdir (dirName)
+        self.view.clearScreen ()
+        self.view.selectedItem = 0
+        self.fillList (os.getcwd (), flatDirView)    # view.workingDir gets changed here
+        self.view.afterDirChange ()
 
     def goHome (self):
-        self.view.goHome (self.flatDirectoryView)
+        self.directoryViewFilter = None
+        os.chdir (os.path.expanduser ('~'))
+        self.view.clearScreen ()
+        self.fillList (os.getcwd (), self.flatDirectoryView)    # view.workingDir gets changed here
+        self.view.selectedItem = 0
+        self.view.afterDirChange ()
 
     def onEnter (self):
         selection = self.view.items[self.view.selectedItem]
@@ -466,7 +528,7 @@ class PanelController (object):
             if selection.fileName == '..':
                 self.updir ()
             else:
-                self.view.downdir (selection.fileName, self.flatDirectoryView)
+                self.downdir (selection.fileName, self.flatDirectoryView)
         else:
             base, ext = os.path.splitext (selection.fileName)
             commandLine = resolveCommandByFileExt (ext[1:])
@@ -536,10 +598,6 @@ class Panel (stc.StyledTextCtrl):
         # Local copy for the view. Should migrate completely to model
         self.workingDir = ''
 
-        # Function Object that gets called to filter out directory view.
-        # Main use is for filtering out the contents by search matches.
-        self.directoryViewFilter = None
-
         # List of full-width lines, containing the text of the items.
         # Only sublines of these lines are displayed both for performance
         # reasons and to bypass a bug in STC, failing to display extremely
@@ -590,16 +648,6 @@ class Panel (stc.StyledTextCtrl):
         self.charsPerCol = width / charWidth / self.viewWindow.numColumns
         self.clearScreen ()
         self.updateDisplayByItems ()
-
-    def initializeAndShowInitialView (self):
-        self.initializeViewSettings ()
-
-        dir = os.path.expanduser ('~')
-        #dir = '/usr/share'
-        os.chdir (dir)
-        self.fillList (dir, False)     # self.workingDir gets changed here
-        self.SetFocus ()
-        self.afterDirChange ()
 
     def setDebugWhitespace (self):
         if generalConfig['debug-whitespace'].lower () == 'true':
@@ -709,38 +757,6 @@ class Panel (stc.StyledTextCtrl):
 
         self.applyDefaultStyles ()
 
-    def fillList (self, cwd, flatDirView):
-        allItems = collectListInfo (flatDirView, cwd)
-        self.workingDir = cwd
-        self.items = constructListForFilling (allItems, self.directoryViewFilter)
-        self.updateDisplayByItems ()
-
-    def listDriveLetters (self):
-        if platform.system () != 'Windows':
-            return
-
-        self.selectedItem = 0
-        self.items = collectDriveLetters ()
-        self.updateDisplayByItems ()
-        self.afterDirChange ()
-
-    def flattenDirectory (self):
-        self.fillList (self.workingDir, True)     # No actual change of cwd here
-        self.afterDirChange ()
-
-    def unflattenDirectory (self):
-        self.selectedItem = 0 # forget the selection of the flattened view
-        self.clearScreen ()
-        self.fillList (os.getcwd (), False)    # getcwd? Really? Why not self.workingDir?
-        self.afterDirChange ()
-
-    def listSearchMatches (self, flatDirView, searchStr):
-        self.directoryViewFilter = DirectoryViewFilter (searchStr)
-        self.clearScreen ()
-        self.fillList (self.workingDir, flatDirView) # No change in cwd
-        self.selectedItem = 0
-        self.afterDirChange ()
-
     def stopSearchMode (self):
         self.applyDefaultStyles ()  # clean matches
 
@@ -760,31 +776,6 @@ class Panel (stc.StyledTextCtrl):
             self.selectedItem = self.items.index (dir)
         except ValueError:
             pass
-
-    def updir (self, flatDirView):
-        oldDir = os.path.split (os.getcwd ())[1]
-        os.chdir ('..')
-        self.clearScreen ()
-        self.selectedItem = 0
-        self.fillList (os.getcwd (), flatDirView)    # self.workingDir gets changed here
-        self.setSelectedItemByDir (oldDir)
-        self.afterDirChange ()
-
-    def downdir (self, dirName, flatDirView):
-        self.directoryViewFilter = None
-        os.chdir (dirName)
-        self.clearScreen ()
-        self.selectedItem = 0
-        self.fillList (os.getcwd (), flatDirView)    # self.workingDir gets changed here
-        self.afterDirChange ()
-
-    def goHome (self, flatDirView):
-        self.directoryViewFilter = None
-        os.chdir (os.path.expanduser ('~'))
-        self.clearScreen ()
-        self.fillList (os.getcwd (), flatDirView)    # self.workingDir gets changed here
-        self.selectedItem = 0
-        self.afterDirChange ()
 
     def OnDestroy (self, evt):
         # This is how the clipboard contents can be preserved after
@@ -859,6 +850,7 @@ class Panel (stc.StyledTextCtrl):
 
         self.updateDisplayByItems (False, False)
 
+    # Note: problematic WRT to extracting self.items
     def setSelectionOnCurrItem (self):
         if len (self.items) <= 0:
             return
@@ -949,6 +941,7 @@ class Panel (stc.StyledTextCtrl):
             self.selectedItem -= self.viewWindow.height
             self.selectedItem = self.selectedItem % self.viewWindow.height + 1
 
+    # Note: problematic WRT to extracting self.items
     def getItemStartByte (self, itemNo):
         if itemNo >= len (self.items):
             return 0
@@ -1006,8 +999,8 @@ class Candy (wx.Frame):
         self.activePane = self.p1
 
     def setUpAndShow (self):
-        self.p2.view.initializeAndShowInitialView ()
-        self.p1.view.initializeAndShowInitialView ()
+        self.p2.initializeAndShowInitialView ()
+        self.p1.initializeAndShowInitialView ()
         self.activePane = self.p1
 
     def OnExit (self, e):
