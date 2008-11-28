@@ -384,16 +384,18 @@ class PanelController (object):
         dir = os.path.expanduser ('~')
         #dir = '/usr/share'
         os.chdir (dir)
-        self.fillList (dir, False)     # view.workingDir gets changed here
+        self.fillList (dir, False)
         self.view.SetFocus ()
         self.view.afterDirChange ()
 
     def newWorkingDir (self, message):
-        self.view.fillList (message.data)
+        # Really? It's fillList that changes the workingDir! Dead loop here.
+        self.fillList (message.data)
 
     def bindEvents (self):
         self.view.Bind (wx.EVT_CHAR, self.OnChar)
         self.view.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.view.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
 
     def handleKeyEvent (self, evt, keyCode, keyMod):
         if self.searchMode:
@@ -409,7 +411,7 @@ class PanelController (object):
             self.searchMode = False
 
             if keyMod == wx.MOD_CONTROL:
-                self.view.listSearchMatches (self.flatDirectoryView, self.searchStr)
+                self.listSearchMatches (self.flatDirectoryView, self.searchStr)
             else:
                 # Here we want to stop searching and set focus on first search
                 # match. But if there was no match, we want to behave more like
@@ -435,6 +437,10 @@ class PanelController (object):
         keyCode = evt.GetKeyCode ()
         self.handleKeyEvent (evt, keyCode, None)
 
+    def OnSetFocus (self, evt):
+        self.view.onSetFocus ()
+        os.chdir (self.model.workingDir)
+
     def moveSelectionDown (self):
         self.view.moveSelectionDown ()
 
@@ -458,7 +464,7 @@ class PanelController (object):
 
         self.directoryViewFilter = None
         # if we're in self.flatDirectoryView, all we want is to refresh the
-        # view of view.workingDir without flattening
+        # view of model.workingDir without flattening
         if self.flatDirectoryView:
             self.flatDirectoryView = False
             self.unflattenDirectory ()
@@ -468,13 +474,13 @@ class PanelController (object):
         os.chdir ('..')
         self.view.clearScreen ()
         self.view.selectedItem = 0
-        self.fillList (os.getcwd (), self.flatDirectoryView)    # view.workingDir gets changed here
+        self.fillList (os.getcwd (), self.flatDirectoryView)
         self.view.setSelectedItemByDir (oldDir)
         self.view.afterDirChange ()
 
     def fillList (self, cwd, flatDirView):
         allItems = collectListInfo (flatDirView, cwd)
-        self.view.workingDir = cwd
+        self.model.workingDir = cwd
         self.view.items = constructListForFilling (allItems, self.directoryViewFilter)
         self.view.updateDisplayByItems ()
 
@@ -489,19 +495,19 @@ class PanelController (object):
 
     def flattenDirectory (self):
         self.flatDirectoryView = True
-        self.fillList (self.view.workingDir, True)     # No actual change of cwd here
+        self.fillList (self.model.workingDir, True)
         self.view.afterDirChange ()
 
     def unflattenDirectory (self):
         self.view.selectedItem = 0 # forget the selection of the flattened view
         self.view.clearScreen ()
-        self.fillList (os.getcwd (), False)    # getcwd? Really? Why not view.workingDir?
+        self.fillList (os.getcwd (), False)    # getcwd? Really? Why not model.workingDir?
         self.view.afterDirChange ()
 
     def listSearchMatches (self, flatDirView, searchStr):
         self.directoryViewFilter = DirectoryViewFilter (searchStr)
         self.view.clearScreen ()
-        self.fillList (self.workingDir, flatDirView) # No change in cwd
+        self.fillList (self.model.workingDir, flatDirView)
         self.view.selectedItem = 0
         self.view.afterDirChange ()
 
@@ -510,14 +516,14 @@ class PanelController (object):
         os.chdir (dirName)
         self.view.clearScreen ()
         self.view.selectedItem = 0
-        self.fillList (os.getcwd (), flatDirView)    # view.workingDir gets changed here
+        self.fillList (os.getcwd (), flatDirView)
         self.view.afterDirChange ()
 
     def goHome (self):
         self.directoryViewFilter = None
         os.chdir (os.path.expanduser ('~'))
         self.view.clearScreen ()
-        self.fillList (os.getcwd (), self.flatDirectoryView)    # view.workingDir gets changed here
+        self.fillList (os.getcwd (), self.flatDirectoryView)
         self.view.selectedItem = 0
         self.view.afterDirChange ()
 
@@ -595,9 +601,6 @@ class Panel (stc.StyledTextCtrl):
         # Index of an item that is currently selected
         self.selectedItem = 0
 
-        # Local copy for the view. Should migrate completely to model
-        self.workingDir = ''
-
         # List of full-width lines, containing the text of the items.
         # Only sublines of these lines are displayed both for performance
         # reasons and to bypass a bug in STC, failing to display extremely
@@ -606,7 +609,6 @@ class Panel (stc.StyledTextCtrl):
 
     def bindEvents (self):
         self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
-        self.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
         self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
 
     def setStyles (self):
@@ -804,10 +806,9 @@ class Panel (stc.StyledTextCtrl):
     def switchSplittingMode (self):
         self.getFrame ().switchSplittingMode ()
 
-    def OnSetFocus (self, evt):
+    def onSetFocus (self):
         self.SetSelBackground (1, colorScheme['selection-back'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
-        os.chdir (self.workingDir)
 
     def OnLoseFocus (self, evt):
         self.SetSelBackground (1, colorScheme['selection-inactive'])
