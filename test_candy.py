@@ -97,6 +97,9 @@ class TestCandy (unittest.TestCase):
         # Now when dimensions are known, lets proceed initializing
         self.frame.setUpAndShow ()
 
+        self.p1 = self.frame.p1.view
+        self.p2 = self.frame.p2.view
+
     def tearDown (self):
         self.frame.Destroy ()
 
@@ -106,65 +109,63 @@ class TestCandy (unittest.TestCase):
         self.assertEqual ((size.x - 5) / 2, self.frame.splitter.GetSashPosition ())
 
     def testInitialDirectoryOnActivePane (self):
-        self.assertEqual (self.frame.activePane.workingDir, os.path.expanduser ('~'))
+        self.assertEqual (self.frame.activePane.model.workingDir, os.path.expanduser ('~'))
 
     def testInitialSelection (self):
-        self.assertEqual (self.frame.activePane.selectedItem, 0)
+        self.assertEqual (self.frame.activePane.view.selectedItem, 0)
 
     def testItemListIsEmpty (self):
-        self.frame.p1.clearList ()
-        self.frame.p2.clearList ()
-        self.assertEquals (len (self.frame.p1.items), 0)
-        self.assertEquals (len (self.frame.p2.items), 0)
+        self.p1.clearList ()
+        self.p2.clearList ()
+        self.assertEquals (len (self.p1.items), 0)
+        self.assertEquals (len (self.p2.items), 0)
 
     def testSelectionDoesntGetAnywhereOnEmptyList (self):
-        self.frame.p1.clearList ()
-        self.frame.p2.clearList ()
-        self.frame.p1.moveSelectionUp ()
-        self.assertEquals (self.frame.p1.selectedItem, 0)
-        self.frame.p1.moveSelectionDown ()
-        self.assertEquals (self.frame.p1.selectedItem, 0)
-        self.frame.p1.moveSelectionLeft ()
-        self.assertEquals (self.frame.p1.selectedItem, 0)
-        self.frame.p1.moveSelectionRight ()
-        self.assertEquals (self.frame.p1.selectedItem, 0)
+        self.p1.clearList ()
+        self.p2.clearList ()
+        self.p1.moveSelectionUp ()
+        self.assertEquals (self.p1.selectedItem, 0)
+        self.p1.moveSelectionDown ()
+        self.assertEquals (self.p1.selectedItem, 0)
+        self.p1.moveSelectionLeft ()
+        self.assertEquals (self.p1.selectedItem, 0)
+        self.p1.moveSelectionRight ()
+        self.assertEquals (self.p1.selectedItem, 0)
 
     def testItemStartCharIsZeroOnEmptyList (self):
-        self.assertEquals (self.frame.p1.items[0].visualItem.startCharOnLine, 0)
+        self.assertEquals (self.p1.items[0].visualItem.startCharOnLine, 0)
 
     def testItemsListIsNotEmpty (self):
-        self.assertTrue (len (self.frame.p1.items) > 0)
+        self.assertTrue (len (self.p1.items) > 0)
 
     def testSimpleIncSearch (self):
-        self.frame.p1.incrementalSearch ('dir')
-        self.assertEquals (self.frame.p1.searchMatchIndex, 1)
+        self.assertEquals (self.p1.incrementalSearch ('dir'), 1)
 
     def testNextSearchMatch (self):
         searchStr = 'file'
-        self.frame.p1.incrementalSearch (searchStr)
-        currPos = self.frame.p1.searchMatchIndex
-        match = self.frame.p1.nextSearchMatch (searchStr, self.frame.p1.searchMatchIndex + 1)
+        currPos = self.p1.incrementalSearch (searchStr)
+        match = self.p1.nextSearchMatch (searchStr, currPos + 1)
         self.assertEquals (match, currPos + 1)
 
     def testItemStartCharOnLine (self):
-        self.assertEquals (self.frame.p1.items[0].visualItem.startCharOnLine, 0)
+        self.assertEquals (self.p1.items[0].visualItem.startCharOnLine, 0)
 
-        for index in range (len (self.frame.p1.items)):
-            col = self.frame.p1.items[index].coords[0]
+        for index in range (len (self.p1.items)):
+            col = self.p1.items[index].coords[0]
             # 11 is a magic column width number here. Based on last evidence
             # that works.
-            self.assertEquals (self.frame.p1.items[index].visualItem.startCharOnLine, col * 11)
+            self.assertEquals (self.p1.items[index].visualItem.startCharOnLine, col * 11)
 
     def testItemStartChar (self):
         #pdb.set_trace ()
-        self.assertEquals (self.frame.p1.getItemStartByte (0), 0)
+        self.assertEquals (self.p1.getItemStartByte (0), 0)
 
-        for index in range (len (self.frame.p1.items)):
+        for index in range (len (self.p1.items)):
             # 36 is a magic ViewWindow.width number here. Based on last
             # evidence that works. Only works out for the 0th column, so this
             # test will be failing for now, until I get rid of this magic.
             # Also, getItemStartByte only works in this ASCII test case.
-            self.assertEquals (self.frame.p1.getItemStartByte (index), index * 36)
+            self.assertEquals (self.p1.getItemStartByte (index), index * 36)
 
 def suite ():
     import test_keyboard
