@@ -123,8 +123,8 @@ class TestCandy (unittest.TestCase):
     def testItemListIsEmpty (self):
         self.frame.p1.clearList ()
         self.frame.p2.clearList ()
-        self.assertEquals (len (self.frame.p1.items), 0)
-        self.assertEquals (len (self.frame.p2.items), 0)
+        self.assertEquals (len (self.frame.p1.model.items), 0)
+        self.assertEquals (len (self.frame.p2.model.items), 0)
 
     def testSelectionDoesntGetAnywhereOnEmptyList (self):
         c1 = self.frame.p1
@@ -141,10 +141,11 @@ class TestCandy (unittest.TestCase):
         self.assertEquals (c1.selectedItem, 0)
 
     def testItemStartCharIsZeroOnEmptyList (self):
-        self.assertEquals (self.frame.p1.items[0].visualItem.startCharOnLine, 0)
+        item = self.frame.p1.model.items[0]
+        self.assertEquals (item.visualItem.startCharOnLine, 0)
 
     def testItemsListIsNotEmpty (self):
-        self.assertTrue (len (self.frame.p1.items) > 0)
+        self.assertTrue (len (self.frame.p1.model.items) > 0)
 
     def testSimpleIncSearch (self):
         self.assertEquals (self.frame.p1.incrementalSearch ('dir'), 1)
@@ -156,9 +157,10 @@ class TestCandy (unittest.TestCase):
         self.assertEquals (match, currPos + 1)
 
     def testItemStartCharOnLine (self):
-        self.assertEquals (self.frame.p1.items[0].visualItem.startCharOnLine, 0)
+        item = self.frame.p1.model.items[0]
+        self.assertEquals (item.visualItem.startCharOnLine, 0)
 
-        for item in self.frame.p1.items:
+        for item in self.frame.p1.model.items:
             col = item.coords[0]
             # 11 is a magic column width number here. Based on last evidence
             # that works.
@@ -166,9 +168,10 @@ class TestCandy (unittest.TestCase):
 
     def testItemStartChar (self):
         #pdb.set_trace ()
-        self.assertEquals (self.p1.getItemStartByte (self.frame.p1.items[0]), 0)
+        item = self.frame.p1.model.items[0]
+        self.assertEquals (self.p1.getItemStartByte (item), 0)
 
-        for index, item in enumerate (self.frame.p1.items):
+        for index, item in enumerate (self.frame.p1.model.items):
             # 36 is a magic ViewWindow.width number here. Based on last
             # evidence that works. Only works out for the 0th column, so this
             # test will be failing for now, until I get rid of this magic.

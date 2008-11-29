@@ -356,6 +356,11 @@ class PanelModel (object):
         # matches.
         self.directoryViewFilter = None
 
+        # List of filesystem items to be displayed. Only contains those that
+        # are to be actually displayed. E.g. no dot-files when hidden files
+        # are not displayed
+        self.items = []
+
     def changeWorkingDir (self, newWorkingDir):
         self.workingDir = newWorkingDir
         pubsub.Publisher ().sendMessage ("WORKDIR CHANGED", self.workingDir)
@@ -371,6 +376,10 @@ class PanelModel (object):
 
     def setDirFilter (self, searchStr):
         self.directoryViewFilter = DirectoryViewFilter (searchStr)
+
+    def setItems (self, items):
+        self.items = items
+        # TODO: publish event here
 
 class PanelController (object):
     def __init__ (self, parent):
@@ -389,11 +398,6 @@ class PanelController (object):
         # which next match should be focused upon go-to-next-match
         self.searchMatchIndex = -1
 
-        # List of filesystem items to be displayed. Only contains those that
-        # are to be actually displayed. E.g. no dot-files when hidden files
-        # are not displayed
-        self.items = []
-
         # Index of an item that is currently selected
         self.selectedItem = 0
 
@@ -402,12 +406,12 @@ class PanelController (object):
 
     # Used in tests
     def clearList (self):
-        self.items = []
+        self.model.setItems ([])
         self.selectedItem = 0
         self.view.numFullColumns = 0
 
     def initializeViewSettings (self, numColumns = 3):
-        self.view.initializeViewSettings (self.items, numColumns)
+        self.view.initializeViewSettings (self.model.items, numColumns)
 
     def initializeAndShowInitialView (self):
         self.initializeViewSettings ()
@@ -454,7 +458,7 @@ class PanelController (object):
                     self.setSelectionOnCurrItem ()
         elif keyCode == wx.WXK_ESCAPE:
             self.searchMode = False
-            self.view.applyDefaultStyles (self.items)  # clean matches
+            self.view.applyDefaultStyles (self.model.items)  # clean matches
         else:
             if keyCode < 256:
                 self.searchStr += chr (keyCode)
@@ -512,24 +516,26 @@ class PanelController (object):
 
     def setSelectedItemByDir (self, dir):
         try:
-            self.selectedItem = self.items.index (dir)
+            self.selectedItem = self.model.items.index (dir)
         except ValueError:
             pass
 
     def fillList (self, cwd, flatDirView):
         allItems = collectListInfo (flatDirView, cwd)
         self.model.workingDir = cwd
-        self.items = constructListForFilling (allItems, \
-                                              self.model.directoryViewFilter)
-        self.view.updateDisplayByItems (self.items, self.setSelectionOnCurrItem)
+        self.model.setItems (constructListForFilling (allItems, \
+                                              self.model.directoryViewFilter))
+        self.view.updateDisplayByItems (self.model.items, \
+                                        self.setSelectionOnCurrItem)
 
     def listDriveLetters (self):
         if platform.system () != 'Windows':
             return
 
         self.selectedItem = 0
-        self.items = collectDriveLetters ()
-        self.view.updateDisplayByItems (self.items, self.setSelectionOnCurrItem)
+        self.model.setItems (collectDriveLetters ())
+        self.view.updateDisplayByItems (self.model.items, \
+                                        self.setSelectionOnCurrItem)
         self.afterDirChange ()
 
     def flattenDirectory (self):
@@ -572,11 +578,11 @@ class PanelController (object):
         # in the line below, I'm subtracting 1 from number of items because
         # of '..' pseudoitem
         statusText = '[Folder view]: %s\t%d item(s)' \
-                     % (os.getcwd (), len (self.items) - 1)
+                     % (os.getcwd (), len (self.model.items) - 1)
         self.view.getFrame ().statusBar.SetStatusText (statusText)
 
     def onEnter (self):
-        selection = self.items[self.selectedItem]
+        selection = self.model.items[self.selectedItem]
 
         if selection.isDir:
             if selection.fileName == '..':
@@ -607,32 +613,33 @@ class PanelController (object):
         return range (start, length) + range (start)
 
     def nextSearchMatch (self, searchStr, initPos):
-        searchRange = self.wrappedRange (initPos, len (self.items))
+        searchRange = self.wrappedRange (initPos, len (self.model.items))
         searchStrLower = searchStr.lower ()
 
         for i in searchRange:
-            if searchStrLower in self.items[i].fileName.lower ():
+            if searchStrLower in self.model.items[i].fileName.lower ():
                 return i
 
     def incrementalSearch (self, searchStr):
         index = self.selectedItem       # start searching from curr selection
-        searchRange = self.wrappedRange (index, len (self.items))
+        searchRange = self.wrappedRange (index, len (self.model.items))
 
         # First of all, clean previous matches
-        self.view.applyDefaultStyles (self.items)
+        self.view.applyDefaultStyles (self.model.items)
 
         # We only want to remember first match
         firstMatch = -1
+        sStr = searchStr.lower ()
 
         for i in searchRange:
-            match = self.items[i].fileName.lower ().find (searchStr.lower ())
+            match = self.model.items[i].fileName.lower ().find (sStr)
 
             if match != -1:
                 if firstMatch == -1:
                     firstMatch = i
-                    self.view.moveItemIntoView (self.items, i)
+                    self.view.moveItemIntoView (self.model.items, i)
 
-                item = self.items[i]
+                item = self.model.items[i]
                 if item.visualItem:
                     self.view.highlightSearchMatch (item, match, searchStr)
 
@@ -643,35 +650,35 @@ class PanelController (object):
         self.searchMode = True
 
     def setSelectionOnCurrItem (self):
-        if len (self.items) <= 0:
+        if len (self.model.items) <= 0:
             return
 
-        item = self.items[self.selectedItem]
+        item = self.model.items[self.selectedItem]
         if not item.visualItem or not item.visualItem.fullyInView:
-            self.view.moveItemIntoView (self.items, self.selectedItem)
+            self.view.moveItemIntoView (self.model.items, self.selectedItem)
 
         self.view.setSelectionOnItem (item)
 
     def moveSelectionDown (self):
         self.selectedItem += 1
 
-        if self.selectedItem >= len (self.items):
+        if self.selectedItem >= len (self.model.items):
             self.selectedItem = 0
 
     def moveSelectionUp (self):
         self.selectedItem -= 1
 
         if self.selectedItem < 0:
-            self.selectedItem = len (self.items) - 1
+            self.selectedItem = len (self.model.items) - 1
 
-        # This can happen if self.items is empty
+        # This can happen if self.model.items is empty
         if self.selectedItem < 0:
             self.selectedItem = 0
 
     def moveSelectionLeft (self):
         self.selectedItem -= self.view.viewWindow.height
 
-        if len (self.items) == 0:
+        if len (self.model.items) == 0:
             self.selectedItem = 0
             return
 
@@ -683,28 +690,28 @@ class PanelController (object):
             # TODO: figure out how to deal with that long line without
             # splitting. It suggests some nasty coupling.
             selItem = self.selectedItem
-            numItems = len (self.items)
+            numItems = len (self.model.items)
             selItem = self.view.updateSelectedItemLeft (selItem, numItems)
             self.selectedItem = selItem
 
     def moveSelectionRight (self):
         self.selectedItem += self.view.viewWindow.height
 
-        if len (self.items) == 0:
+        if len (self.model.items) == 0:
             self.selectedItem = 0
             return
 
-        if self.selectedItem > len (self.items):
+        if self.selectedItem > len (self.model.items):
             self.selectedItem -= self.view.viewWindow.height
             self.selectedItem %= self.view.viewWindow.height
             self.selectedItem += 1
 
     def startEditor (self):
-        os.system ('gvim ' + self.items[self.selectedItem].fileName)
+        os.system ('gvim ' + self.model.items[self.selectedItem].fileName)
 
     def startViewer (self):
         import viewr
-        file = self.items[self.selectedItem].fileName
+        file = self.model.items[self.selectedItem].fileName
         wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
         wnd.Show (True)
 
