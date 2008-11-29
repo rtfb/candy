@@ -348,9 +348,29 @@ class PanelModel (object):
         # Working directory of the pane
         self.workingDir = os.path.expanduser ('~')
 
+        # Signifies flattened directory view
+        self.flatDirectoryView = False
+
+        # Function Object that gets called to filter out directory view.
+        # Main use (for now) is for filtering out the contents by search
+        # matches.
+        self.directoryViewFilter = None
+
     def changeWorkingDir (self, newWorkingDir):
         self.workingDir = newWorkingDir
         pubsub.Publisher ().sendMessage ("WORKDIR CHANGED", self.workingDir)
+
+    def flattenDirectory (self):
+        self.flatDirectoryView = True
+
+    def unflattenDirectory (self):
+        self.flatDirectoryView = False
+
+    def clearDirFilter (self):
+        self.directoryViewFilter = None
+
+    def setDirFilter (self, searchStr):
+        self.directoryViewFilter = DirectoryViewFilter (searchStr)
 
 class PanelController (object):
     def __init__ (self, parent):
@@ -358,9 +378,6 @@ class PanelController (object):
         self.view = Panel (parent)
         self.bindEvents ()
         pubsub.Publisher ().subscribe (self.newWorkingDir, "WORKDIR CHANGED")
-
-        # Signifies flattened directory view
-        self.flatDirectoryView = False
 
         # String being searched incrementally
         self.searchStr = ''
@@ -371,11 +388,6 @@ class PanelController (object):
         # Index of an item that is an accepted search match. Needed to know
         # which next match should be focused upon go-to-next-match
         self.searchMatchIndex = -1
-
-        # Function Object that gets called to filter out directory view.
-        # Main use (for now) is for filtering out the contents by search
-        # matches.
-        self.directoryViewFilter = None
 
         # List of filesystem items to be displayed. Only contains those that
         # are to be actually displayed. E.g. no dot-files when hidden files
@@ -430,7 +442,8 @@ class PanelController (object):
             self.searchMode = False
 
             if keyMod == wx.MOD_CONTROL:
-                self.listSearchMatches (self.flatDirectoryView, self.searchStr)
+                self.listSearchMatches (self.model.flatDirectoryView, \
+                                        self.searchStr)
             else:
                 # Here we want to stop searching and set focus on first search
                 # match. But if there was no match, we want to behave more like
@@ -481,11 +494,11 @@ class PanelController (object):
                 self.listDriveLetters ()
                 return
 
-        self.directoryViewFilter = None
-        # if we're in self.flatDirectoryView, all we want is to refresh the
-        # view of model.workingDir without flattening
-        if self.flatDirectoryView:
-            self.flatDirectoryView = False
+        self.model.clearDirFilter ()
+        # if we're in self.model.flatDirectoryView, all we want is to refresh
+        # the view of model.workingDir without flattening
+        if self.model.flatDirectoryView:
+            self.model.unflattenDirectory ()
             self.unflattenDirectory ()
             return
 
@@ -493,7 +506,7 @@ class PanelController (object):
         os.chdir ('..')
         self.view.clearScreen ()
         self.selectedItem = 0
-        self.fillList (os.getcwd (), self.flatDirectoryView)
+        self.fillList (os.getcwd (), self.model.flatDirectoryView)
         self.setSelectedItemByDir (oldDir)
         self.afterDirChange ()
 
@@ -507,7 +520,7 @@ class PanelController (object):
         allItems = collectListInfo (flatDirView, cwd)
         self.model.workingDir = cwd
         self.items = constructListForFilling (allItems, \
-                                              self.directoryViewFilter)
+                                              self.model.directoryViewFilter)
         self.view.updateDisplayByItems (self.items, self.setSelectionOnCurrItem)
 
     def listDriveLetters (self):
@@ -520,7 +533,7 @@ class PanelController (object):
         self.afterDirChange ()
 
     def flattenDirectory (self):
-        self.flatDirectoryView = True
+        self.model.flattenDirectory ()
         self.fillList (self.model.workingDir, True)
         self.afterDirChange ()
 
@@ -532,14 +545,14 @@ class PanelController (object):
         self.afterDirChange ()
 
     def listSearchMatches (self, flatDirView, searchStr):
-        self.directoryViewFilter = DirectoryViewFilter (searchStr)
+        self.model.setDirFilter (searchStr)
         self.view.clearScreen ()
         self.fillList (self.model.workingDir, flatDirView)
         self.selectedItem = 0
         self.afterDirChange ()
 
     def downdir (self, dirName, flatDirView):
-        self.directoryViewFilter = None
+        self.model.clearDirFilter ()
         os.chdir (dirName)
         self.view.clearScreen ()
         self.selectedItem = 0
@@ -547,10 +560,10 @@ class PanelController (object):
         self.afterDirChange ()
 
     def goHome (self):
-        self.directoryViewFilter = None
+        self.model.clearDirFilter ()
         os.chdir (os.path.expanduser ('~'))
         self.view.clearScreen ()
-        self.fillList (os.getcwd (), self.flatDirectoryView)
+        self.fillList (os.getcwd (), self.model.flatDirectoryView)
         self.selectedItem = 0
         self.afterDirChange ()
 
@@ -569,7 +582,7 @@ class PanelController (object):
             if selection.fileName == '..':
                 self.updir ()
             else:
-                self.downdir (selection.fileName, self.flatDirectoryView)
+                self.downdir (selection.fileName, self.model.flatDirectoryView)
         else:
             base, ext = os.path.splitext (selection.fileName)
             commandLine = resolveCommandByFileExt (ext[1:])
