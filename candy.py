@@ -381,6 +381,37 @@ class PanelModel (object):
         self.items = items
         # TODO: publish event here
 
+    def getIndexByItem (self, item):
+        try:
+            return self.items.index (item)
+        except ValueError:
+            return 0
+
+    def fillListByWorkingDir (self, cwd):
+        allItems = collectListInfo (self.flatDirectoryView, cwd)
+        self.changeWorkingDir (cwd)
+        list = constructListForFilling (allItems, self.directoryViewFilter)
+        self.setItems (list)
+
+    def updir (self):
+        if platform.system () == 'Windows':
+            if isRootOfDrive (self.workingDir):
+                self.setItems (collectDriveLetters ())
+                return 0
+
+        self.clearDirFilter ()
+        # if we're in self.flatDirectoryView, all we want is to refresh
+        # the view of self.workingDir without flattening
+        if self.flatDirectoryView:
+            self.unflattenDirectory ()
+            self.fillListByWorkingDir (os.getcwd ())
+            return 0
+
+        oldDir = os.path.split (os.getcwd ())[1]
+        os.chdir ('..')
+        self.fillListByWorkingDir (os.getcwd ())
+        return self.getIndexByItem (oldDir)
+
 class PanelController (object):
     def __init__ (self, parent):
         self.model = PanelModel ()
@@ -419,13 +450,14 @@ class PanelController (object):
         dir = os.path.expanduser ('~')
         #dir = '/usr/share'
         os.chdir (dir)
-        self.fillList (dir, False)
+        self.fillList (dir)
         self.view.SetFocus ()
         self.afterDirChange ()
 
     def newWorkingDir (self, message):
         # Really? It's fillList that changes the workingDir! Dead loop here.
-        self.fillList (message.data)
+        #self.fillList (message.data)
+        pass
 
     def bindEvents (self):
         self.view.Bind (wx.EVT_CHAR, self.OnChar)
@@ -446,8 +478,7 @@ class PanelController (object):
             self.searchMode = False
 
             if keyMod == wx.MOD_CONTROL:
-                self.listSearchMatches (self.model.flatDirectoryView, \
-                                        self.searchStr)
+                self.listSearchMatches (self.searchStr)
             else:
                 # Here we want to stop searching and set focus on first search
                 # match. But if there was no match, we want to behave more like
@@ -493,38 +524,15 @@ class PanelController (object):
         sys.exit (0)
 
     def updir (self):
-        if platform.system () == 'Windows':
-            if isRootOfDrive (self.model.workingDir):
-                self.listDriveLetters ()
-                return
-
-        self.model.clearDirFilter ()
-        # if we're in self.model.flatDirectoryView, all we want is to refresh
-        # the view of model.workingDir without flattening
-        if self.model.flatDirectoryView:
-            self.model.unflattenDirectory ()
-            self.unflattenDirectory ()
-            return
-
-        oldDir = os.path.split (os.getcwd ())[1]
-        os.chdir ('..')
-        self.view.clearScreen ()
         self.selectedItem = 0
-        self.fillList (os.getcwd (), self.model.flatDirectoryView)
-        self.setSelectedItemByDir (oldDir)
+        self.view.clearScreen ()
+        self.selectedItem = self.model.updir ()
+        self.view.updateDisplayByItems (self.model.items, \
+                                        self.setSelectionOnCurrItem)
         self.afterDirChange ()
 
-    def setSelectedItemByDir (self, dir):
-        try:
-            self.selectedItem = self.model.items.index (dir)
-        except ValueError:
-            pass
-
-    def fillList (self, cwd, flatDirView):
-        allItems = collectListInfo (flatDirView, cwd)
-        self.model.workingDir = cwd
-        self.model.setItems (constructListForFilling (allItems, \
-                                              self.model.directoryViewFilter))
+    def fillList (self, cwd):
+        self.model.fillListByWorkingDir (cwd)
         self.view.updateDisplayByItems (self.model.items, \
                                         self.setSelectionOnCurrItem)
 
@@ -540,36 +548,36 @@ class PanelController (object):
 
     def flattenDirectory (self):
         self.model.flattenDirectory ()
-        self.fillList (self.model.workingDir, True)
+        self.fillList (self.model.workingDir)
         self.afterDirChange ()
 
     def unflattenDirectory (self):
         self.selectedItem = 0 # forget the selection of the flattened view
         self.view.clearScreen ()
         # getcwd? Really? Why not model.workingDir?
-        self.fillList (os.getcwd (), False)
+        self.fillList (os.getcwd ())
         self.afterDirChange ()
 
-    def listSearchMatches (self, flatDirView, searchStr):
+    def listSearchMatches (self, searchStr):
         self.model.setDirFilter (searchStr)
         self.view.clearScreen ()
-        self.fillList (self.model.workingDir, flatDirView)
+        self.fillList (self.model.workingDir)
         self.selectedItem = 0
         self.afterDirChange ()
 
-    def downdir (self, dirName, flatDirView):
+    def downdir (self, dirName):
         self.model.clearDirFilter ()
         os.chdir (dirName)
         self.view.clearScreen ()
         self.selectedItem = 0
-        self.fillList (os.getcwd (), flatDirView)
+        self.fillList (os.getcwd ())
         self.afterDirChange ()
 
     def goHome (self):
         self.model.clearDirFilter ()
         os.chdir (os.path.expanduser ('~'))
         self.view.clearScreen ()
-        self.fillList (os.getcwd (), self.model.flatDirectoryView)
+        self.fillList (os.getcwd ())
         self.selectedItem = 0
         self.afterDirChange ()
 
@@ -588,7 +596,7 @@ class PanelController (object):
             if selection.fileName == '..':
                 self.updir ()
             else:
-                self.downdir (selection.fileName, self.model.flatDirectoryView)
+                self.downdir (selection.fileName)
         else:
             base, ext = os.path.splitext (selection.fileName)
             commandLine = resolveCommandByFileExt (ext[1:])
