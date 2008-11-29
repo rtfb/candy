@@ -394,8 +394,11 @@ class PanelController (object):
         self.selectedItem = 0
         self.view.numFullColumns = 0
 
+    def initializeViewSettings (self, numColumns = 3):
+        self.view.initializeViewSettings (self.items, numColumns)
+
     def initializeAndShowInitialView (self):
-        self.view.initializeViewSettings ()
+        self.initializeViewSettings ()
 
         dir = os.path.expanduser ('~')
         #dir = '/usr/share'
@@ -753,7 +756,7 @@ class Panel (stc.StyledTextCtrl):
         self.SetSelBackground (1, colorScheme['selection-inactive'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
 
-    def initializeViewSettings (self, numColumns = 3):
+    def initializeViewSettings (self, items, numColumns):
         width, height = self.GetClientSizeTuple ()
         lineHeight = self.TextHeight (0)
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
@@ -765,7 +768,7 @@ class Panel (stc.StyledTextCtrl):
         self.viewWindow.numColumns = numColumns
         self.charsPerCol = width / charWidth / self.viewWindow.numColumns
         self.clearScreen ()
-        self.updateDisplayByItems ([])
+        self.updateDisplayByItems (items)
 
     def setDebugWhitespace (self):
         if generalConfig['debug-whitespace'].lower () == 'true':
@@ -1016,8 +1019,8 @@ class Candy (wx.Frame):
         if self.splitter.GetSplitMode () == wx.SPLIT_HORIZONTAL:
             numColumns = 5
 
-        self.p1.view.initializeViewSettings (numColumns)
-        self.p2.view.initializeViewSettings (numColumns)
+        self.p1.initializeViewSettings (numColumns)
+        self.p2.initializeViewSettings (numColumns)
 
     def splitEqual (self):
         size = self.GetSize ()
@@ -1064,8 +1067,8 @@ class Candy (wx.Frame):
 
         self.splitter.SetSplitMode (newSplitMode)
         self.splitEqual ()
-        self.p1.view.initializeViewSettings (numColumns)
-        self.p2.view.initializeViewSettings (numColumns)
+        self.p1.initializeViewSettings (numColumns)
+        self.p2.initializeViewSettings (numColumns)
 
 def main ():
     app = wx.App (0)
