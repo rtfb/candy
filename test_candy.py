@@ -58,12 +58,14 @@ class TestSmartJustifier (unittest.TestCase):
     def testDotsInTheMiddle (self):
         target = 'long...name.txt'
         sj = candy.SmartJustifier (len (target))
-        self.assertEquals (target, sj.justify ('longTHIS_SHOULD_GET_REMOVEDname.txt'))
+        longFileName = 'longTHIS_SHOULD_GET_REMOVEDname.txt'
+        self.assertEquals (target, sj.justify (longFileName))
 
     def testOddNumberOfCharsAndDots (self):
         target = 'long...ame.txt'
         sj = candy.SmartJustifier (len (target))
-        self.assertEquals (target, sj.justify ('longTHIS_SHOULD_GET_REMOVEDame.txt'))
+        longFileName = 'longTHIS_SHOULD_GET_REMOVEDname.txt'
+        self.assertEquals (target, sj.justify (longFileName))
 
     def testEmptyLine (self):
         sj = candy.SmartJustifier (3)
@@ -76,9 +78,11 @@ class TestSmartJustifier (unittest.TestCase):
     def testWidth (self):
         targetWidth = 10
         sj = candy.SmartJustifier (targetWidth)
-        self.assertEquals (targetWidth, len (sj.justify ('0123456789.gnumeric')))
-        self.assertEquals (targetWidth, len (sj.justify ('Jim_Hefferon_-_Linear_Algebra.pdf')))
-        self.assertEquals (targetWidth, len (sj.justify ('a')))
+        testCases = ['0123456789.gnumeric',
+                     'Jim_Hefferon_-_Linear_Algebra.pdf',
+                     'a']
+        for tc in testCases:
+            self.assertEquals (targetWidth, len (sj.justify (tc)))
 
     def testGnumeric (self):
         target = '0...9.gnumeri'
@@ -106,10 +110,12 @@ class TestCandy (unittest.TestCase):
     def testSplitEqual (self):
         size = self.frame.GetSize ()
         # -5 is to compensate for the sash width of 5 pixels. Same in the code.
-        self.assertEqual ((size.x - 5) / 2, self.frame.splitter.GetSashPosition ())
+        sashPos = self.frame.splitter.GetSashPosition ()
+        self.assertEqual ((size.x - 5) / 2, sashPos)
 
     def testInitialDirectoryOnActivePane (self):
-        self.assertEqual (self.frame.activePane.model.workingDir, os.path.expanduser ('~'))
+        homeDir = os.path.expanduser ('~')
+        self.assertEqual (self.frame.activePane.model.workingDir, homeDir)
 
     def testInitialSelection (self):
         self.assertEqual (self.frame.activePane.selectedItem, 0)
@@ -152,11 +158,11 @@ class TestCandy (unittest.TestCase):
     def testItemStartCharOnLine (self):
         self.assertEquals (self.frame.p1.items[0].visualItem.startCharOnLine, 0)
 
-        for index in range (len (self.frame.p1.items)):
-            col = self.frame.p1.items[index].coords[0]
+        for item in self.frame.p1.items:
+            col = item.coords[0]
             # 11 is a magic column width number here. Based on last evidence
             # that works.
-            self.assertEquals (self.frame.p1.items[index].visualItem.startCharOnLine, col * 11)
+            self.assertEquals (item.visualItem.startCharOnLine, col * 11)
 
     def testItemStartChar (self):
         #pdb.set_trace ()

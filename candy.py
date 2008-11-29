@@ -36,7 +36,8 @@ if platform.system () == 'Windows':
     try:
         import win32api
     except ImportError:
-        print 'You seem to be running Windows and don\'t have win32api. Tisk tisk tisk...'
+        print 'You seem to be running Windows and don\'t have win32api.'
+        print 'Tisk tisk tisk...'
 
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
@@ -372,7 +373,8 @@ class PanelController (object):
         self.searchMatchIndex = -1
 
         # Function Object that gets called to filter out directory view.
-        # Main use (for now) is for filtering out the contents by search matches.
+        # Main use (for now) is for filtering out the contents by search
+        # matches.
         self.directoryViewFilter = None
 
         # List of filesystem items to be displayed. Only contains those that
@@ -501,7 +503,8 @@ class PanelController (object):
     def fillList (self, cwd, flatDirView):
         allItems = collectListInfo (flatDirView, cwd)
         self.model.workingDir = cwd
-        self.items = constructListForFilling (allItems, self.directoryViewFilter)
+        self.items = constructListForFilling (allItems, \
+                                              self.directoryViewFilter)
         self.view.updateDisplayByItems (self.items, self.setSelectionOnCurrItem)
 
     def listDriveLetters (self):
@@ -521,7 +524,8 @@ class PanelController (object):
     def unflattenDirectory (self):
         self.selectedItem = 0 # forget the selection of the flattened view
         self.view.clearScreen ()
-        self.fillList (os.getcwd (), False)    # getcwd? Really? Why not model.workingDir?
+        # getcwd? Really? Why not model.workingDir?
+        self.fillList (os.getcwd (), False)
         self.afterDirChange ()
 
     def listSearchMatches (self, flatDirView, searchStr):
@@ -612,8 +616,9 @@ class PanelController (object):
                     firstMatch = i
                     self.view.moveItemIntoView (self.items, i)
 
-                if self.items[i].visualItem:
-                    self.view.highlightSearchMatch (self.items[i], match, searchStr)
+                item = self.items[i]
+                if item.visualItem:
+                    self.view.highlightSearchMatch (item, match, searchStr)
 
         return firstMatch
 
@@ -629,14 +634,7 @@ class PanelController (object):
         if not item.visualItem or not item.visualItem.fullyInView:
             self.view.moveItemIntoView (self.items, self.selectedItem)
 
-        selectionStart = self.view.getItemStartByte (item)
-
-        item = None
-
-        if self.selectedItem < len (self.items):
-            item = self.items[self.selectedItem]
-
-        self.view.setSelectionOnItem (selectionStart, item)
+        self.view.setSelectionOnItem (item)
 
     def moveSelectionDown (self):
         self.selectedItem += 1
@@ -662,8 +660,16 @@ class PanelController (object):
             return
 
         if self.selectedItem < 0:
-            self.selectedItem += self.view.viewWindow.height   # undo the decrement and start calculating from scratch
-            self.selectedItem = self.view.updateSelectedItemLeft (self.selectedItem, len (self.items))
+            # undo the decrement and start calculating from scratch:
+            self.selectedItem += self.view.viewWindow.height
+
+            # Avoiding too long line here... but...
+            # TODO: figure out how to deal with that long line without
+            # splitting. It suggests some nasty coupling.
+            selItem = self.selectedItem
+            numItems = len (self.items)
+            selItem = self.view.updateSelectedItemLeft (selItem, numItems)
+            self.selectedItem = selItem
 
     def moveSelectionRight (self):
         self.selectedItem += self.view.viewWindow.height
@@ -674,7 +680,8 @@ class PanelController (object):
 
         if self.selectedItem > len (self.items):
             self.selectedItem -= self.view.viewWindow.height
-            self.selectedItem = self.selectedItem % self.view.viewWindow.height + 1
+            self.selectedItem %= self.view.viewWindow.height
+            self.selectedItem += 1
 
     def startEditor (self):
         os.system ('gvim ' + self.items[self.selectedItem].fileName)
@@ -712,8 +719,8 @@ class Panel (stc.StyledTextCtrl):
         # to bottom
         self.numFullColumns = 0
 
-        # A set of VisualItems that are referenced from subset of controller.items
-        # and represent visible parts of them on screen.
+        # A set of VisualItems that are referenced from subset of
+        # controller.items and represent visible parts of them on screen.
         self.visualItems = []
 
         # List of full-width lines, containing the text of the items.
@@ -917,7 +924,8 @@ class Panel (stc.StyledTextCtrl):
 
         self.updateDisplayByItems (items, None, False)
 
-    def setSelectionOnItem (self, selectionStart, item):
+    def setSelectionOnItem (self, item):
+        selectionStart = self.getItemStartByte (item)
         self.SetCurrentPos (selectionStart)
         self.EnsureCaretVisible ()
 
@@ -930,7 +938,8 @@ class Panel (stc.StyledTextCtrl):
 
     def updateSelectedItemLeft (self, selectedItem, numItems):
         numFullLines = numItems % self.viewWindow.height
-        bottomRightIndex = self.viewWindow.height * (self.numFullColumns + 1) - 1
+        bottomRightIndex = self.viewWindow.height * (self.numFullColumns + 1)
+        bottomRightIndex -= 1
 
         if selectedItem % self.viewWindow.height > numFullLines:
             bottomRightIndex = self.viewWindow.height * self.numFullColumns - 1
@@ -945,7 +954,7 @@ class Panel (stc.StyledTextCtrl):
         if row >= 0:
             # +1 below because GetLineEndPosition doesn't account for newlines
             # TODO: why not +row? If it skips newlines, it should have
-            # skipped all
+            # skipped N (=row) of them
             sumBytes = self.GetLineEndPosition (row) + 1
 
         return sumBytes + item.visualItem.startByteOnLine
@@ -963,7 +972,8 @@ class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
         wx.Frame.__init__ (self, parent, -1, title)
 
-        self.splitter = wx.SplitterWindow (self, ID_SPLITTER, style = wx.SP_BORDER)
+        self.splitter = wx.SplitterWindow (self, ID_SPLITTER, \
+                                           style = wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize (50)
 
         self.p1 = PanelController (self.splitter)
@@ -972,7 +982,8 @@ class Candy (wx.Frame):
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
         self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
-        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged, id = ID_SPLITTER)
+        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged, \
+                   id = ID_SPLITTER)
 
         displaySize = wx.DisplaySize ()
         appSize = (displaySize[0] / 2, displaySize[1] / 2)
@@ -982,7 +993,8 @@ class Candy (wx.Frame):
         self.sizer.Add (self.splitter, 1, wx.EXPAND)
         self.statusLine = StatusLine (self, ID_STATUS_LINE, appSize[0])
         self.sizer.AddSpacer (2)
-        self.sizer.Add (self.statusLine, 0, wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND)
+        sizerFlags = wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND
+        self.sizer.Add (self.statusLine, 0, sizerFlags)
         self.SetSizer (self.sizer)
 
         self.statusBar = self.CreateStatusBar ()
