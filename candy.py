@@ -337,7 +337,7 @@ class StatusLine (stc.StyledTextCtrl):
         pb = int (generalConfig['font-size']) # 12
 
         # Set the styles according to color scheme
-        styleSpec = "size:%d,face:%s,back:%s,fore:%s" \
+        styleSpec = 'size:%d,face:%s,back:%s,fore:%s' \
                     % (pb, faceCourier, colorScheme['background'],
                        colorScheme['default-text'])
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
@@ -363,7 +363,7 @@ class PanelModel (object):
 
     def changeWorkingDir (self, newWorkingDir):
         self.workingDir = newWorkingDir
-        pubsub.Publisher ().sendMessage ("WORKDIR CHANGED", self.workingDir)
+        pubsub.Publisher ().sendMessage ('WORKDIR CHANGED', self.workingDir)
 
     def flattenDirectory (self):
         self.flatDirectoryView = True
@@ -417,7 +417,7 @@ class PanelController (object):
         self.model = PanelModel ()
         self.view = Panel (parent)
         self.bindEvents ()
-        #pubsub.Publisher ().subscribe (self.newWorkingDir, "WORKDIR CHANGED")
+        #pubsub.Publisher ().subscribe (self.newWorkingDir, 'WORKDIR CHANGED')
 
         # String being searched incrementally
         self.searchStr = ''
@@ -729,15 +729,15 @@ class Panel (stc.StyledTextCtrl):
         pb = int (generalConfig['font-size']) # 12
 
         # Set the styles according to color scheme
-        styleSpec = "size:%d,face:%s,back:%s,fore:%s" \
+        styleSpec = 'size:%d,face:%s,back:%s,fore:%s' \
                     % (pb, faceCourier, colorScheme['background'],
                        colorScheme['default-text'])
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll ()
-        styleSpec = "size:%d,bold,face:%s,fore:%s" \
+        styleSpec = 'size:%d,bold,face:%s,fore:%s' \
                     % (pb, faceCourier, colorScheme['folder'])
         self.StyleSetSpec (STYLE_FOLDER, styleSpec)
-        styleSpec = "size:%d,bold,face:%s,fore:%s,back:%s" \
+        styleSpec = 'size:%d,bold,face:%s,fore:%s,back:%s' \
                     % (pb, faceCourier, colorScheme['search-highlight-fore'],
                        colorScheme['search-highlight-back'])
         self.StyleSetSpec (STYLE_INC_SEARCH, styleSpec)
