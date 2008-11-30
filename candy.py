@@ -371,11 +371,11 @@ class PanelModel (object):
     def unflattenDirectory (self):
         self.flatDirectoryView = False
 
-    def clearDirFilter (self):
-        self.directoryViewFilter = None
-
     def setDirFilter (self, searchStr):
-        self.directoryViewFilter = DirectoryViewFilter (searchStr)
+        if searchStr != u'':
+            self.directoryViewFilter = DirectoryViewFilter (searchStr)
+        else:
+            self.directoryViewFilter = None
 
     def setItems (self, items):
         self.items = items
@@ -399,7 +399,7 @@ class PanelModel (object):
                 self.setItems (collectDriveLetters ())
                 return 0
 
-        self.clearDirFilter ()
+        self.setDirFilter (u'')
         # if we're in self.flatDirectoryView, all we want is to refresh
         # the view of self.workingDir without flattening
         if self.flatDirectoryView:
@@ -505,33 +505,21 @@ class PanelController (object):
         self.view.onSetFocus ()
         os.chdir (self.model.workingDir)
 
-    def moveSelectionDown (self):
-        self.view.moveSelectionDown ()
-
-    def moveSelectionUp (self):
-        self.view.moveSelectionUp ()
-
-    def moveSelectionLeft (self):
-        self.view.moveSelectionLeft ()
-
-    def moveSelectionRight (self):
-        self.view.moveSelectionRight ()
-
     def quiter (self):
         sys.exit (0)
+
+    def updateView (self):
+        self.view.updateDisplayByItems (self.model.items, \
+                                        self.setSelectionOnCurrItem)
 
     def updir (self):
         self.selectedItem = 0
         self.view.clearScreen ()
         self.selectedItem = self.model.updir ()
-        self.view.updateDisplayByItems (self.model.items, \
-                                        self.setSelectionOnCurrItem)
         self.afterDirChange ()
 
     def fillList (self, cwd):
         self.model.fillListByWorkingDir (cwd)
-        self.view.updateDisplayByItems (self.model.items, \
-                                        self.setSelectionOnCurrItem)
 
     def listDriveLetters (self):
         if platform.system () != 'Windows':
@@ -539,8 +527,6 @@ class PanelController (object):
 
         self.selectedItem = 0
         self.model.setItems (collectDriveLetters ())
-        self.view.updateDisplayByItems (self.model.items, \
-                                        self.setSelectionOnCurrItem)
         self.afterDirChange ()
 
     def flattenDirectory (self):
@@ -548,26 +534,16 @@ class PanelController (object):
         self.fillList (self.model.workingDir)
         self.afterDirChange ()
 
-    def unflattenDirectory (self):
-        self.selectedItem = 0 # forget the selection of the flattened view
-        self.view.clearScreen ()
-        self.fillList (self.model.workingDir)
-        self.afterDirChange ()
-
-    def listSearchMatches (self, searchStr):
+    def changeDir (self, fullPath, searchStr = u''):
         self.model.setDirFilter (searchStr)
-        self.view.clearScreen ()
-        self.fillList (self.model.workingDir)
-        self.selectedItem = 0
-        self.afterDirChange ()
-
-    def changeDir (self, fullPath):
-        self.model.clearDirFilter ()
         os.chdir (fullPath)
         self.view.clearScreen ()
         self.selectedItem = 0
         self.fillList (fullPath)
         self.afterDirChange ()
+
+    def listSearchMatches (self, searchStr):
+        self.changeDir (self.model.workingDir, searchStr)
 
     def downdir (self, dirName):
         self.changeDir (os.path.join (self.model.workingDir, dirName))
@@ -576,6 +552,7 @@ class PanelController (object):
         self.changeDir (os.path.expanduser (u'~'))
 
     def afterDirChange (self):
+        self.updateView ()
         self.setSelectionOnCurrItem ()
         # in the line below, I'm subtracting 1 from number of items because
         # of '..' pseudoitem
