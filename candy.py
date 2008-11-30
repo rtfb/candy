@@ -417,7 +417,7 @@ class PanelController (object):
         self.model = PanelModel ()
         self.view = Panel (parent)
         self.bindEvents ()
-        pubsub.Publisher ().subscribe (self.newWorkingDir, "WORKDIR CHANGED")
+        #pubsub.Publisher ().subscribe (self.newWorkingDir, "WORKDIR CHANGED")
 
         # String being searched incrementally
         self.searchStr = ''
@@ -450,11 +450,6 @@ class PanelController (object):
 
         # This one is needed here to get the initial focus:
         self.view.SetFocus ()
-
-    def newWorkingDir (self, message):
-        # Really? It's fillList that changes the workingDir! Dead loop here.
-        #self.fillList (message.data)
-        pass
 
     def bindEvents (self):
         self.view.Bind (wx.EVT_CHAR, self.OnChar)
@@ -518,9 +513,6 @@ class PanelController (object):
         self.selectedItem = self.model.updir ()
         self.afterDirChange ()
 
-    def fillList (self, cwd):
-        self.model.fillListByWorkingDir (cwd)
-
     def listDriveLetters (self):
         if platform.system () != 'Windows':
             return
@@ -531,7 +523,7 @@ class PanelController (object):
 
     def flattenDirectory (self):
         self.model.flattenDirectory ()
-        self.fillList (self.model.workingDir)
+        self.model.fillListByWorkingDir (self.model.workingDir)
         self.afterDirChange ()
 
     def changeDir (self, fullPath, searchStr = u''):
@@ -539,7 +531,7 @@ class PanelController (object):
         os.chdir (fullPath)
         self.view.clearScreen ()
         self.selectedItem = 0
-        self.fillList (fullPath)
+        self.model.fillListByWorkingDir (fullPath)
         self.afterDirChange ()
 
     def listSearchMatches (self, searchStr):
