@@ -212,13 +212,13 @@ def collectListInfo (isFlatDirectoryView, cwd):
     files = listFiles (isFlatDirectoryView, cwd)
 
     for f in files:
-        item = RawItem (unicode (f, 'utf-8'))
+        item = RawItem (f)
 
         if os.path.isdir (f):
             item.style = STYLE_FOLDER
             item.isDir = True
 
-        if f.startswith ('.'):
+        if f.startswith (u'.'):
             item.isHidden = True
 
         items.append (item)
@@ -239,10 +239,10 @@ def collectDriveLetters ():
     return items
 
 def isRootOfDrive (path):
-    letters = [chr (n) for n in range (ord ('a'), ord ('z') + 1)]
+    letters = [chr (n) for n in range (ord (u'a'), ord (u'z') + 1)]
     return len (path) == 3 \
            and path.lower ()[0] in letters \
-           and path[1:] == ':\\'
+           and path[1:] == u':\\'
 
 def constructListForFilling (fullList, specialFilter):
     dirList = filter (lambda (f): f.isDir, fullList)
@@ -283,7 +283,7 @@ class SmartJustifier (object):
         root, ext = os.path.splitext (text)
         newWidth = self.width - self.numDots
 
-        if ext != '':
+        if ext != u'':
             newWidth -= len (ext)
 
         if newWidth <= 5:       # 5 = len ('a...b')
@@ -346,7 +346,7 @@ class StatusLine (stc.StyledTextCtrl):
 class PanelModel (object):
     def __init__ (self):
         # Working directory of the pane
-        self.workingDir = os.path.expanduser ('~')
+        self.workingDir = os.path.expanduser (u'~')
 
         # Signifies flattened directory view
         self.flatDirectoryView = False
@@ -404,12 +404,12 @@ class PanelModel (object):
         # the view of self.workingDir without flattening
         if self.flatDirectoryView:
             self.unflattenDirectory ()
-            self.fillListByWorkingDir (os.getcwd ())
+            self.fillListByWorkingDir (os.getcwdu ())
             return 0
 
-        oldDir = os.path.split (os.getcwd ())[1]
-        os.chdir ('..')
-        self.fillListByWorkingDir (os.getcwd ())
+        oldDir = os.path.split (os.getcwdu ())[1]
+        os.chdir (u'..')
+        self.fillListByWorkingDir (os.getcwdu ())
         return self.getIndexByItem (oldDir)
 
 class PanelController (object):
@@ -446,13 +446,10 @@ class PanelController (object):
 
     def initializeAndShowInitialView (self):
         self.initializeViewSettings ()
+        self.goHome ()
 
-        dir = os.path.expanduser ('~')
-        #dir = '/usr/share'
-        os.chdir (dir)
-        self.fillList (dir)
+        # This one is needed here to get the initial focus:
         self.view.SetFocus ()
-        self.afterDirChange ()
 
     def newWorkingDir (self, message):
         # Really? It's fillList that changes the workingDir! Dead loop here.
@@ -554,8 +551,7 @@ class PanelController (object):
     def unflattenDirectory (self):
         self.selectedItem = 0 # forget the selection of the flattened view
         self.view.clearScreen ()
-        # getcwd? Really? Why not model.workingDir?
-        self.fillList (os.getcwd ())
+        self.fillList (self.model.workingDir)
         self.afterDirChange ()
 
     def listSearchMatches (self, searchStr):
@@ -565,35 +561,33 @@ class PanelController (object):
         self.selectedItem = 0
         self.afterDirChange ()
 
-    def downdir (self, dirName):
+    def changeDir (self, fullPath):
         self.model.clearDirFilter ()
-        os.chdir (dirName)
+        os.chdir (fullPath)
         self.view.clearScreen ()
         self.selectedItem = 0
-        self.fillList (os.getcwd ())
+        self.fillList (fullPath)
         self.afterDirChange ()
 
+    def downdir (self, dirName):
+        self.changeDir (os.path.join (self.model.workingDir, dirName))
+
     def goHome (self):
-        self.model.clearDirFilter ()
-        os.chdir (os.path.expanduser ('~'))
-        self.view.clearScreen ()
-        self.fillList (os.getcwd ())
-        self.selectedItem = 0
-        self.afterDirChange ()
+        self.changeDir (os.path.expanduser (u'~'))
 
     def afterDirChange (self):
         self.setSelectionOnCurrItem ()
         # in the line below, I'm subtracting 1 from number of items because
         # of '..' pseudoitem
-        statusText = '[Folder view]: %s\t%d item(s)' \
-                     % (os.getcwd (), len (self.model.items) - 1)
+        statusText = u'[Folder view]: %s\t%d item(s)' \
+                     % (os.getcwdu (), len (self.model.items) - 1)
         self.view.getFrame ().statusBar.SetStatusText (statusText)
 
     def onEnter (self):
         selection = self.model.items[self.selectedItem]
 
         if selection.isDir:
-            if selection.fileName == '..':
+            if selection.fileName == u'..':
                 self.updir ()
             else:
                 self.downdir (selection.fileName)
@@ -606,9 +600,6 @@ class PanelController (object):
 
     def clearScreen (self):
         self.view.clearScreen ()
-
-    def listDriveLetters (self):
-        self.view.listDriveLetters ()
 
     def onNextMatch (self):
         item = self.selectedItem + 1
@@ -1029,7 +1020,7 @@ class Candy (wx.Frame):
         self.SetSizer (self.sizer)
 
         self.statusBar = self.CreateStatusBar ()
-        self.statusBar.SetStatusText (os.getcwd ())
+        self.statusBar.SetStatusText (os.getcwdu ())
         self.Center ()
         self.activePane = self.p1
 
