@@ -126,6 +126,10 @@ class TestCandy (unittest.TestCase):
         # Now when dimensions are known, lets proceed initializing
         self.frame.setUpAndShow ()
 
+        # Speed up the tests by not executing updateView()
+        self.frame.p1.updateView = lambda: None
+        self.frame.p2.updateView = lambda: None
+
     def tearDown (self):
         self.frame.Destroy ()
 
