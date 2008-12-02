@@ -89,6 +89,31 @@ class TestSmartJustifier (unittest.TestCase):
         sj = candy.SmartJustifier (len (target))
         self.assertEquals (target, sj.justify ('0123456789.gnumeric'))
 
+class TestModel (unittest.TestCase):
+    def setUp (self):
+        self.model = candy.PanelModel ('m.')
+
+    def tearDown (self):
+        pass
+
+    def testInitialDirectoryOnActivePane (self):
+        homeDir = os.path.expanduser ('~')
+        self.assertEqual (self.model.workingDir, homeDir)
+
+    def testItemListIsEmpty (self):
+        self.assertEquals (len (self.model.items), 0)
+
+    def testFillItemsList (self):
+        self.model.fillListByWorkingDir ('.')
+        # -5 here because the fake list contains 5 hidden files
+        fakeListLen = len (fakeFileLister (False, '.')) - 5
+        self.assertEquals (len (self.model.items), fakeListLen)
+
+    def testUpdirFromFlatView (self):
+        self.model.fillListByWorkingDir ('.')
+        self.model.flattenDirectory ()
+        self.assertEquals (self.model.updir (), 0)
+
 class TestCandy (unittest.TestCase):
     def setUp (self):
         self.app = wx.PySimpleApp ()
@@ -101,9 +126,6 @@ class TestCandy (unittest.TestCase):
         # Now when dimensions are known, lets proceed initializing
         self.frame.setUpAndShow ()
 
-        self.p1 = self.frame.p1.view
-        self.p2 = self.frame.p2.view
-
     def tearDown (self):
         self.frame.Destroy ()
 
@@ -112,10 +134,6 @@ class TestCandy (unittest.TestCase):
         # -5 is to compensate for the sash width of 5 pixels. Same in the code.
         sashPos = self.frame.splitter.GetSashPosition ()
         self.assertEqual ((size.x - 5) / 2, sashPos)
-
-    def testInitialDirectoryOnActivePane (self):
-        homeDir = os.path.expanduser ('~')
-        self.assertEqual (self.frame.activePane.model.workingDir, homeDir)
 
     def testInitialSelection (self):
         self.assertEqual (self.frame.activePane.selectedItem, 0)
@@ -169,21 +187,24 @@ class TestCandy (unittest.TestCase):
     def testItemStartChar (self):
         #pdb.set_trace ()
         item = self.frame.p1.model.items[0]
-        self.assertEquals (self.p1.getItemStartByte (item), 0)
+        view = self.frame.p1.view
+        self.assertEquals (view.getItemStartByte (item), 0)
 
         for index, item in enumerate (self.frame.p1.model.items):
             # 36 is a magic ViewWindow.width number here. Based on last
             # evidence that works. Only works out for the 0th column, so this
             # test will be failing for now, until I get rid of this magic.
             # Also, getItemStartByte only works in this ASCII test case.
-            self.assertEquals (self.p1.getItemStartByte (item), index * 36)
+            self.assertEquals (view.getItemStartByte (item), index * 36)
 
 def suite ():
     import test_keyboard
     candySuite = unittest.makeSuite (TestCandy, 'test')
+    modelSuite = unittest.makeSuite (TestModel, 'test')
     smartJustifierSuite = unittest.makeSuite (TestSmartJustifier, 'test')
     keyboardSuite = unittest.makeSuite (test_keyboard.TestKeyboardEventHandler)
-    return unittest.TestSuite ([smartJustifierSuite, keyboardSuite, candySuite])
+    return unittest.TestSuite ([smartJustifierSuite, keyboardSuite,
+                                modelSuite, candySuite])
 
 if __name__ == '__main__':
     unittest.main (defaultTest = 'suite')
