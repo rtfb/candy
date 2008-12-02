@@ -17,6 +17,28 @@ Please report bugs in Candy to Vytautas.Shaltenis@gmail.com.
 
 Candy's home page is at <http://rtfb.gamedev.lt/projects/candy/>.
 
+Compatibility
+=============
+
+I'm developing Candy with Python 2.5.2. Using other versions of
+Python 2.5.x should not be an issue. Even older Pythons should
+also work, but I have not tried. If you do, let me know how it
+behaved.
+
+I was reported that Candy is more sensitive to the version of
+wxPython. I am using version 2.8.8.0. Version 2.6.3.2 was reported
+to have problems, so I advise not to run Candy on all of 2.6
+series of wxPython.
+
+You can check what version of wxPython you have, using the following
+command:
+
+$ python -c "import wx; print (wx.VERSION_STRING)"
+
+On Windows, you will need win32api module. Candy will not refuse
+to work without it, but you will lack some essential functionality.
+You can get win32api module here: http://python.net/crew/mhammond/win32/
+
 MAINTAINER: Vytautas Saltenis <Vytautas.Shaltenis@gmail.com>
 
 Copyright (C) 2008, Vytautas Saltenis
