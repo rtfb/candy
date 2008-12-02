@@ -344,7 +344,7 @@ class StatusLine (stc.StyledTextCtrl):
         self.StyleClearAll ()
 
 class PanelModel (object):
-    def __init__ (self):
+    def __init__ (self, msgSign):
         # Working directory of the pane
         self.workingDir = os.path.expanduser (u'~')
 
@@ -361,9 +361,14 @@ class PanelModel (object):
         # are not displayed
         self.items = []
 
+        # Signature that is added to the message, to identify the model that
+        # has sent it
+        self.messageSignature = msgSign
+
     def changeWorkingDir (self, newWorkingDir):
         self.workingDir = newWorkingDir
-        pubsub.Publisher ().sendMessage ('WORKDIR CHANGED', self.workingDir)
+        message = self.messageSignature + 'WORKDIR CHANGED'
+        pubsub.Publisher ().sendMessage (message, self.workingDir)
 
     def flattenDirectory (self):
         self.flatDirectoryView = True
@@ -379,7 +384,8 @@ class PanelModel (object):
 
     def setItems (self, items):
         self.items = items
-        # TODO: publish event here
+        message = self.messageSignature + 'NEW ITEMS'
+        pubsub.Publisher ().sendMessage (message, self.items)
 
     def getIndexByItem (self, item):
         try:
@@ -413,11 +419,12 @@ class PanelModel (object):
         return self.getIndexByItem (oldDir)
 
 class PanelController (object):
-    def __init__ (self, parent):
-        self.model = PanelModel ()
+    def __init__ (self, parent, modelSignature):
+        self.model = PanelModel (modelSignature)
         self.view = Panel (parent)
         self.bindEvents ()
-        #pubsub.Publisher ().subscribe (self.newWorkingDir, 'WORKDIR CHANGED')
+        signature = modelSignature + 'NEW ITEMS'
+        pubsub.Publisher ().subscribe (self.afterDirChange, signature)
 
         # String being searched incrementally
         self.searchStr = ''
@@ -511,7 +518,6 @@ class PanelController (object):
         self.selectedItem = 0
         self.view.clearScreen ()
         self.selectedItem = self.model.updir ()
-        self.afterDirChange ()
 
     def listDriveLetters (self):
         if platform.system () != 'Windows':
@@ -519,12 +525,10 @@ class PanelController (object):
 
         self.selectedItem = 0
         self.model.setItems (collectDriveLetters ())
-        self.afterDirChange ()
 
     def flattenDirectory (self):
         self.model.flattenDirectory ()
         self.model.fillListByWorkingDir (self.model.workingDir)
-        self.afterDirChange ()
 
     def changeDir (self, fullPath, searchStr = u''):
         self.model.setDirFilter (searchStr)
@@ -532,7 +536,6 @@ class PanelController (object):
         self.view.clearScreen ()
         self.selectedItem = 0
         self.model.fillListByWorkingDir (fullPath)
-        self.afterDirChange ()
 
     def listSearchMatches (self, searchStr):
         self.changeDir (self.model.workingDir, searchStr)
@@ -543,7 +546,7 @@ class PanelController (object):
     def goHome (self):
         self.changeDir (os.path.expanduser (u'~'))
 
-    def afterDirChange (self):
+    def afterDirChange (self, message):
         self.updateView ()
         self.setSelectionOnCurrItem ()
         # in the line below, I'm subtracting 1 from number of items because
@@ -685,7 +688,7 @@ class PanelController (object):
 
     def switchPane (self):
         self.view.getFrame ().switchPane ()
-        self.afterDirChange ()
+        self.afterDirChange (None)
 
     def switchSplittingMode (self):
         self.view.switchSplittingMode ()
@@ -967,8 +970,8 @@ class Candy (wx.Frame):
                                            style = wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize (50)
 
-        self.p1 = PanelController (self.splitter)
-        self.p2 = PanelController (self.splitter)
+        self.p1 = PanelController (self.splitter, 'm1.')
+        self.p2 = PanelController (self.splitter, 'm2.')
         self.splitter.SplitVertically (self.p1.view, self.p2.view)
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
