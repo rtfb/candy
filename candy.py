@@ -511,8 +511,7 @@ class PanelController (object):
         sys.exit (0)
 
     def updateView (self):
-        self.view.updateDisplayByItems (self.model.items, \
-                                        self.setSelectionOnCurrItem)
+        self.view.updateDisplayByItems (self.model.items)
 
     def updir (self):
         self.selectedItem = 0
@@ -850,8 +849,7 @@ class Panel (stc.StyledTextCtrl):
                 row = 0
                 column += 1
 
-    def updateDisplayByItems (self, rawItems, itemSelector = None,
-                              constructFullLines = True):
+    def updateDisplayByItems (self, rawItems, constructFullLines = True):
         self.clearScreen ()
         self.SetReadOnly (False)
 
@@ -863,10 +861,6 @@ class Panel (stc.StyledTextCtrl):
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
         self.setDebugWhitespace ()
-
-        if itemSelector:
-            itemSelector ()
-
         self.applyDefaultStyles (rawItems)
 
     def getFrame (self):
@@ -916,7 +910,7 @@ class Panel (stc.StyledTextCtrl):
         else:
             return      # The item is already in view
 
-        self.updateDisplayByItems (items, None, False)
+        self.updateDisplayByItems (items, False)
 
     def setSelectionOnItem (self, item):
         selectionStart = self.getItemStartByte (item)
