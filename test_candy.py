@@ -185,17 +185,17 @@ class TestCandy (unittest.TestCase):
             self.assertEquals (item.visualItem.startCharOnLine, col * 11)
 
     def testItemStartChar (self):
-        #pdb.set_trace ()
         item = self.frame.p1.model.items[0]
         view = self.frame.p1.view
         self.assertEquals (view.getItemStartByte (item), 0)
 
         for index, item in enumerate (self.frame.p1.model.items):
             # 36 is a magic ViewWindow.width number here. Based on last
-            # evidence that works. Only works out for the 0th column, so this
-            # test will be failing for now, until I get rid of this magic.
-            # Also, getItemStartByte only works in this ASCII test case.
-            self.assertEquals (view.getItemStartByte (item), index * 36)
+            # evidence that works. Because of this magic, getItemStartByte
+            # only works in this ASCII test case.
+            column, row = item.coords
+            referenceValue = view.charsPerCol * column + 36 * row
+            self.assertEquals (view.getItemStartByte (item), referenceValue)
 
 def suite ():
     import test_keyboard
