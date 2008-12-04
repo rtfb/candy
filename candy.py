@@ -30,12 +30,14 @@ import pdb
 import math
 import platform
 import keyboard
+import wx.lib.pubsub as pubsub
 
 if platform.system () == 'Windows':
     try:
         import win32api
     except ImportError:
-        print 'You seem to be running Windows and don\'t have win32api. Tisk tisk tisk...'
+        print 'You seem to be running Windows and don\'t have win32api.'
+        print 'Tisk tisk tisk...'
 
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
@@ -69,7 +71,8 @@ def readConfig (fileName):
             continue
 
         name, value = l.split (':')
-        dict.setdefault (name.strip (), resolveColorNameOrReturn (value.strip ()))
+        val = resolveColorNameOrReturn (value.strip ())
+        dict.setdefault (name.strip (), val)
 
     return dict
 
@@ -79,14 +82,14 @@ generalConfig = readConfig (generalConfPath)
 colorConf = os.path.join (projectDir, 'colorscheme-default.conf')
 colorScheme = readConfig (colorConf)
 
-class DirectoryViewFilter:
+class DirectoryViewFilter (object):
     def __init__ (self, searchStr):
         self.searchStr = searchStr.lower ()
 
     def __call__ (self, item):
         return self.searchStr in item.fileName.lower ()
 
-class VisualItem:
+class VisualItem (object):
     """
     An item to hold visual representation. E.g. if the external item is a
     filename, this one will hold things like justified name, startChar in
@@ -124,7 +127,7 @@ class VisualItem:
         charsBeforeThisItem = visibleTextLine[:self.startCharOnLine]
         self.startByteOnLine = len (charsBeforeThisItem.encode ('utf-8'))
 
-class RawItem:
+class RawItem (object):
     """
     An item to hold the representation close to the one outside of the program.
     E.g. if the external item is a filename, this one will hold things like
@@ -209,13 +212,13 @@ def collectListInfo (isFlatDirectoryView, cwd):
     files = listFiles (isFlatDirectoryView, cwd)
 
     for f in files:
-        item = RawItem (unicode (f, 'utf-8'))
+        item = RawItem (f)
 
         if os.path.isdir (f):
             item.style = STYLE_FOLDER
             item.isDir = True
 
-        if f.startswith ('.'):
+        if f.startswith (u'.'):
             item.isHidden = True
 
         items.append (item)
@@ -236,10 +239,10 @@ def collectDriveLetters ():
     return items
 
 def isRootOfDrive (path):
-    letters = [chr (n) for n in range (ord ('a'), ord ('z') + 1)]
+    letters = [chr (n) for n in range (ord (u'a'), ord (u'z') + 1)]
     return len (path) == 3 \
            and path.lower ()[0] in letters \
-           and path[1:] == ':\\'
+           and path[1:] == u':\\'
 
 def constructListForFilling (fullList, specialFilter):
     dirList = filter (lambda (f): f.isDir, fullList)
@@ -268,7 +271,7 @@ def intDivCeil (a, b):
 def intDivFloor (a, b):
     return int (math.floor (float (a) / b))
 
-class SmartJustifier:
+class SmartJustifier (object):
     def __init__ (self, width):
         self.width = width
         self.numDots = 3
@@ -280,7 +283,7 @@ class SmartJustifier:
         root, ext = os.path.splitext (text)
         newWidth = self.width - self.numDots
 
-        if ext != '':
+        if ext != u'':
             newWidth -= len (ext)
 
         if newWidth <= 5:       # 5 = len ('a...b')
@@ -303,7 +306,7 @@ class SmartJustifier:
         return newText
 
 # The width/height/left/right are in characters
-class ViewWindow:
+class ViewWindow (object):
     def __init__ (self, width, height):
         # Number of characters that can fit in whole width of the pane
         self.width = width
@@ -334,15 +337,364 @@ class StatusLine (stc.StyledTextCtrl):
         pb = int (generalConfig['font-size']) # 12
 
         # Set the styles according to color scheme
-        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
-                                                  % (pb, faceCourier,
-                                                     colorScheme['background'],
-                                                     colorScheme['default-text']))
+        styleSpec = 'size:%d,face:%s,back:%s,fore:%s' \
+                    % (pb, faceCourier, colorScheme['background'],
+                       colorScheme['default-text'])
+        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll ()
 
-class MySTC (stc.StyledTextCtrl):
-    def __init__ (self, parent, ID):
-        stc.StyledTextCtrl.__init__ (self, parent, ID)
+class PanelModel (object):
+    def __init__ (self, msgSign):
+        # Working directory of the pane
+        self.workingDir = os.path.expanduser (u'~')
+
+        # Signifies flattened directory view
+        self.flatDirectoryView = False
+
+        # Function Object that gets called to filter out directory view.
+        # Main use (for now) is for filtering out the contents by search
+        # matches.
+        self.directoryViewFilter = None
+
+        # List of filesystem items to be displayed. Only contains those that
+        # are to be actually displayed. E.g. no dot-files when hidden files
+        # are not displayed
+        self.items = []
+
+        # Signature that is added to the message, to identify the model that
+        # has sent it
+        self.messageSignature = msgSign
+
+    def changeWorkingDir (self, newWorkingDir):
+        self.workingDir = newWorkingDir
+        message = self.messageSignature + 'WORKDIR CHANGED'
+        pubsub.Publisher ().sendMessage (message, self.workingDir)
+
+    def flattenDirectory (self):
+        self.flatDirectoryView = True
+
+    def unflattenDirectory (self):
+        self.flatDirectoryView = False
+
+    def setDirFilter (self, searchStr):
+        if searchStr != u'':
+            self.directoryViewFilter = DirectoryViewFilter (searchStr)
+        else:
+            self.directoryViewFilter = None
+
+    def setItems (self, items):
+        self.items = items
+        message = self.messageSignature + 'NEW ITEMS'
+        pubsub.Publisher ().sendMessage (message, self.items)
+
+    def getIndexByItem (self, item):
+        try:
+            return self.items.index (item)
+        except ValueError:
+            return 0
+
+    def fillListByWorkingDir (self, cwd):
+        allItems = collectListInfo (self.flatDirectoryView, cwd)
+        self.changeWorkingDir (cwd)
+        list = constructListForFilling (allItems, self.directoryViewFilter)
+        self.setItems (list)
+
+    def updir (self):
+        if platform.system () == 'Windows':
+            if isRootOfDrive (self.workingDir):
+                self.setItems (collectDriveLetters ())
+                return 0
+
+        self.setDirFilter (u'')
+        # if we're in self.flatDirectoryView, all we want is to refresh
+        # the view of self.workingDir without flattening
+        if self.flatDirectoryView:
+            self.unflattenDirectory ()
+            self.fillListByWorkingDir (os.getcwdu ())
+            return 0
+
+        oldDir = os.path.split (os.getcwdu ())[1]
+        os.chdir (u'..')
+        self.fillListByWorkingDir (os.getcwdu ())
+        return self.getIndexByItem (oldDir)
+
+class PanelController (object):
+    def __init__ (self, parent, modelSignature):
+        self.model = PanelModel (modelSignature)
+        self.view = Panel (parent)
+        self.bindEvents ()
+        signature = modelSignature + 'NEW ITEMS'
+        pubsub.Publisher ().subscribe (self.afterDirChange, signature)
+
+        # String being searched incrementally
+        self.searchStr = ''
+
+        # Signifies incremental search mode
+        self.searchMode = False
+
+        # Index of an item that is an accepted search match. Needed to know
+        # which next match should be focused upon go-to-next-match
+        self.searchMatchIndex = -1
+
+        # Index of an item that is currently selected
+        self.selectedItem = 0
+
+        self.keys = keyboard.KeyboardConfig ()
+        self.keys.load ('keys.conf', self)
+
+    # Used in tests
+    def clearList (self):
+        self.model.setItems ([])
+        self.selectedItem = 0
+        self.view.numFullColumns = 0
+
+    def initializeViewSettings (self, numColumns = 3):
+        self.view.initializeViewSettings (self.model.items, numColumns)
+
+    def initializeAndShowInitialView (self):
+        self.initializeViewSettings ()
+        self.goHome ()
+
+        # This one is needed here to get the initial focus:
+        self.view.SetFocus ()
+
+    def bindEvents (self):
+        self.view.Bind (wx.EVT_CHAR, self.OnChar)
+        self.view.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.view.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
+
+    def handleKeyEvent (self, evt, keyCode, keyMod):
+        if self.searchMode:
+            self.searchModeKeyDown (keyCode, keyMod)
+        else:
+            skipper = lambda *a, **k: evt.Skip ()
+            func = self.keys.getFunc (skipper, keyCode, keyMod)
+            func ()
+            self.setSelectionOnCurrItem ()
+
+    def searchModeKeyDown (self, keyCode, keyMod):
+        if keyCode == wx.WXK_RETURN:
+            self.searchMode = False
+
+            if keyMod == wx.MOD_CONTROL:
+                self.listSearchMatches (self.searchStr)
+            else:
+                # Here we want to stop searching and set focus on first search
+                # match. But if there was no match, we want to behave more like
+                # when we cancel search. Except we've no matches to clear, since
+                # no match means nothing was highlighted
+                if self.searchMatchIndex != -1:
+                    self.selectedItem = self.searchMatchIndex
+                    self.setSelectionOnCurrItem ()
+        elif keyCode == wx.WXK_ESCAPE:
+            self.searchMode = False
+            self.view.applyDefaultStyles (self.model.items)  # clean matches
+        else:
+            if keyCode < 256:
+                self.searchStr += chr (keyCode)
+                self.searchMatchIndex = self.incrementalSearch (self.searchStr)
+
+    def OnKeyDown (self, evt):
+        keyCode = evt.GetKeyCode ()
+        keyMod = evt.GetModifiers ()
+        self.handleKeyEvent (evt, keyCode, keyMod)
+
+    def OnChar (self, evt):
+        keyCode = evt.GetKeyCode ()
+        self.handleKeyEvent (evt, keyCode, None)
+
+    def OnSetFocus (self, evt):
+        self.view.onSetFocus ()
+        os.chdir (self.model.workingDir)
+
+    def quiter (self):
+        sys.exit (0)
+
+    def updateView (self):
+        self.view.updateDisplayByItems (self.model.items)
+
+    def updir (self):
+        self.selectedItem = 0
+        self.view.clearScreen ()
+        self.selectedItem = self.model.updir ()
+
+    def listDriveLetters (self):
+        if platform.system () != 'Windows':
+            return
+
+        self.selectedItem = 0
+        self.model.setItems (collectDriveLetters ())
+
+    def flattenDirectory (self):
+        self.model.flattenDirectory ()
+        self.model.fillListByWorkingDir (self.model.workingDir)
+
+    def changeDir (self, fullPath, searchStr = u''):
+        self.model.setDirFilter (searchStr)
+        os.chdir (fullPath)
+        self.view.clearScreen ()
+        self.selectedItem = 0
+        self.model.fillListByWorkingDir (fullPath)
+
+    def listSearchMatches (self, searchStr):
+        self.changeDir (self.model.workingDir, searchStr)
+
+    def downdir (self, dirName):
+        self.changeDir (os.path.join (self.model.workingDir, dirName))
+
+    def goHome (self):
+        self.changeDir (os.path.expanduser (u'~'))
+
+    def afterDirChange (self, message):
+        self.updateView ()
+        self.setSelectionOnCurrItem ()
+        # in the line below, I'm subtracting 1 from number of items because
+        # of '..' pseudoitem
+        statusText = u'[Folder view]: %s\t%d item(s)' \
+                     % (os.getcwdu (), len (self.model.items) - 1)
+        self.view.getFrame ().statusBar.SetStatusText (statusText)
+
+    def onEnter (self):
+        selection = self.model.items[self.selectedItem]
+
+        if selection.isDir:
+            if selection.fileName == u'..':
+                self.updir ()
+            else:
+                self.downdir (selection.fileName)
+        else:
+            base, ext = os.path.splitext (selection.fileName)
+            commandLine = resolveCommandByFileExt (ext[1:])
+
+            if commandLine:
+                os.system (commandLine % (selection.fileName))
+
+    def clearScreen (self):
+        self.view.clearScreen ()
+
+    def onNextMatch (self):
+        item = self.selectedItem + 1
+        self.searchMatchIndex = self.nextSearchMatch (self.searchStr, item)
+        self.selectedItem = self.searchMatchIndex
+
+    def wrappedRange (self, start, length):
+        # Construct a range of indices to produce wrapped search from
+        # given position
+        return range (start, length) + range (start)
+
+    def nextSearchMatch (self, searchStr, initPos):
+        searchRange = self.wrappedRange (initPos, len (self.model.items))
+        searchStrLower = searchStr.lower ()
+
+        for i in searchRange:
+            if searchStrLower in self.model.items[i].fileName.lower ():
+                return i
+
+    def incrementalSearch (self, searchStr):
+        index = self.selectedItem       # start searching from curr selection
+        searchRange = self.wrappedRange (index, len (self.model.items))
+
+        # First of all, clean previous matches
+        self.view.applyDefaultStyles (self.model.items)
+
+        # We only want to remember first match
+        firstMatch = -1
+        sStr = searchStr.lower ()
+
+        for i in searchRange:
+            match = self.model.items[i].fileName.lower ().find (sStr)
+
+            if match != -1:
+                if firstMatch == -1:
+                    firstMatch = i
+                    self.view.moveItemIntoView (self.model.items, i)
+
+                item = self.model.items[i]
+                if item.visualItem:
+                    self.view.highlightSearchMatch (item, match, searchStr)
+
+        return firstMatch
+
+    def onStartIncSearch (self):
+        self.searchStr = ''
+        self.searchMode = True
+
+    def setSelectionOnCurrItem (self):
+        if len (self.model.items) <= 0:
+            return
+
+        item = self.model.items[self.selectedItem]
+        if not item.visualItem or not item.visualItem.fullyInView:
+            self.view.moveItemIntoView (self.model.items, self.selectedItem)
+
+        self.view.setSelectionOnItem (item)
+
+    def moveSelectionDown (self):
+        self.selectedItem += 1
+
+        if self.selectedItem >= len (self.model.items):
+            self.selectedItem = 0
+
+    def moveSelectionUp (self):
+        self.selectedItem -= 1
+
+        if self.selectedItem < 0:
+            self.selectedItem = len (self.model.items) - 1
+
+        # This can happen if self.model.items is empty
+        if self.selectedItem < 0:
+            self.selectedItem = 0
+
+    def moveSelectionLeft (self):
+        self.selectedItem -= self.view.viewWindow.height
+
+        if len (self.model.items) == 0:
+            self.selectedItem = 0
+            return
+
+        if self.selectedItem < 0:
+            # undo the decrement and start calculating from scratch:
+            self.selectedItem += self.view.viewWindow.height
+
+            # Avoiding too long line here... but...
+            # TODO: figure out how to deal with that long line without
+            # splitting. It suggests some nasty coupling.
+            selItem = self.selectedItem
+            numItems = len (self.model.items)
+            selItem = self.view.updateSelectedItemLeft (selItem, numItems)
+            self.selectedItem = selItem
+
+    def moveSelectionRight (self):
+        self.selectedItem += self.view.viewWindow.height
+
+        if len (self.model.items) == 0:
+            self.selectedItem = 0
+            return
+
+        if self.selectedItem > len (self.model.items):
+            self.selectedItem -= self.view.viewWindow.height
+            self.selectedItem %= self.view.viewWindow.height
+            self.selectedItem += 1
+
+    def startEditor (self):
+        os.system ('gvim ' + self.model.items[self.selectedItem].fileName)
+
+    def startViewer (self):
+        import viewr
+        file = self.model.items[self.selectedItem].fileName
+        wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
+        wnd.Show (True)
+
+    def switchPane (self):
+        self.view.getFrame ().switchPane ()
+        self.afterDirChange (None)
+
+    def switchSplittingMode (self):
+        self.view.switchSplittingMode ()
+
+class Panel (stc.StyledTextCtrl):
+    def __init__ (self, parent):
+        stc.StyledTextCtrl.__init__ (self, parent)
 
         # No margins and scroll bars over here!
         self.SetMarginWidth (1, 0)
@@ -356,39 +708,13 @@ class MySTC (stc.StyledTextCtrl):
         # Number of characters per column width
         self.charsPerCol = 0
 
-        # Number of columns in the whole-wide view, that are filled from top to bottom
+        # Number of columns in the whole-wide view, that are filled from top
+        # to bottom
         self.numFullColumns = 0
 
-        # List of filesystem items to be displayed. Only contains those that are to be
-        # actually displayed. E.g. no dot-files when hidden files are not displayed
-        self.items = []
-
-        # A set of VisualItems that are referenced from subset of self.items
-        # and represent visible parts of them on screen.
+        # A set of VisualItems that are referenced from subset of
+        # controller.items and represent visible parts of them on screen.
         self.visualItems = []
-
-        # Index of an item that is currently selected
-        self.selectedItem = 0
-
-        # Signifies incremental search mode
-        self.searchMode = False
-
-        # String being searched incrementally
-        self.searchStr = ''
-
-        # Index of an item that is an accepted search match. Needed to know which
-        # next match should be focused upon go-to-next-match
-        self.searchMatchIndex = -1
-
-        # Working directory of the pane
-        self.workingDir = os.path.expanduser ('~')
-
-        # Signifies flattened directory view
-        self.flatDirectoryView = False
-
-        # Function Object that gets called to filter out directory view.
-        # Main use is for filtering out the contents by search matches.
-        self.directoryViewFilter = None
 
         # List of full-width lines, containing the text of the items.
         # Only sublines of these lines are displayed both for performance
@@ -396,14 +722,8 @@ class MySTC (stc.StyledTextCtrl):
         # long lines correctly.
         self.fullTextLines = []
 
-        self.keys = keyboard.KeyboardConfig ()
-        self.keys.load ('keys.conf', self)
-
     def bindEvents (self):
-        self.Bind (wx.EVT_CHAR, self.OnChar)
-        self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
-        self.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
         self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
 
     def setStyles (self):
@@ -411,28 +731,22 @@ class MySTC (stc.StyledTextCtrl):
         pb = int (generalConfig['font-size']) # 12
 
         # Set the styles according to color scheme
-        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, "size:%d,face:%s,back:%s,fore:%s"
-                                                  % (pb, faceCourier,
-                                                     colorScheme['background'],
-                                                     colorScheme['default-text']))
+        styleSpec = 'size:%d,face:%s,back:%s,fore:%s' \
+                    % (pb, faceCourier, colorScheme['background'],
+                       colorScheme['default-text'])
+        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll ()
-        self.StyleSetSpec (STYLE_FOLDER, "size:%d,bold,face:%s,fore:%s"
-                                         % (pb, faceCourier,
-                                            colorScheme['folder']))
-        self.StyleSetSpec (STYLE_INC_SEARCH, "size:%d,bold,face:%s,fore:%s,back:%s"
-                                             % (pb, faceCourier,
-                                                colorScheme['search-highlight-fore'],
-                                                colorScheme['search-highlight-back']))
+        styleSpec = 'size:%d,bold,face:%s,fore:%s' \
+                    % (pb, faceCourier, colorScheme['folder'])
+        self.StyleSetSpec (STYLE_FOLDER, styleSpec)
+        styleSpec = 'size:%d,bold,face:%s,fore:%s,back:%s' \
+                    % (pb, faceCourier, colorScheme['search-highlight-fore'],
+                       colorScheme['search-highlight-back'])
+        self.StyleSetSpec (STYLE_INC_SEARCH, styleSpec)
         self.SetSelBackground (1, colorScheme['selection-inactive'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
 
-    # Used in tests
-    def clearList (self):
-        self.items = []
-        self.selectedItem = 0
-        self.numFullColumns = 0
-
-    def initializeViewSettings (self, numColumns = 3):
+    def initializeViewSettings (self, items, numColumns):
         width, height = self.GetClientSizeTuple ()
         lineHeight = self.TextHeight (0)
         charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
@@ -444,17 +758,7 @@ class MySTC (stc.StyledTextCtrl):
         self.viewWindow.numColumns = numColumns
         self.charsPerCol = width / charWidth / self.viewWindow.numColumns
         self.clearScreen ()
-        self.updateDisplayByItems ()
-
-    def initializeAndShowInitialView (self):
-        self.initializeViewSettings ()
-
-        dir = os.path.expanduser ('~')
-        #dir = '/usr/share'
-        os.chdir (dir)
-        self.fillList (dir)
-        self.SetFocus ()
-        self.afterDirChange ()
+        self.updateDisplayByItems (items)
 
     def setDebugWhitespace (self):
         if generalConfig['debug-whitespace'].lower () == 'true':
@@ -500,10 +804,10 @@ class MySTC (stc.StyledTextCtrl):
         vi.fullyInView = True
         return vi
 
-    def extractVisualItems (self):
+    def extractVisualItems (self, items):
         self.visualItems = []
 
-        for i in self.items:
+        for i in items:
             i.visualItem = None
             startCharInView = self.viewWindow.charInView (i.startCharOnLine)
             endCharPos = i.startCharOnLine + len (i.visiblePart)
@@ -523,15 +827,15 @@ class MySTC (stc.StyledTextCtrl):
 
         return u'\n'.join (visibleSublines).encode ('utf-8')
 
-    def constructFullTextLines (self):
-        self.numFullColumns = len (self.items) / self.viewWindow.height
+    def constructFullTextLines (self, items):
+        self.numFullColumns = len (items) / self.viewWindow.height
         self.fullTextLines = ['' for i in range (self.viewWindow.height)]
 
         row = 0
         column = 0
         sj = SmartJustifier (self.charsPerCol - 1)
 
-        for item in self.items:
+        for item in items:
             visiblePart = sj.justify (item.fileName) + u' '
             item.coords = (column, row)
             item.startCharOnLine = len (self.fullTextLines[row])
@@ -545,99 +849,22 @@ class MySTC (stc.StyledTextCtrl):
                 row = 0
                 column += 1
 
-    def updateDisplayByItems (self, constructFullLines = True,
-                              setSelection = True):
+    def updateDisplayByItems (self, rawItems, constructFullLines = True):
         self.clearScreen ()
         self.SetReadOnly (False)
 
         if constructFullLines:
-            self.constructFullTextLines ()
+            self.constructFullTextLines (rawItems)
 
         self.SetTextUTF8 (self.extractVisibleSubLines ())
-        self.extractVisualItems ()
+        self.extractVisualItems (rawItems)
         self.EmptyUndoBuffer ()
         self.SetReadOnly (True)
         self.setDebugWhitespace ()
-
-        if setSelection:
-            self.setSelectionOnCurrItem ()
-
-        self.applyDefaultStyles ()
-
-    def fillList (self, cwd):
-        allItems = collectListInfo (self.flatDirectoryView, cwd)
-        self.workingDir = cwd
-        self.items = constructListForFilling (allItems, self.directoryViewFilter)
-        self.updateDisplayByItems ()
-
-    def listDriveLetters (self):
-        if platform.system () != 'Windows':
-            return
-
-        self.selectedItem = 0
-        self.items = collectDriveLetters ()
-        self.updateDisplayByItems ()
-        self.afterDirChange ()
-
-    def flattenDirectory (self):
-        self.flatDirectoryView = True
-        self.fillList (self.workingDir)
-        self.afterDirChange ()
+        self.applyDefaultStyles (rawItems)
 
     def getFrame (self):
         return self.GetParent ().GetParent ()
-
-    def afterDirChange (self):
-        self.setSelectionOnCurrItem ()
-        # in the line below, I'm subtracting 1 from number of items because of '..' pseudoitem
-        statusText = '[Folder view]: %s\t%d item(s)' % (os.getcwd (), len (self.items) - 1)
-        self.getFrame ().statusBar.SetStatusText (statusText)
-
-    def updir (self):
-        if platform.system () == 'Windows':
-            if isRootOfDrive (self.workingDir):
-                self.listDriveLetters ()
-                return
-
-        self.directoryViewFilter = None
-        # if we're in self.flatDirectoryView, all we want is to refresh the
-        # view of self.workingDir without flattening
-        if self.flatDirectoryView:
-            self.flatDirectoryView = False
-            self.selectedItem = 0 # forget the selection of the flattened view
-            self.clearScreen ()
-            self.fillList (os.getcwd ())
-            self.afterDirChange ()
-            return
-
-        oldDir = os.path.split (os.getcwd ())[1]
-        os.chdir ('..')
-        self.clearScreen ()
-        self.selectedItem = 0
-        self.fillList (os.getcwd ())
-
-        try:
-            self.selectedItem = self.items.index (oldDir)
-        except ValueError:
-            pass
-
-        self.afterDirChange ()
-
-    def downdir (self, dirName):
-        self.directoryViewFilter = None
-        os.chdir (dirName)
-        self.clearScreen ()
-        self.selectedItem = 0
-        self.fillList (os.getcwd ())
-        self.afterDirChange ()
-
-    def goHome (self):
-        self.directoryViewFilter = None
-        os.chdir (os.path.expanduser ('~'))
-        self.clearScreen ()
-        self.fillList (os.getcwd ())
-        self.selectedItem = 0
-        self.afterDirChange ()
 
     def OnDestroy (self, evt):
         # This is how the clipboard contents can be preserved after
@@ -650,124 +877,27 @@ class MySTC (stc.StyledTextCtrl):
         self.ClearAll ()
         self.SetReadOnly (True)
 
-    def quiter (self):
-        sys.exit (0)
-
-    def onEnter (self):
-        selection = self.items[self.selectedItem]
-
-        if selection.isDir:
-            if selection.fileName == '..':
-                self.updir ()
-            else:
-                self.downdir (selection.fileName)
-        else:
-            base, ext = os.path.splitext (selection.fileName)
-            commandLine = resolveCommandByFileExt (ext[1:])
-
-            if commandLine:
-                os.system (commandLine % (selection.fileName))
-
-    def onNextMatch (self):
-        self.searchMatchIndex = self.nextSearchMatch (self.searchStr, self.selectedItem + 1)
-        self.selectedItem = self.searchMatchIndex
-
-    def onStartIncSearch (self):
-        self.searchMode = True
-        self.searchStr = ''
-
-    def startEditor (self):
-        os.system ('gvim ' + self.items[self.selectedItem].fileName)
-
-    def startViewer (self):
-        import viewr
-        file = self.items[self.selectedItem].fileName
-        wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
-        wnd.Show (True)
-
-    def switchPane (self):
-        self.getFrame ().switchPane ()
-        self.afterDirChange ()
-
     def switchSplittingMode (self):
         self.getFrame ().switchSplittingMode ()
 
-    def handleKeyEvent (self, evt, keyCode, keyMod):
-        if self.searchMode:
-            self.searchModeKeyDown (keyCode, keyMod)
-        else:
-            skipper = lambda *a, **k: evt.Skip ()
-            func = self.keys.getFunc (skipper, keyCode, keyMod)
-            func ()
-            self.setSelectionOnCurrItem ()
-
-    def OnKeyDown (self, evt):
-        keyCode = evt.GetKeyCode ()
-        keyMod = evt.GetModifiers ()
-        self.handleKeyEvent (evt, keyCode, keyMod)
-
-    def OnChar (self, evt):
-        keyCode = evt.GetKeyCode ()
-        self.handleKeyEvent (evt, keyCode, None)
-
-    def searchModeKeyDown (self, keyCode, keyMod):
-        if keyCode == wx.WXK_RETURN:
-            if keyMod == wx.MOD_CONTROL:
-                self.directoryViewFilter = DirectoryViewFilter (self.searchStr)
-                self.searchMode = False
-                self.clearScreen ()
-                self.fillList (self.workingDir)
-                self.selectedItem = 0
-                self.afterDirChange ()
-            else:
-                # Here we want to stop searching and set focus on first search match.
-                # But if there was no match, we want to behave more like when we
-                # click Escape. Except we've no matches to clear, since no match means
-                # nothing was highlighted
-                self.searchMode = False
-
-                if self.searchMatchIndex != -1:
-                    self.selectedItem = self.searchMatchIndex
-                    self.setSelectionOnCurrItem ()
-        elif keyCode == wx.WXK_ESCAPE:
-            self.searchMode = False
-            self.applyDefaultStyles ()  # Stop searching; clean matches
-        else:
-            if keyCode < 256:
-                self.searchStr += chr (keyCode)
-                self.incrementalSearch (self.searchStr)
-
-    def OnSetFocus (self, evt):
+    def onSetFocus (self):
         self.SetSelBackground (1, colorScheme['selection-back'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
-        os.chdir (self.workingDir)
 
     def OnLoseFocus (self, evt):
         self.SetSelBackground (1, colorScheme['selection-inactive'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
 
-    def nextSearchMatch (self, searchStr, initPos):
-        # Construct a range of indices to produce wrapped search from current pos
-        searchRange = range (initPos, len (self.items)) + range (initPos)
-        searchStrLower = searchStr.lower ()
-
-        for i in searchRange:
-            if searchStrLower in self.items[i].fileName.lower ():
-                return i
-
-    def highlightSearchMatch (self, itemIndex, matchOffset):
-        selectionStart = self.getItemStartByte (itemIndex) + matchOffset
+    def highlightSearchMatch (self, item, matchOffset, searchStr):
+        selectionStart = self.getItemStartByte (item) + matchOffset
 
         # Set the style for the new match:
         self.StartStyling (selectionStart, 0xff)
-        stylingRegion = len (self.searchStr)
+        stylingRegion = len (searchStr)
         self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
 
-    def moveItemIntoView (self, itemNo):
-        if len (self.items) <= 0:
-            return
-
-        item = self.items[itemNo]
+    def moveItemIntoView (self, items, index):
+        item = items[index]
         startCharOnLine = item.startCharOnLine
         endCharOnLine = startCharOnLine + len (item.visiblePart)
 
@@ -780,116 +910,47 @@ class MySTC (stc.StyledTextCtrl):
         else:
             return      # The item is already in view
 
-        self.updateDisplayByItems (False, False)
+        self.updateDisplayByItems (items, False)
 
-    def setSelectionOnCurrItem (self):
-        if len (self.items) <= 0:
-            return
-
-        visItem = self.items[self.selectedItem].visualItem
-        if not visItem or not visItem.fullyInView:
-            self.moveItemIntoView (self.selectedItem)
-
-        selectionStart = self.getItemStartByte (self.selectedItem)
+    def setSelectionOnItem (self, item):
+        selectionStart = self.getItemStartByte (item)
         self.SetCurrentPos (selectionStart)
         self.EnsureCaretVisible ()
 
-        if self.selectedItem < len (self.items):
-            visItem = self.items[self.selectedItem].visualItem
-            numCharsToSelect = visItem.visLenInBytes
+        if item:
+            numCharsToSelect = item.visualItem.visLenInBytes
         else:
             numCharsToSelect = self.charsPerCol
 
         self.SetSelection (selectionStart, selectionStart + numCharsToSelect)
 
-    def incrementalSearch (self, searchStr):
-        index = self.selectedItem       # start searching from curr selection
+    def updateSelectedItemLeft (self, selectedItem, numItems):
+        numFullLines = numItems % self.viewWindow.height
+        bottomRightIndex = self.viewWindow.height * (self.numFullColumns + 1)
+        bottomRightIndex -= 1
 
-        # Construct a range of indices to produce wrapped search from current pos
-        searchRange = range (index, len (self.items)) + range (index)
+        if selectedItem % self.viewWindow.height > numFullLines:
+            bottomRightIndex = self.viewWindow.height * self.numFullColumns - 1
 
-        # First of all, clean previous matches
-        self.applyDefaultStyles ()
+        return selectedItem - self.viewWindow.height + bottomRightIndex
 
-        # We only want to remember first match
-        firstMatch = -1
-
-        for i in searchRange:
-            match = self.items[i].fileName.lower ().find (searchStr.lower ())
-
-            if match != -1:
-                if firstMatch == -1:
-                    firstMatch = i
-                    self.moveItemIntoView (i)
-
-                if self.items[i].visualItem:
-                    self.highlightSearchMatch (i, match)
-
-        self.searchMatchIndex = firstMatch
-
-    def moveSelectionDown (self):
-        self.selectedItem += 1
-
-        if self.selectedItem >= len (self.items):
-            self.selectedItem = 0
-
-    def moveSelectionUp (self):
-        self.selectedItem -= 1
-
-        if self.selectedItem < 0:
-            self.selectedItem = len (self.items) - 1
-
-        # This can happen if self.items is empty
-        if self.selectedItem < 0:
-            self.selectedItem = 0
-
-    def moveSelectionLeft (self):
-        self.selectedItem -= self.viewWindow.height
-
-        if len (self.items) == 0:
-            self.selectedItem = 0
-            return
-
-        if self.selectedItem < 0:
-            self.selectedItem += self.viewWindow.height   # undo the decrement and start calculating from scratch
-            numFullLines = len (self.items) % self.viewWindow.height
-            bottomRightIndex = self.viewWindow.height * (self.numFullColumns + 1) - 1
-
-            if self.selectedItem % self.viewWindow.height > numFullLines:
-                bottomRightIndex = self.viewWindow.height * self.numFullColumns - 1
-
-            self.selectedItem = self.selectedItem - self.viewWindow.height + bottomRightIndex
-
-    def moveSelectionRight (self):
-        self.selectedItem += self.viewWindow.height
-
-        if len (self.items) == 0:
-            self.selectedItem = 0
-            return
-
-        if self.selectedItem > len (self.items):
-            self.selectedItem -= self.viewWindow.height
-            self.selectedItem = self.selectedItem % self.viewWindow.height + 1
-
-    def getItemStartByte (self, itemNo):
-        if itemNo >= len (self.items):
-            return 0
-
+    def getItemStartByte (self, item):
         # -1 below because I want to get byte count for the lines [0..currLine)
-        row = self.items[itemNo].coords[1] - 1
+        row = item.coords[1] - 1
         sumBytes = 0
 
         if row >= 0:
             # +1 below because GetLineEndPosition doesn't account for newlines
-            # TODO: why not +row? If it skips newlines, it should've skipped all
+            # TODO: why not +row? If it skips newlines, it should have
+            # skipped N (=row) of them
             sumBytes = self.GetLineEndPosition (row) + 1
 
-        return sumBytes + self.items[itemNo].visualItem.startByteOnLine
+        return sumBytes + item.visualItem.startByteOnLine
 
-    def applyDefaultStyles (self):
-        for index, item in enumerate (self.items):
+    def applyDefaultStyles (self, rawItems):
+        for index, item in enumerate (rawItems):
             if item.visualItem:
-                selStart = self.getItemStartByte (index)
+                selStart = self.getItemStartByte (item)
                 self.StartStyling (selStart, 0xff)
 
                 itemNameLen = item.visualItem.visLenInBytes
@@ -899,16 +960,18 @@ class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
         wx.Frame.__init__ (self, parent, -1, title)
 
-        self.splitter = wx.SplitterWindow (self, ID_SPLITTER, style = wx.SP_BORDER)
+        self.splitter = wx.SplitterWindow (self, ID_SPLITTER, \
+                                           style = wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize (50)
 
-        self.p1 = MySTC (self.splitter, -1)
-        self.p2 = MySTC (self.splitter, -1)
-        self.splitter.SplitVertically (self.p1, self.p2)
+        self.p1 = PanelController (self.splitter, 'm1.')
+        self.p2 = PanelController (self.splitter, 'm2.')
+        self.splitter.SplitVertically (self.p1.view, self.p2.view)
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
         self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
-        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged, id = ID_SPLITTER)
+        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged, \
+                   id = ID_SPLITTER)
 
         displaySize = wx.DisplaySize ()
         appSize = (displaySize[0] / 2, displaySize[1] / 2)
@@ -918,11 +981,12 @@ class Candy (wx.Frame):
         self.sizer.Add (self.splitter, 1, wx.EXPAND)
         self.statusLine = StatusLine (self, ID_STATUS_LINE, appSize[0])
         self.sizer.AddSpacer (2)
-        self.sizer.Add (self.statusLine, 0, wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND)
+        sizerFlags = wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND
+        self.sizer.Add (self.statusLine, 0, sizerFlags)
         self.SetSizer (self.sizer)
 
         self.statusBar = self.CreateStatusBar ()
-        self.statusBar.SetStatusText (os.getcwd ())
+        self.statusBar.SetStatusText (os.getcwdu ())
         self.Center ()
         self.activePane = self.p1
 
@@ -975,7 +1039,7 @@ class Candy (wx.Frame):
         else:
             self.activePane = self.p1
 
-        self.activePane.SetFocus ()
+        self.activePane.view.SetFocus ()
 
     def switchSplittingMode (self):
         currSplitMode = self.splitter.GetSplitMode ()

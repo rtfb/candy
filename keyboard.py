@@ -31,7 +31,7 @@ class EventParseError (exceptions.Exception):
     def __str__ (self):
         return 'Failed to parse event \'%s\'' % (self.eventStr)
 
-class KeyboardEvent:
+class KeyboardEvent (object):
     def __init__ (self, command = ''):
         self.reset ()
         self.command = command
@@ -123,7 +123,7 @@ class KeyboardEvent:
             self.modShift = True
             return
 
-class KeyboardConfig:
+class KeyboardConfig (object):
     def __init__ (self):
         self.events = {}
 
