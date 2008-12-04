@@ -727,6 +727,13 @@ class Panel (stc.StyledTextCtrl):
         self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
 
     def setStyles (self):
+        # This repeats the default: the five bits are for styling, the
+        # rest three are for indicators (like green squiggle line).
+        # I'm setting it explicitly to have a reference to the starting
+        # point in the code if I ever need some messing around with
+        # indicators.
+        self.SetStyleBits (5)
+
         faceCourier = generalConfig['font-face'] # 'Courier'
         pb = int (generalConfig['font-size']) # 12
 
@@ -951,7 +958,11 @@ class Panel (stc.StyledTextCtrl):
         for index, item in enumerate (rawItems):
             if item.visualItem:
                 selStart = self.getItemStartByte (item)
-                self.StartStyling (selStart, 0xff)
+
+                # Note the 0x1f. It means I'm only affecting the style
+                # bits, leaving the indicators alone. This avoids having
+                # the nasty green squiggle underline.
+                self.StartStyling (selStart, 0x1f)
 
                 itemNameLen = item.visualItem.visLenInBytes
                 self.SetStyling (itemNameLen, item.style)
