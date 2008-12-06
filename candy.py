@@ -971,7 +971,7 @@ class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
         wx.Frame.__init__ (self, parent, -1, title)
 
-        self.splitter = wx.SplitterWindow (self, ID_SPLITTER, \
+        self.splitter = wx.SplitterWindow (self, ID_SPLITTER,
                                            style = wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize (50)
 
@@ -981,7 +981,7 @@ class Candy (wx.Frame):
 
         self.Bind (wx.EVT_SIZE, self.OnSize)
         self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
-        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged, \
+        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged,
                    id = ID_SPLITTER)
 
         displaySize = wx.DisplaySize ()
