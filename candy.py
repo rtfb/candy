@@ -710,27 +710,25 @@ class Panel (stc.StyledTextCtrl):
         self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
 
     def setStyles (self):
-        # This repeats the default: the five bits are for styling, the
-        # rest three are for indicators (like green squiggle line).
-        # I'm setting it explicitly to have a reference to the starting
-        # point in the code if I ever need some messing around with
-        # indicators.
+        # This repeats the default: the five bits are for styling, the rest
+        # three are for indicators (like green squiggle line). I'm setting it
+        # explicitly to have a reference to the starting point in the code if I
+        # ever need some messing around with indicators.
         self.SetStyleBits (5)
 
         faceCourier = generalConfig['font-face'] # 'Courier'
         pb = int (generalConfig['font-size']) # 12
+        sizeAndFace = 'size:%d,face:%s' % (pb, faceCourier)
 
         # Set the styles according to color scheme
-        styleSpec = 'size:%d,face:%s,back:%s,fore:%s' \
-                    % (pb, faceCourier, colorScheme['background'],
-                       colorScheme['default-text'])
+        styleSpec = sizeAndFace + ',back:%s,fore:%s' \
+                    % (colorScheme['background'], colorScheme['default-text'])
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll ()
-        styleSpec = 'size:%d,bold,face:%s,fore:%s' \
-                    % (pb, faceCourier, colorScheme['folder'])
+        styleSpec = sizeAndFace + ',bold,fore:%s' % (colorScheme['folder'])
         self.StyleSetSpec (STYLE_FOLDER, styleSpec)
-        styleSpec = 'size:%d,bold,face:%s,fore:%s,back:%s' \
-                    % (pb, faceCourier, colorScheme['search-highlight-fore'],
+        styleSpec = sizeAndFace + ',bold,fore:%s,back:%s' \
+                    % (colorScheme['search-highlight-fore'],
                        colorScheme['search-highlight-back'])
         self.StyleSetSpec (STYLE_INC_SEARCH, styleSpec)
         self.SetSelBackground (1, colorScheme['selection-inactive'])
