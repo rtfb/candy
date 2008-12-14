@@ -330,6 +330,7 @@ class ViewWindow (object):
 class StatusLine (stc.StyledTextCtrl):
     def __init__ (self, parent, id, width):
         stc.StyledTextCtrl.__init__ (self, parent, id, size = (width, 20))
+        self.messagePrefix = ''
         self.SetMarginWidth (1, 0)
         self.SetUseHorizontalScrollBar (0)
 
@@ -342,6 +343,47 @@ class StatusLine (stc.StyledTextCtrl):
                        colorScheme['default-text'])
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll ()
+
+        self.Bind (stc.EVT_STC_MODIFIED, self.onStatusLineChange)
+        self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
+
+    def OnKeyDown (self, evt):
+        keyCode = evt.GetKeyCode ()
+        keyMod = evt.GetModifiers ()
+
+        if not self.processKeyEvent (keyCode, keyMod):
+            evt.Skip ()
+
+    def processKeyEvent (self, keyCode, keyMod):
+        message = self.messagePrefix
+
+        if keyCode == wx.WXK_RETURN:
+            if keyMod == wx.MOD_CONTROL:
+                message += 'CONTROL '
+            message += 'ENTER'
+        elif keyCode == wx.WXK_ESCAPE:
+            message += 'ESCAPE'
+
+        if message != self.messagePrefix:
+            text = self.GetText ()
+            self.ClearAll ()
+            pubsub.Publisher ().sendMessage (message, text)
+            return True
+
+        return False
+
+    def onStatusLineChange (self, evt):
+        type = evt.GetModificationType ()
+
+        if stc.STC_MOD_BEFOREINSERT & type != 0 \
+           or stc.STC_MOD_BEFOREDELETE & type != 0:
+            return
+
+        message = self.messagePrefix + 'NEW STATUS LINE TEXT'
+        text = self.GetText ()
+
+        if text != '':
+            pubsub.Publisher ().sendMessage (message, text)
 
 class PanelModel (object):
     def __init__ (self, msgSign):
@@ -419,12 +461,18 @@ class PanelModel (object):
         return self.getIndexByItem (oldDir)
 
 class PanelController (object):
-    def __init__ (self, parent, modelSignature):
+    def __init__ (self, parent, modelSignature, controllerSignature):
         self.model = PanelModel (modelSignature)
+        self.controllerSignature = controllerSignature
         self.view = Panel (parent)
         self.bindEvents ()
         signature = modelSignature + 'NEW ITEMS'
         pubsub.Publisher ().subscribe (self.afterDirChange, signature)
+
+        self.subscribe (self.ctrlEnter, 'CONTROL ENTER')
+        self.subscribe (self.enter, 'ENTER')
+        self.subscribe (self.escape, 'ESCAPE')
+        self.subscribe (self.newStatusLineText, 'NEW STATUS LINE TEXT')
 
         # String being searched incrementally
         self.searchStr = ''
@@ -441,6 +489,10 @@ class PanelController (object):
 
         self.keys = keyboard.KeyboardConfig ()
         self.keys.load ('keys.conf', self)
+
+    def subscribe (self, func, signature):
+        msg = self.controllerSignature + signature
+        pubsub.Publisher ().subscribe (func, msg)
 
     # Used in tests
     def clearList (self):
@@ -464,35 +516,10 @@ class PanelController (object):
         self.view.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
 
     def handleKeyEvent (self, evt, keyCode, keyMod):
-        if self.searchMode:
-            self.searchModeKeyDown (keyCode, keyMod)
-        else:
-            skipper = lambda *a, **k: evt.Skip ()
-            func = self.keys.getFunc (skipper, keyCode, keyMod)
-            func ()
-            self.setSelectionOnCurrItem ()
-
-    def searchModeKeyDown (self, keyCode, keyMod):
-        if keyCode == wx.WXK_RETURN:
-            self.searchMode = False
-
-            if keyMod == wx.MOD_CONTROL:
-                self.listSearchMatches (self.searchStr)
-            else:
-                # Here we want to stop searching and set focus on first search
-                # match. But if there was no match, we want to behave more like
-                # when we cancel search. Except we've no matches to clear, since
-                # no match means nothing was highlighted
-                if self.searchMatchIndex != -1:
-                    self.selectedItem = self.searchMatchIndex
-                    self.setSelectionOnCurrItem ()
-        elif keyCode == wx.WXK_ESCAPE:
-            self.searchMode = False
-            self.view.applyDefaultStyles (self.model.items)  # clean matches
-        else:
-            if keyCode < 256:
-                self.searchStr += chr (keyCode)
-                self.searchMatchIndex = self.incrementalSearch (self.searchStr)
+        skipper = lambda *a, **k: evt.Skip ()
+        func = self.keys.getFunc (skipper, keyCode, keyMod)
+        func ()
+        self.setSelectionOnCurrItem ()
 
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
@@ -554,6 +581,31 @@ class PanelController (object):
                      % (os.getcwdu (), len (self.model.items) - 1)
         self.view.getFrame ().statusBar.SetStatusText (statusText)
 
+    def ctrlEnter (self, msg):
+        self.view.SetFocus ()
+        self.searchMode = False
+        self.listSearchMatches (self.searchStr)
+
+    def enter (self, msg):
+        self.view.SetFocus ()
+        self.searchMode = False
+        # Here we want to stop searching and set focus on first search
+        # match. But if there was no match, we want to behave more like
+        # when we cancel search. Except we've no matches to clear, since
+        # no match means nothing was highlighted
+        if self.searchMatchIndex != -1:
+            self.selectedItem = self.searchMatchIndex
+            self.setSelectionOnCurrItem ()
+
+    def escape (self, msg):
+        self.view.SetFocus ()
+        self.searchMode = False
+        self.view.applyDefaultStyles (self.model.items)  # clean matches
+
+    def newStatusLineText (self, msg):
+        self.searchStr = msg.data
+        self.searchMatchIndex = self.incrementalSearch (self.searchStr)
+
     def onEnter (self):
         selection = self.model.items[self.selectedItem]
 
@@ -601,6 +653,7 @@ class PanelController (object):
     def onStartIncSearch (self):
         self.searchStr = ''
         self.searchMode = True
+        self.view.getFrame ().statusLine.SetFocus ()
 
     def setSelectionOnCurrItem (self):
         if len (self.model.items) <= 0:
@@ -980,15 +1033,6 @@ class Candy (wx.Frame):
                                            style = wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize (50)
 
-        self.p1 = PanelController (self.splitter, 'm1.')
-        self.p2 = PanelController (self.splitter, 'm2.')
-        self.splitter.SplitVertically (self.p1.view, self.p2.view)
-
-        self.Bind (wx.EVT_SIZE, self.OnSize)
-        self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
-        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged,
-                   id = ID_SPLITTER)
-
         displaySize = wx.DisplaySize ()
         appSize = (displaySize[0] / 2, displaySize[1] / 2)
         self.SetSize (appSize)
@@ -1001,15 +1045,29 @@ class Candy (wx.Frame):
         self.sizer.Add (self.statusLine, 0, sizerFlags)
         self.SetSizer (self.sizer)
 
+        self.p1 = PanelController (self.splitter, 'm1.', 'c1.')
+        self.p2 = PanelController (self.splitter, 'm2.', 'c2.')
+        self.splitter.SplitVertically (self.p1.view, self.p2.view)
+
+        self.Bind (wx.EVT_SIZE, self.OnSize)
+        self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
+        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged,
+                   id = ID_SPLITTER)
+
         self.statusBar = self.CreateStatusBar ()
         self.statusBar.SetStatusText (os.getcwdu ())
         self.Center ()
-        self.activePane = self.p1
+        self.setActivePane (self.p1)
+
+    def setActivePane (self, pane):
+        self.activePane = pane
+        pane.view.SetFocus ()
+        self.statusLine.messagePrefix = pane.controllerSignature
 
     def setUpAndShow (self):
         self.p2.initializeAndShowInitialView ()
         self.p1.initializeAndShowInitialView ()
-        self.activePane = self.p1
+        self.setActivePane (self.p1)
 
     def OnExit (self, e):
         self.Close (True)
@@ -1051,11 +1109,9 @@ class Candy (wx.Frame):
 
     def switchPane (self):
         if self.activePane == self.p1:
-            self.activePane = self.p2
+            self.setActivePane (self.p2)
         else:
-            self.activePane = self.p1
-
-        self.activePane.view.SetFocus ()
+            self.setActivePane (self.p1)
 
     def switchSplittingMode (self):
         currSplitMode = self.splitter.GetSplitMode ()
