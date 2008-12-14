@@ -164,5 +164,7 @@ class KeyboardConfig (object):
                     func = eval ('panel.' + e.command)
                     self.events.setdefault (e, func)
                 except AttributeError:
-                    print 'Key binding error: no such command "%s"' % (e.command)
+                    errStr = 'Key binding error: no such command "'
+                    errStr += e.command + '"'
+                    print errStr
 

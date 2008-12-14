@@ -57,7 +57,8 @@ class TestKeyboardEventHandler (unittest.TestCase):
 
     def testDigits (self):
         ke = keyboard.KeyboardEvent ()
-        # ke.char is simply the digit, ke.keyCode is the ascii number for that digit
+        # ke.char is simply the digit, ke.keyCode is the ascii number for that
+        # digit
         for char in range (ord ('0'), ord ('9')):
             ke.parse (chr (char))
             self.assertEquals (ke.char, chr (char))
@@ -66,7 +67,8 @@ class TestKeyboardEventHandler (unittest.TestCase):
 
     def testShiftDigits (self):
         ke = keyboard.KeyboardEvent ()
-        # ke.char is the '!@#', etc., ke.keyCode is the ascii number for that symbol
+        # ke.char is the '!@#', etc., ke.keyCode is the ascii number for that
+        # symbol
         for char in '!@#$%^&*()':
             ke.parse (char)
             self.assertEquals (ke.char, char)
@@ -75,7 +77,8 @@ class TestKeyboardEventHandler (unittest.TestCase):
 
     def testOtherUnshifted (self):
         ke = keyboard.KeyboardEvent ()
-        # ke.char is the '`-=', etc., ke.keyCode is the ascii number for that symbol
+        # ke.char is the '`-=', etc., ke.keyCode is the ascii number for that
+        # symbol
         for char in '`-=[];\',./\\':
             ke.parse (char)
             self.assertEquals (ke.char, char)
@@ -84,7 +87,8 @@ class TestKeyboardEventHandler (unittest.TestCase):
 
     def testOtherShifted (self):
         ke = keyboard.KeyboardEvent ()
-        # ke.char is the '~_+', etc., ke.keyCode is the ascii number for that symbol
+        # ke.char is the '~_+', etc., ke.keyCode is the ascii number for that
+        # symbol
         for char in '~_+{}|:"<>?':
             ke.parse (char)
             self.assertEquals (ke.char, char)
@@ -97,7 +101,8 @@ class TestKeyboardEventHandler (unittest.TestCase):
         for key, code in [('Esc', wx.WXK_ESCAPE), ('esc', wx.WXK_ESCAPE),
                           ('Space', wx.WXK_SPACE), ('space', wx.WXK_SPACE),
                           ('Enter', wx.WXK_RETURN), ('enter', wx.WXK_RETURN),
-                          ('Tab', wx.WXK_TAB), ('TAB', wx.WXK_TAB), ('tab', wx.WXK_TAB),
+                          ('Tab', wx.WXK_TAB), ('TAB', wx.WXK_TAB),
+                          ('tab', wx.WXK_TAB),
                           ('Return', wx.WXK_RETURN), ('return', wx.WXK_RETURN)]:
             ke.parse (key)
             self.assertEquals (ke.char, '')
@@ -167,8 +172,8 @@ class TestKeyboardEventHandler (unittest.TestCase):
         self.assertTrue (ke.modCtrl)
 
 def suite ():
-    keyboardEventHandlerSuite = unittest.makeSuite (TestKeyboardEventHandler, 'test')
-    return unittest.TestSuite ([keyboardEventHandlerSuite])
+    keyboardHandlerSuite = unittest.makeSuite (TestKeyboardEventHandler, 'test')
+    return unittest.TestSuite ([keyboardHandlerSuite])
 
 if __name__ == '__main__':
     unittest.main (defaultTest = 'suite')
