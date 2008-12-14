@@ -367,7 +367,7 @@ class StatusLine (stc.StyledTextCtrl):
         if message != self.messagePrefix:
             text = self.GetText ()
             self.ClearAll ()
-            pubsub.Publisher ().sendMessage (message, text)
+            pubsub.Publisher ().sendMessage (message, text[1:])
             return True
 
         return False
@@ -383,7 +383,7 @@ class StatusLine (stc.StyledTextCtrl):
         text = self.GetText ()
 
         if text != '':
-            pubsub.Publisher ().sendMessage (message, text)
+            pubsub.Publisher ().sendMessage (message, text[1:])
 
 class PanelModel (object):
     def __init__ (self, msgSign):
@@ -469,16 +469,13 @@ class PanelController (object):
         signature = modelSignature + 'NEW ITEMS'
         pubsub.Publisher ().subscribe (self.afterDirChange, signature)
 
-        self.subscribe (self.ctrlEnter, 'CONTROL ENTER')
-        self.subscribe (self.enter, 'ENTER')
-        self.subscribe (self.escape, 'ESCAPE')
-        self.subscribe (self.newStatusLineText, 'NEW STATUS LINE TEXT')
+        self.subscribe (self.searchCtrlEnter, 'CONTROL ENTER')
+        self.subscribe (self.searchEnter, 'ENTER')
+        self.subscribe (self.searchEscape, 'ESCAPE')
+        self.subscribe (self.searchNewStatusLineText, 'NEW STATUS LINE TEXT')
 
         # String being searched incrementally
         self.searchStr = ''
-
-        # Signifies incremental search mode
-        self.searchMode = False
 
         # Index of an item that is an accepted search match. Needed to know
         # which next match should be focused upon go-to-next-match
@@ -581,28 +578,25 @@ class PanelController (object):
                      % (os.getcwdu (), len (self.model.items) - 1)
         self.view.getFrame ().statusBar.SetStatusText (statusText)
 
-    def ctrlEnter (self, msg):
+    def searchCtrlEnter (self, msg):
         self.view.SetFocus ()
-        self.searchMode = False
         self.listSearchMatches (self.searchStr)
 
-    def enter (self, msg):
+    def searchEnter (self, msg):
         self.view.SetFocus ()
-        self.searchMode = False
-        # Here we want to stop searching and set focus on first search
-        # match. But if there was no match, we want to behave more like
-        # when we cancel search. Except we've no matches to clear, since
-        # no match means nothing was highlighted
+        # Here we want to stop searching and set focus on first search match.
+        # But if there was no match, we want to behave more like when we cancel
+        # search. Except we've no matches to clear, since no match means
+        # nothing was highlighted
         if self.searchMatchIndex != -1:
             self.selectedItem = self.searchMatchIndex
             self.setSelectionOnCurrItem ()
 
-    def escape (self, msg):
+    def searchEscape (self, msg):
         self.view.SetFocus ()
-        self.searchMode = False
         self.view.applyDefaultStyles (self.model.items)  # clean matches
 
-    def newStatusLineText (self, msg):
+    def searchNewStatusLineText (self, msg):
         self.searchStr = msg.data
         self.searchMatchIndex = self.incrementalSearch (self.searchStr)
 
@@ -652,7 +646,8 @@ class PanelController (object):
 
     def onStartIncSearch (self):
         self.searchStr = ''
-        self.searchMode = True
+        self.view.getFrame ().statusLine.SetText (u'/')
+        self.view.getFrame ().statusLine.GotoPos (1)
         self.view.getFrame ().statusLine.SetFocus ()
 
     def setSelectionOnCurrItem (self):
