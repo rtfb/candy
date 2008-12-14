@@ -31,7 +31,7 @@ class BuiltinViewerControl (stc.StyledTextCtrl):
         self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
 
-        styleSpec = 'size:%d,face:%s' % (pb, faceCourier))
+        styleSpec = 'size:%d,face:%s' % (pb, faceCourier)
         self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
         self.SetFocus ()
 
