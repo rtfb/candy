@@ -816,6 +816,10 @@ class Panel (stc.StyledTextCtrl):
         return u'\n'.join (visibleSublines).encode ('utf-8')
 
     def constructFullTextLines (self, items):
+        if self.viewWindow.height == 0:
+            # Avoid division by zero
+            self.viewWindow.height = 1
+
         self.numFullColumns = len (items) / self.viewWindow.height
         self.fullTextLines = ['' for i in range (self.viewWindow.height)]
 
