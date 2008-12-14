@@ -590,30 +590,13 @@ class PanelController (object):
             if searchStrLower in self.model.items[i].fileName.lower ():
                 return i
 
+        return initPos
+
     def incrementalSearch (self, searchStr):
-        index = self.selectedItem       # start searching from curr selection
-        searchRange = self.wrappedRange (index, len (self.model.items))
-
-        # First of all, clean previous matches
-        self.view.applyDefaultStyles (self.model.items)
-
-        # We only want to remember first match
-        firstMatch = -1
-        sStr = searchStr.lower ()
-
-        for i in searchRange:
-            match = self.model.items[i].fileName.lower ().find (sStr)
-
-            if match != -1:
-                if firstMatch == -1:
-                    firstMatch = i
-                    self.view.moveItemIntoView (self.model.items, i)
-
-                item = self.model.items[i]
-                if item.visualItem:
-                    self.view.highlightSearchMatch (item, match, searchStr)
-
-        return firstMatch
+        matchIndex = self.nextSearchMatch (searchStr, self.selectedItem)
+        self.view.moveItemIntoView (self.model.items, matchIndex)
+        self.view.highlightSearchMatches (self.model.items, searchStr)
+        return matchIndex
 
     def onStartIncSearch (self):
         self.searchStr = ''
@@ -895,13 +878,33 @@ class Panel (stc.StyledTextCtrl):
         self.SetSelBackground (1, colorScheme['selection-inactive'])
         self.SetSelForeground (1, colorScheme['selection-fore'])
 
-    def highlightSearchMatch (self, item, matchOffset, searchStr):
-        selectionStart = self.getItemStartByte (item) + matchOffset
+    def highlightSearchMatches (self, items, searchStr):
+        self.applyDefaultStyles (items)
+        searchStrLower = searchStr.lower ()
 
-        # Set the style for the new match:
-        self.StartStyling (selectionStart, 0xff)
-        stylingRegion = len (searchStr)
-        self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
+        for i in items:
+            if i.visualItem:
+                matchOffset = i.fileName.lower ().find (searchStrLower)
+
+                if matchOffset != -1:
+                    endOfHighlight = i.visualItem.visLenInChars
+                    if matchOffset + len (searchStr) > endOfHighlight:
+                        # TODO: this is a temporary hack to make the highlight
+                        # always fit the visible part of an item. As we must
+                        # run the search through the actual filename by
+                        # definition, this match offset can be way off the
+                        # visible part of an item. This issue of highlighting a
+                        # search match inside the invisible part of a file name
+                        # needs to be addressed separately, but for now it will
+                        # suffice to make it less visually disturbing.
+                        matchOffset = 0
+
+                    selectionStart = self.getItemStartByte (i) + matchOffset
+
+                    # Set the style for the new match:
+                    self.StartStyling (selectionStart, 0xff)
+                    stylingRegion = len (searchStr)
+                    self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
 
     def moveItemIntoView (self, items, index):
         item = items[index]
