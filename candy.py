@@ -665,7 +665,7 @@ class PanelController (object):
     def startViewer (self):
         import viewr
         file = self.model.items[self.selectedItem].fileName
-        wnd = viewr.BuiltinViewerFrame (self, -1, file, file)
+        wnd = viewr.BuiltinViewerFrame (self.view, -1, file, file)
         wnd.Show (True)
 
     def switchPane (self):
