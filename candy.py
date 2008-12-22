@@ -611,7 +611,7 @@ class PanelController (object):
                 self.downdir (selection.fileName)
         else:
             base, ext = os.path.splitext (selection.fileName)
-            commandLine = resolveCommandByFileExt (ext[1:])
+            commandLine = resolveCommandByFileExt (ext[1:].lower ())
 
             if commandLine:
                 os.system (commandLine % (selection.fileName))
