@@ -954,7 +954,7 @@ class Panel (stc.StyledTextCtrl):
 
                     # Set the style for the new match:
                     self.StartStyling (selectionStart, 0xff)
-                    stylingRegion = len (searchStr)
+                    stylingRegion = len (searchStr.encode ('utf-8'))
                     self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
 
     def moveItemIntoView (self, items, index):
