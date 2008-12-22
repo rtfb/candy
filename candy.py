@@ -708,6 +708,15 @@ class PanelController (object):
             self.selectedItem %= self.view.viewWindow.height
             self.selectedItem += 1
 
+    def moveSelectionZero (self):
+        self.selectedItem = 0
+
+    def moveSelectionLast (self):
+        self.selectedItem = len (self.model.items) - 1
+
+        if self.selectedItem < 0:
+            self.selectedItem = 0
+
     def startEditor (self):
         os.system ('gvim ' + self.model.items[self.selectedItem].fileName)
 
