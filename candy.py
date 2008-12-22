@@ -165,6 +165,7 @@ def resolveCommandByFileExt (ext):
         'avi':  'mplayer %s',
         'asf':  'mplayer %s',
         'pdf':  'evince %s',
+        'ps':   'evince %s',
         'jpg':  'gqview %s',
         'jpeg': 'gqview %s',
         'png':  'gqview %s',
