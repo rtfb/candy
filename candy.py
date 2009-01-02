@@ -134,8 +134,9 @@ class RawItem (object):
     filename, path, attributes, etc. Number of these objects is the number of
     the real objects external to our app, e.g. len (os.listdir ()).
     """
-    def __init__ (self, fileName):
+    def __init__ (self, fileName, path):
         self.fileName = fileName
+        self.path = path
         self.style = stc.STC_STYLE_DEFAULT
         self.isDir = False
         self.isHidden = False
@@ -188,12 +189,20 @@ def resolveCommandByFileExt (ext):
 
     return cmd
 
+def listOfTuples (list, secondItem):
+    tuples = []
+
+    for i in list:
+        tuples.append ((i, secondItem))
+
+    return tuples
+
 # Obviously excludes subdirectories
 def recursiveListDir (cwd):
     allFiles = []
 
     for root, dirs, files in os.walk (cwd):
-        allFiles.extend (files)
+        allFiles.extend (listOfTuples (files, root))
 
     return allFiles
 
@@ -203,23 +212,24 @@ def listFiles (isFlatDirectoryView, cwd):
     if isFlatDirectoryView:
         files = recursiveListDir (cwd)
     else:
-        files = os.listdir (cwd)
+        files = listOfTuples (os.listdir (cwd), cwd)
 
     return files
 
 def collectListInfo (isFlatDirectoryView, cwd):
     items = []
-
     files = listFiles (isFlatDirectoryView, cwd)
 
     for f in files:
-        item = RawItem (f)
+        fileName = f[0]
+        path = f[1]
+        item = RawItem (fileName, path)
 
-        if os.path.isdir (f):
+        if os.path.isdir (fileName):
             item.style = STYLE_FOLDER
             item.isDir = True
 
-        if f.startswith (u'.'):
+        if fileName.startswith (u'.'):
             item.isHidden = True
 
         items.append (item)
@@ -231,7 +241,7 @@ def collectDriveLetters ():
     driveLetters = win32api.GetLogicalDriveStrings ().split ('\x00')[:-1]
 
     for d in driveLetters:
-        item = RawItem (d)
+        item = RawItem (d, u'/')
         item.style = STYLE_FOLDER
         item.isDir = True
 
@@ -254,7 +264,7 @@ def constructListForFilling (fullList, specialFilter):
 
     notHidden = filter (lambda (f): not f.isHidden, dirList + fileList)
 
-    dotDot = RawItem (u'..')
+    dotDot = RawItem (u'..', u'.')
     dotDot.style = STYLE_FOLDER
     dotDot.isDir = True
     dotDot.isHidden = False
@@ -518,6 +528,16 @@ class PanelController (object):
         func = self.keys.getFunc (skipper, keyCode, keyMod)
         func ()
         self.setSelectionOnCurrItem ()
+        self.displaySelectionInfo ()
+
+    def displaySelectionInfo (self):
+        # in the line below, I'm subtracting 1 from number of items because
+        # of '..' pseudoitem
+        item = self.model.items[self.selectedItem]
+        statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
+                     % (os.getcwdu (), len (self.model.items) - 1,
+                        item.fileName, item.path)
+        self.view.getFrame ().statusBar.SetStatusText (statusText)
 
     def OnKeyDown (self, evt):
         keyCode = evt.GetKeyCode ()
@@ -573,11 +593,7 @@ class PanelController (object):
     def afterDirChange (self, message):
         self.updateView ()
         self.setSelectionOnCurrItem ()
-        # in the line below, I'm subtracting 1 from number of items because
-        # of '..' pseudoitem
-        statusText = u'[Folder view]: %s\t%d item(s)' \
-                     % (os.getcwdu (), len (self.model.items) - 1)
-        self.view.getFrame ().statusBar.SetStatusText (statusText)
+        self.displaySelectionInfo ()
 
     def searchCtrlEnter (self, msg):
         self.view.SetFocus ()
