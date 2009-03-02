@@ -20,9 +20,10 @@
 
 # Keyboard Binding Handler
 
-import wx
 import os
 import exceptions
+
+import wx
 
 
 class EventParseError (exceptions.Exception):

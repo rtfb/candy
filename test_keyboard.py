@@ -19,9 +19,11 @@
 #
 
 import unittest
-import wx
-import keyboard
 import pdb
+
+import wx
+
+import keyboard
 
 
 class TestKeyboardEventHandler (unittest.TestCase):

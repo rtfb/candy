@@ -21,15 +21,15 @@
 # If text interface will ever be needed, this one might be handy:
 # http://freshmeat.net/projects/python-urwid/
 
-import wx
-import wx.stc as stc
 import os
 import time
 import sys
 import pdb
 import math
 import platform
-import keyboard
+
+import wx
+import wx.stc as stc
 import wx.lib.pubsub as pubsub
 
 if platform.system () == 'Windows':
@@ -39,11 +39,15 @@ if platform.system () == 'Windows':
         print 'You seem to be running Windows and don\'t have win32api.'
         print 'Tisk tisk tisk...'
 
+import keyboard
+
+
 STYLE_FOLDER = 1
 STYLE_INC_SEARCH = 2
 
 ID_SPLITTER = 100
 ID_STATUS_LINE = 101
+
 
 def resolveColorNameOrReturn (name):
     # http://html-color-codes.com/

@@ -19,10 +19,12 @@
 #
 
 import unittest
-import candy
-import wx
 import os
 import pdb
+
+import wx
+
+import candy
 
 
 def fakeFileLister (isFlatDirectoryView, cwd):
