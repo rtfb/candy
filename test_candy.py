@@ -27,21 +27,21 @@ import wx
 import candy
 
 
-def fakeFileLister (isFlatDirectoryView, cwd):
+def fakeFileLister(isFlatDirectoryView, cwd):
     dirs = []
     files = []
     hidden = []
 
-    for i in range (10):
-        dirs.append ('dir' + str (i))
+    for i in range(10):
+        dirs.append('dir' + str(i))
 
-    dirs.insert (0, '..')
+    dirs.insert(0, '..')
 
-    for i in range (20):
-        files.append ('file' + str (i))
+    for i in range(20):
+        files.append('file' + str(i))
 
-    for i in range (5):
-        hidden.append ('.hid' + str (i))
+    for i in range(5):
+        hidden.append('.hid' + str(i))
 
     return dirs + files + hidden
 
@@ -49,176 +49,176 @@ def fakeFileLister (isFlatDirectoryView, cwd):
 candy.listFiles = fakeFileLister
 
 
-class TestSmartJustifier (unittest.TestCase):
-    def setUp (self):
+class TestSmartJustifier(unittest.TestCase):
+    def setUp(self):
         pass
 
-    def tearDown (self):
+    def tearDown(self):
         pass
 
-    def testBasicJustification (self):
-        sj = candy.SmartJustifier (5)
-        self.assertEquals ('abc  ', sj.justify ('abc'))
+    def testBasicJustification(self):
+        sj = candy.SmartJustifier(5)
+        self.assertEquals('abc  ', sj.justify('abc'))
 
-    def testDotsInTheMiddle (self):
+    def testDotsInTheMiddle(self):
         target = 'long...name.txt'
-        sj = candy.SmartJustifier (len (target))
+        sj = candy.SmartJustifier(len(target))
         longFileName = 'longTHIS_SHOULD_GET_REMOVEDname.txt'
-        self.assertEquals (target, sj.justify (longFileName))
+        self.assertEquals(target, sj.justify(longFileName))
 
-    def testOddNumberOfCharsAndDots (self):
+    def testOddNumberOfCharsAndDots(self):
         target = 'long...ame.txt'
-        sj = candy.SmartJustifier (len (target))
+        sj = candy.SmartJustifier(len(target))
         longFileName = 'longTHIS_SHOULD_GET_REMOVEDname.txt'
-        self.assertEquals (target, sj.justify (longFileName))
+        self.assertEquals(target, sj.justify(longFileName))
 
-    def testEmptyLine (self):
-        sj = candy.SmartJustifier (3)
-        self.assertEquals ('   ', sj.justify (''))
+    def testEmptyLine(self):
+        sj = candy.SmartJustifier(3)
+        self.assertEquals('   ', sj.justify(''))
 
-    def testOneChar (self):
-        sj = candy.SmartJustifier (3)
-        self.assertEquals ('a  ', sj.justify ('a'))
+    def testOneChar(self):
+        sj = candy.SmartJustifier(3)
+        self.assertEquals('a  ', sj.justify('a'))
 
-    def testWidth (self):
+    def testWidth(self):
         targetWidth = 10
-        sj = candy.SmartJustifier (targetWidth)
+        sj = candy.SmartJustifier(targetWidth)
         testCases = ['0123456789.gnumeric',
                      'Jim_Hefferon_-_Linear_Algebra.pdf',
                      'a']
         for tc in testCases:
-            self.assertEquals (targetWidth, len (sj.justify (tc)))
+            self.assertEquals(targetWidth, len(sj.justify(tc)))
 
-    def testGnumeric (self):
+    def testGnumeric(self):
         target = '0...9.gnumeri'
-        sj = candy.SmartJustifier (len (target))
-        self.assertEquals (target, sj.justify ('0123456789.gnumeric'))
+        sj = candy.SmartJustifier(len(target))
+        self.assertEquals(target, sj.justify('0123456789.gnumeric'))
 
 
-class TestModel (unittest.TestCase):
-    def setUp (self):
-        self.model = candy.PanelModel ('m.')
+class TestModel(unittest.TestCase):
+    def setUp(self):
+        self.model = candy.PanelModel('m.')
 
-    def tearDown (self):
+    def tearDown(self):
         pass
 
-    def testInitialDirectoryOnActivePane (self):
-        homeDir = os.path.expanduser ('~')
-        self.assertEqual (self.model.workingDir, homeDir)
+    def testInitialDirectoryOnActivePane(self):
+        homeDir = os.path.expanduser('~')
+        self.assertEqual(self.model.workingDir, homeDir)
 
-    def testItemListIsEmpty (self):
-        self.assertEquals (len (self.model.items), 0)
+    def testItemListIsEmpty(self):
+        self.assertEquals(len(self.model.items), 0)
 
-    def testFillItemsList (self):
-        self.model.fillListByWorkingDir ('.')
+    def testFillItemsList(self):
+        self.model.fillListByWorkingDir('.')
         # -5 here because the fake list contains 5 hidden files
-        fakeListLen = len (fakeFileLister (False, '.')) - 5
-        self.assertEquals (len (self.model.items), fakeListLen)
+        fakeListLen = len(fakeFileLister(False, '.')) - 5
+        self.assertEquals(len(self.model.items), fakeListLen)
 
-    def testUpdirFromFlatView (self):
-        self.model.fillListByWorkingDir ('.')
-        self.model.flattenDirectory ()
-        self.assertEquals (self.model.updir (), 0)
+    def testUpdirFromFlatView(self):
+        self.model.fillListByWorkingDir('.')
+        self.model.flattenDirectory()
+        self.assertEquals(self.model.updir(), 0)
 
 
-class TestCandy (unittest.TestCase):
-    def setUp (self):
-        self.app = wx.PySimpleApp ()
-        self.frame = candy.Candy (None, -1, 'foo')
+class TestCandy(unittest.TestCase):
+    def setUp(self):
+        self.app = wx.PySimpleApp()
+        self.frame = candy.Candy(None, -1, 'foo')
 
         # Let application know its dimensions
-        self.frame.Show (True)
-        self.frame.Show (False)
+        self.frame.Show(True)
+        self.frame.Show(False)
 
         # Now when dimensions are known, lets proceed initializing
-        self.frame.setUpAndShow ()
+        self.frame.setUpAndShow()
 
         # Speed up the tests by not executing updateView()
         self.frame.p1.updateView = lambda: None
         self.frame.p2.updateView = lambda: None
 
-    def tearDown (self):
-        self.frame.Destroy ()
+    def tearDown(self):
+        self.frame.Destroy()
 
-    def testSplitEqual (self):
-        size = self.frame.GetSize ()
+    def testSplitEqual(self):
+        size = self.frame.GetSize()
         # -5 is to compensate for the sash width of 5 pixels. Same in the code.
-        sashPos = self.frame.splitter.GetSashPosition ()
-        self.assertEqual ((size.x - 5) / 2, sashPos)
+        sashPos = self.frame.splitter.GetSashPosition()
+        self.assertEqual((size.x - 5) / 2, sashPos)
 
-    def testInitialSelection (self):
-        self.assertEqual (self.frame.activePane.selectedItem, 0)
+    def testInitialSelection(self):
+        self.assertEqual(self.frame.activePane.selectedItem, 0)
 
-    def testItemListIsEmpty (self):
-        self.frame.p1.clearList ()
-        self.frame.p2.clearList ()
-        self.assertEquals (len (self.frame.p1.model.items), 0)
-        self.assertEquals (len (self.frame.p2.model.items), 0)
+    def testItemListIsEmpty(self):
+        self.frame.p1.clearList()
+        self.frame.p2.clearList()
+        self.assertEquals(len(self.frame.p1.model.items), 0)
+        self.assertEquals(len(self.frame.p2.model.items), 0)
 
-    def testSelectionDoesntGetAnywhereOnEmptyList (self):
+    def testSelectionDoesntGetAnywhereOnEmptyList(self):
         c1 = self.frame.p1
         c2 = self.frame.p2
-        c1.clearList ()
-        c2.clearList ()
-        c1.moveSelectionUp ()
-        self.assertEquals (c1.selectedItem, 0)
-        c1.moveSelectionDown ()
-        self.assertEquals (c1.selectedItem, 0)
-        c1.moveSelectionLeft ()
-        self.assertEquals (c1.selectedItem, 0)
-        c1.moveSelectionRight ()
-        self.assertEquals (c1.selectedItem, 0)
+        c1.clearList()
+        c2.clearList()
+        c1.moveSelectionUp()
+        self.assertEquals(c1.selectedItem, 0)
+        c1.moveSelectionDown()
+        self.assertEquals(c1.selectedItem, 0)
+        c1.moveSelectionLeft()
+        self.assertEquals(c1.selectedItem, 0)
+        c1.moveSelectionRight()
+        self.assertEquals(c1.selectedItem, 0)
 
-    def testItemStartCharIsZeroOnEmptyList (self):
+    def testItemStartCharIsZeroOnEmptyList(self):
         item = self.frame.p1.model.items[0]
-        self.assertEquals (item.visualItem.startCharOnLine, 0)
+        self.assertEquals(item.visualItem.startCharOnLine, 0)
 
-    def testItemsListIsNotEmpty (self):
-        self.assertTrue (len (self.frame.p1.model.items) > 0)
+    def testItemsListIsNotEmpty(self):
+        self.assertTrue(len(self.frame.p1.model.items) > 0)
 
-    def testSimpleIncSearch (self):
-        self.assertEquals (self.frame.p1.incrementalSearch ('dir'), 1)
+    def testSimpleIncSearch(self):
+        self.assertEquals(self.frame.p1.incrementalSearch('dir'), 1)
 
-    def testNextSearchMatch (self):
+    def testNextSearchMatch(self):
         searchStr = 'file'
-        currPos = self.frame.p1.incrementalSearch (searchStr)
-        match = self.frame.p1.nextSearchMatch (searchStr, currPos + 1)
-        self.assertEquals (match, currPos + 1)
+        currPos = self.frame.p1.incrementalSearch(searchStr)
+        match = self.frame.p1.nextSearchMatch(searchStr, currPos + 1)
+        self.assertEquals(match, currPos + 1)
 
-    def testItemStartCharOnLine (self):
+    def testItemStartCharOnLine(self):
         item = self.frame.p1.model.items[0]
-        self.assertEquals (item.visualItem.startCharOnLine, 0)
+        self.assertEquals(item.visualItem.startCharOnLine, 0)
 
         for item in self.frame.p1.model.items:
             col = item.coords[0]
             # 11 is a magic column width number here. Based on last evidence
             # that works.
-            self.assertEquals (item.visualItem.startCharOnLine, col * 11)
+            self.assertEquals(item.visualItem.startCharOnLine, col * 11)
 
-    def testItemStartChar (self):
+    def testItemStartChar(self):
         item = self.frame.p1.model.items[0]
         view = self.frame.p1.view
-        self.assertEquals (view.getItemStartByte (item), 0)
+        self.assertEquals(view.getItemStartByte(item), 0)
 
-        for index, item in enumerate (self.frame.p1.model.items):
+        for index, item in enumerate(self.frame.p1.model.items):
             # 36 is a magic ViewWindow.width number here. Based on last
             # evidence that works. Because of this magic, getItemStartByte
             # only works in this ASCII test case.
             column, row = item.coords
             referenceValue = view.charsPerCol * column + 36 * row
-            self.assertEquals (view.getItemStartByte (item), referenceValue)
+            self.assertEquals(view.getItemStartByte(item), referenceValue)
 
 
-def suite ():
+def suite():
     import test_keyboard
-    candySuite = unittest.makeSuite (TestCandy, 'test')
-    modelSuite = unittest.makeSuite (TestModel, 'test')
-    smartJustifierSuite = unittest.makeSuite (TestSmartJustifier, 'test')
-    keyboardSuite = unittest.makeSuite (test_keyboard.TestKeyboardEventHandler)
-    return unittest.TestSuite ([smartJustifierSuite, keyboardSuite,
+    candySuite = unittest.makeSuite(TestCandy, 'test')
+    modelSuite = unittest.makeSuite(TestModel, 'test')
+    smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
+    keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
+    return unittest.TestSuite([smartJustifierSuite, keyboardSuite,
                                 modelSuite, candySuite])
 
 
 if __name__ == '__main__':
-    unittest.main (defaultTest = 'suite')
+    unittest.main(defaultTest='suite')
 

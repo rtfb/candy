@@ -26,27 +26,27 @@ import exceptions
 import wx
 
 
-class EventParseError (exceptions.Exception):
-    def __init__ (self, eventStr):
+class EventParseError(exceptions.Exception):
+    def __init__(self, eventStr):
         self.eventStr = eventStr
 
-    def __str__ (self):
+    def __str__(self):
         return 'Failed to parse event \'%s\'' % (self.eventStr)
 
 
-class KeyboardEvent (object):
-    def __init__ (self, command = ''):
-        self.reset ()
+class KeyboardEvent(object):
+    def __init__(self, command=''):
+        self.reset()
         self.command = command
 
-    def reset (self):
+    def reset(self):
         self.char = ''
         self.keyCode = 0
         self.modCtrl = False
         self.modAlt = False
         self.modShift = False
 
-    def modifiersBitMask (self):
+    def modifiersBitMask(self):
         mask = 0
 
         if self.modCtrl:
@@ -60,27 +60,27 @@ class KeyboardEvent (object):
 
         return mask
 
-    def parse (self, str):
-        if len (str) == 1:
-            self._parseLenOne (str)
-        elif str.lower () == 'esc':
+    def parse(self, str):
+        if len(str) == 1:
+            self._parseLenOne(str)
+        elif str.lower() == 'esc':
             self.keyCode = wx.WXK_ESCAPE
-        elif str.lower () == 'space':
+        elif str.lower() == 'space':
             self.keyCode = wx.WXK_SPACE
-        elif str.lower () == 'tab':
+        elif str.lower() == 'tab':
             self.keyCode = wx.WXK_TAB
-        elif str.lower () in ['enter', 'return']:
+        elif str.lower() in ['enter', 'return']:
             self.keyCode = wx.WXK_RETURN
-        elif str.lower ().startswith ('f') and len (str) > 1:
-            self._parseFunctionKeys (str)
+        elif str.lower().startswith('f') and len(str) > 1:
+            self._parseFunctionKeys(str)
         else:
-            self._parseComplex (str)
+            self._parseComplex(str)
 
-    def _parseFunctionKeys (self, str):
+    def _parseFunctionKeys(self, str):
         try:
-            number = eval (str[1:])
+            number = eval(str[1:])
         except:
-            raise EventParseError (str)
+            raise EventParseError(str)
 
         funcs = [wx.WXK_F1, wx.WXK_F2, wx.WXK_F3, wx.WXK_F4, wx.WXK_F5,
                  wx.WXK_F6, wx.WXK_F7, wx.WXK_F8, wx.WXK_F9, wx.WXK_F10,
@@ -89,11 +89,11 @@ class KeyboardEvent (object):
                  wx.WXK_F21, wx.WXK_F22, wx.WXK_F23, wx.WXK_F24]
         self.keyCode = funcs[number - 1]
 
-    def _parseComplex (self, str):
-        parts = str.split ('-')
+    def _parseComplex(self, str):
+        parts = str.split('-')
 
-        if len (parts) <= 1:
-            raise EventParseError (str)
+        if len(parts) <= 1:
+            raise EventParseError(str)
 
         if parts[0] == 'C':
             self.modCtrl = True
@@ -102,71 +102,71 @@ class KeyboardEvent (object):
         elif parts[0] in ['A', 'M']:
             self.modAlt = True
         else:
-            raise EventParseError (str)
+            raise EventParseError(str)
 
-        self.parse ('-'.join (parts[1:]))
+        self.parse('-'.join(parts[1:]))
 
-    def _parseLenOne (self, str):
+    def _parseLenOne(self, str):
         if str in 'ABCDEFGHIJKLMNOPQRSTUVWZYX':
             self.char = str
-            self.keyCode = ord (str)
+            self.keyCode = ord(str)
             self.modShift = True
             return
         elif str in 'abcdefghijklmnopqrstuvwzyx':
             self.char = str
-            self.keyCode = ord (str.upper ())
+            self.keyCode = ord(str.upper())
             return
         elif str in '0123456789`-=[]\\;\',./':
             self.char = str
-            self.keyCode = ord (str)
+            self.keyCode = ord(str)
             return
         elif str in '!@#$%^&*()~_+{}|:"<>?':
             self.char = str
-            self.keyCode = ord (str)
+            self.keyCode = ord(str)
             self.modShift = True
             return
 
 
-class KeyboardConfig (object):
-    def __init__ (self):
+class KeyboardConfig(object):
+    def __init__(self):
         self.events = {}
 
-    def getFunc (self, notFound, keyCode, keyMod):
+    def getFunc(self, notFound, keyCode, keyMod):
         for e in self.events:
             if keyCode == e.keyCode:
                 if not keyMod:
                     return self.events[e]
 
-                if keyMod == e.modifiersBitMask ():
+                if keyMod == e.modifiersBitMask():
                     return self.events[e]
 
         return notFound
 
-    def _parseBindings (self, command, bindings):
-        bs = bindings.split (',')
+    def _parseBindings(self, command, bindings):
+        bs = bindings.split(',')
         events = []
 
         for b in bs:
-            event = KeyboardEvent (command)
-            event.parse (b.strip ())
-            events.append (event)
+            event = KeyboardEvent(command)
+            event.parse(b.strip())
+            events.append(event)
 
         return events
 
-    def load (self, fileName, panel):
-        projectDir = os.path.dirname (__file__)
-        keysConfPath = os.path.join (projectDir, fileName)
-        lines = open (keysConfPath).readlines ()
+    def load(self, fileName, panel):
+        projectDir = os.path.dirname(__file__)
+        keysConfPath = os.path.join(projectDir, fileName)
+        lines = open(keysConfPath).readlines()
 
         for line in lines:
-            if line.strip () == '':
+            if line.strip() == '':
                 continue
 
-            command, bindings = line.strip ().split (':')
-            for e in self._parseBindings (command, bindings):
+            command, bindings = line.strip().split(':')
+            for e in self._parseBindings(command, bindings):
                 try:
-                    func = eval ('panel.' + e.command)
-                    self.events.setdefault (e, func)
+                    func = eval('panel.' + e.command)
+                    self.events.setdefault(e, func)
                 except AttributeError:
                     errStr = 'Key binding error: no such command "'
                     errStr += e.command + '"'

@@ -32,7 +32,7 @@ import wx
 import wx.stc as stc
 import wx.lib.pubsub as pubsub
 
-if platform.system () == 'Windows':
+if platform.system() == 'Windows':
     try:
         import win32api
     except ImportError:
@@ -49,7 +49,7 @@ ID_SPLITTER = 100
 ID_STATUS_LINE = 101
 
 
-def resolveColorNameOrReturn (name):
+def resolveColorNameOrReturn(name):
     # http://html-color-codes.com/
     dict = {
         'black':  '#000000',
@@ -61,50 +61,50 @@ def resolveColorNameOrReturn (name):
         'grey':   '#999999',
         }
 
-    if name in dict.keys ():
+    if name in dict.keys():
         return dict[name]
 
     return name
 
 
-def readConfig (fileName):
-    lines = open (fileName).readlines ()
+def readConfig(fileName):
+    lines = open(fileName).readlines()
     dict = {}
 
     for l in lines:
-        if l.strip () == '':
+        if l.strip() == '':
             continue
 
-        name, value = l.split (':')
-        val = resolveColorNameOrReturn (value.strip ())
-        dict.setdefault (name.strip (), val)
+        name, value = l.split(':')
+        val = resolveColorNameOrReturn(value.strip())
+        dict.setdefault(name.strip(), val)
 
     return dict
 
 
-projectDir = os.path.dirname (__file__)
-generalConfPath = os.path.join (projectDir, 'general.conf')
-generalConfig = readConfig (generalConfPath)
-colorConf = os.path.join (projectDir, 'colorscheme-default.conf')
-colorScheme = readConfig (colorConf)
+projectDir = os.path.dirname(__file__)
+generalConfPath = os.path.join(projectDir, 'general.conf')
+generalConfig = readConfig(generalConfPath)
+colorConf = os.path.join(projectDir, 'colorscheme-default.conf')
+colorScheme = readConfig(colorConf)
 
 
-class DirectoryViewFilter (object):
-    def __init__ (self, searchStr):
-        self.searchStr = searchStr.lower ()
+class DirectoryViewFilter(object):
+    def __init__(self, searchStr):
+        self.searchStr = searchStr.lower()
 
-    def __call__ (self, item):
-        return self.searchStr in item.fileName.lower ()
+    def __call__(self, item):
+        return self.searchStr in item.fileName.lower()
 
 
-class VisualItem (object):
+class VisualItem(object):
     """
     An item to hold visual representation. E.g. if the external item is a
     filename, this one will hold things like justified name, startChar in
     the ViewWindow coords and the like. Number of these objects is the number
     RawItems that actually fit on screen (at least partially).
     """
-    def __init__ (self):
+    def __init__(self):
         # Character on the row-representing string, which is the str[0]-th
         # char of this item's visual representation. Will not be negative,
         # since objects of this class represent only visible things, even
@@ -131,19 +131,19 @@ class VisualItem (object):
         # record whether the whole item was fit to screen
         self.fullyInView = False
 
-    def setStartByte (self, visibleTextLine):
+    def setStartByte(self, visibleTextLine):
         charsBeforeThisItem = visibleTextLine[:self.startCharOnLine]
-        self.startByteOnLine = len (charsBeforeThisItem.encode ('utf-8'))
+        self.startByteOnLine = len(charsBeforeThisItem.encode('utf-8'))
 
 
-class RawItem (object):
+class RawItem(object):
     """
     An item to hold the representation close to the one outside of the program.
     E.g. if the external item is a filename, this one will hold things like
     filename, path, attributes, etc. Number of these objects is the number of
     the real objects external to our app, e.g. len (os.listdir ()).
     """
-    def __init__ (self, fileName, path):
+    def __init__(self, fileName, path):
         self.fileName = fileName
         self.path = path
         self.style = stc.STC_STYLE_DEFAULT
@@ -158,17 +158,17 @@ class RawItem (object):
         self.startCharOnLine = 0
         self.startByteOnLine = 0
 
-    def __eq__ (self, fileName):
+    def __eq__(self, fileName):
         return self.fileName == fileName
 
-    def __lt__ (self, other):
+    def __lt__(self, other):
         return self.fileName < other.fileName
 
-    def __str__ (self):
+    def __str__(self):
         return self.fileName
 
 
-def resolveCommandByFileExt (ext):
+def resolveCommandByFileExt(ext):
     extDict = {
         'wmv':  'mplayer %s',
         'mpeg': 'mplayer %s',
@@ -200,134 +200,134 @@ def resolveCommandByFileExt (ext):
     return cmd
 
 
-def listOfTuples (list, secondItem):
+def listOfTuples(list, secondItem):
     tuples = []
 
     for i in list:
-        tuples.append ((i, secondItem))
+        tuples.append((i, secondItem))
 
     return tuples
 
 
 # Obviously excludes subdirectories
-def recursiveListDir (cwd):
+def recursiveListDir(cwd):
     allFiles = []
 
-    for root, dirs, files in os.walk (cwd):
-        allFiles.extend (listOfTuples (files, root))
+    for root, dirs, files in os.walk(cwd):
+        allFiles.extend(listOfTuples(files, root))
 
     return allFiles
 
 
-def listFiles (isFlatDirectoryView, cwd):
+def listFiles(isFlatDirectoryView, cwd):
     files = []
 
     if isFlatDirectoryView:
-        files = recursiveListDir (cwd)
+        files = recursiveListDir(cwd)
     else:
-        files = listOfTuples (os.listdir (cwd), cwd)
+        files = listOfTuples(os.listdir(cwd), cwd)
 
     return files
 
 
-def collectListInfo (isFlatDirectoryView, cwd):
+def collectListInfo(isFlatDirectoryView, cwd):
     items = []
-    files = listFiles (isFlatDirectoryView, cwd)
+    files = listFiles(isFlatDirectoryView, cwd)
 
     for f in files:
         fileName = f[0]
         path = f[1]
-        item = RawItem (fileName, path)
+        item = RawItem(fileName, path)
 
-        if os.path.isdir (fileName):
+        if os.path.isdir(fileName):
             item.style = STYLE_FOLDER
             item.isDir = True
 
-        if fileName.startswith (u'.'):
+        if fileName.startswith(u'.'):
             item.isHidden = True
 
-        items.append (item)
+        items.append(item)
 
     return items
 
 
-def collectDriveLetters ():
+def collectDriveLetters():
     items = []
-    driveLetters = win32api.GetLogicalDriveStrings ().split ('\x00')[:-1]
+    driveLetters = win32api.GetLogicalDriveStrings().split('\x00')[:-1]
 
     for d in driveLetters:
-        item = RawItem (d, u'/')
+        item = RawItem(d, u'/')
         item.style = STYLE_FOLDER
         item.isDir = True
 
-        items.append (item)
+        items.append(item)
 
     return items
 
 
-def isRootOfDrive (path):
-    letters = [chr (n) for n in range (ord (u'a'), ord (u'z') + 1)]
-    return len (path) == 3 \
-           and path.lower ()[0] in letters \
+def isRootOfDrive(path):
+    letters = [chr(n) for n in range(ord(u'a'), ord(u'z') + 1)]
+    return len(path) == 3 \
+           and path.lower()[0] in letters \
            and path[1:] == u':\\'
 
 
-def constructListForFilling (fullList, specialFilter):
-    dirList = filter (lambda (f): f.isDir, fullList)
-    dirList.sort ()
+def constructListForFilling(fullList, specialFilter):
+    dirList = filter(lambda(f): f.isDir, fullList)
+    dirList.sort()
 
-    fileList = filter (lambda (f): not f.isDir, fullList)
-    fileList.sort ()
+    fileList = filter(lambda(f): not f.isDir, fullList)
+    fileList.sort()
 
-    notHidden = filter (lambda (f): not f.isHidden, dirList + fileList)
+    notHidden = filter(lambda(f): not f.isHidden, dirList + fileList)
 
-    dotDot = RawItem (u'..', u'.')
+    dotDot = RawItem(u'..', u'.')
     dotDot.style = STYLE_FOLDER
     dotDot.isDir = True
     dotDot.isHidden = False
-    dotDot.visiblePartLength = len (dotDot.fileName)
-    notHidden.insert (0, dotDot)
+    dotDot.visiblePartLength = len(dotDot.fileName)
+    notHidden.insert(0, dotDot)
 
     if specialFilter:
-        return filter (specialFilter, notHidden)
+        return filter(specialFilter, notHidden)
     else:
         return notHidden
 
 
-def intDivCeil (a, b):
-    return int (math.ceil (float (a) / b))
+def intDivCeil(a, b):
+    return int(math.ceil(float(a) / b))
 
 
-def intDivFloor (a, b):
-    return int (math.floor (float (a) / b))
+def intDivFloor(a, b):
+    return int(math.floor(float(a) / b))
 
 
-class SmartJustifier (object):
-    def __init__ (self, width):
+class SmartJustifier(object):
+    def __init__(self, width):
         self.width = width
         self.numDots = 3
 
-    def justify (self, text):
-        if len (text) <= self.width:
-            return text.ljust (self.width)
+    def justify(self, text):
+        if len(text) <= self.width:
+            return text.ljust(self.width)
 
-        root, ext = os.path.splitext (text)
+        root, ext = os.path.splitext(text)
         newWidth = self.width - self.numDots
 
         if ext != u'':
-            newWidth -= len (ext)
+            newWidth -= len(ext)
 
-        if newWidth <= 5:       # 5 = len ('a...b')
+        if newWidth <= 5:       # 5 = len('a...b')
             halfWidthCeil = 1
             halfWidthFloor = 1
             extTop = self.width - halfWidthCeil - halfWidthFloor - self.numDots
         else:
-            halfWidthCeil = intDivCeil (newWidth, 2)
-            halfWidthFloor = intDivFloor (newWidth, 2)
-            extTop = len (ext)
+            halfWidthCeil = intDivCeil(newWidth, 2)
+            halfWidthFloor = intDivFloor(newWidth, 2)
+            extTop = len(ext)
 
-        if extTop > len (ext):
-            halfWidthCeil += extTop - len (ext)
+        if extTop > len(ext):
+            halfWidthCeil += extTop - len(ext)
 
         dots = u'.' * self.numDots
         leftPart = root[:halfWidthCeil]
@@ -338,8 +338,8 @@ class SmartJustifier (object):
 
 
 # The width/height/left/right are in characters
-class ViewWindow (object):
-    def __init__ (self, width, height):
+class ViewWindow(object):
+    def __init__(self, width, height):
         # Number of characters that can fit in whole width of the pane
         self.width = width
 
@@ -352,42 +352,42 @@ class ViewWindow (object):
         # Number of columns of items across all the width of the pane
         self.numColumns = 0
 
-    def right (self):
+    def right(self):
         return self.left + self.width
 
     # only handles horizontal dimension
-    def charInView (self, charPos):
-        return charPos >= self.left and charPos < self.right ()
+    def charInView(self, charPos):
+        return charPos >= self.left and charPos < self.right()
 
 
-class StatusLine (stc.StyledTextCtrl):
-    def __init__ (self, parent, id, width):
-        stc.StyledTextCtrl.__init__ (self, parent, id, size = (width, 20))
+class StatusLine(stc.StyledTextCtrl):
+    def __init__(self, parent, id, width):
+        stc.StyledTextCtrl.__init__(self, parent, id, size=(width, 20))
         self.messagePrefix = ''
-        self.SetMarginWidth (1, 0)
-        self.SetUseHorizontalScrollBar (0)
+        self.SetMarginWidth(1, 0)
+        self.SetUseHorizontalScrollBar(0)
 
         faceCourier = generalConfig['font-face'] # 'Courier'
-        pb = int (generalConfig['font-size']) # 12
+        pb = int(generalConfig['font-size']) # 12
 
         # Set the styles according to color scheme
         styleSpec = 'size:%d,face:%s,back:%s,fore:%s' \
                     % (pb, faceCourier, colorScheme['background'],
                        colorScheme['default-text'])
-        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
-        self.StyleClearAll ()
+        self.StyleSetSpec(stc.STC_STYLE_DEFAULT, styleSpec)
+        self.StyleClearAll()
 
-        self.Bind (stc.EVT_STC_MODIFIED, self.onStatusLineChange)
-        self.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind(stc.EVT_STC_MODIFIED, self.onStatusLineChange)
+        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
 
-    def OnKeyDown (self, evt):
-        keyCode = evt.GetKeyCode ()
-        keyMod = evt.GetModifiers ()
+    def OnKeyDown(self, evt):
+        keyCode = evt.GetKeyCode()
+        keyMod = evt.GetModifiers()
 
-        if not self.processKeyEvent (keyCode, keyMod):
-            evt.Skip ()
+        if not self.processKeyEvent(keyCode, keyMod):
+            evt.Skip()
 
-    def processKeyEvent (self, keyCode, keyMod):
+    def processKeyEvent(self, keyCode, keyMod):
         message = self.messagePrefix
 
         if keyCode == wx.WXK_RETURN:
@@ -397,36 +397,36 @@ class StatusLine (stc.StyledTextCtrl):
         elif keyCode == wx.WXK_ESCAPE:
             message += 'ESCAPE'
         elif keyCode == wx.WXK_BACK:
-            text = self.GetText ()
+            text = self.GetText()
             if text == u'/':
                 message += 'ESCAPE'
 
         if message != self.messagePrefix:
-            text = self.GetText ()
-            self.ClearAll ()
-            pubsub.Publisher ().sendMessage (message, text[1:])
+            text = self.GetText()
+            self.ClearAll()
+            pubsub.Publisher().sendMessage(message, text[1:])
             return True
 
         return False
 
-    def onStatusLineChange (self, evt):
-        type = evt.GetModificationType ()
+    def onStatusLineChange(self, evt):
+        type = evt.GetModificationType()
 
         if stc.STC_MOD_BEFOREINSERT & type != 0 \
            or stc.STC_MOD_BEFOREDELETE & type != 0:
             return
 
         message = self.messagePrefix + 'NEW STATUS LINE TEXT'
-        text = self.GetText ()
+        text = self.GetText()
 
         if text != '':
-            pubsub.Publisher ().sendMessage (message, text[1:])
+            pubsub.Publisher().sendMessage(message, text[1:])
 
 
-class PanelModel (object):
-    def __init__ (self, msgSign):
+class PanelModel(object):
+    def __init__(self, msgSign):
         # Working directory of the pane
-        self.workingDir = os.path.expanduser (u'~')
+        self.workingDir = os.path.expanduser(u'~')
 
         # Signifies flattened directory view
         self.flatDirectoryView = False
@@ -445,73 +445,73 @@ class PanelModel (object):
         # has sent it
         self.messageSignature = msgSign
 
-    def changeWorkingDir (self, newWorkingDir):
+    def changeWorkingDir(self, newWorkingDir):
         self.workingDir = newWorkingDir
         message = self.messageSignature + 'WORKDIR CHANGED'
-        pubsub.Publisher ().sendMessage (message, self.workingDir)
+        pubsub.Publisher().sendMessage(message, self.workingDir)
 
-    def flattenDirectory (self):
+    def flattenDirectory(self):
         self.flatDirectoryView = True
 
-    def unflattenDirectory (self):
+    def unflattenDirectory(self):
         self.flatDirectoryView = False
 
-    def setDirFilter (self, searchStr):
+    def setDirFilter(self, searchStr):
         if searchStr != u'':
-            self.directoryViewFilter = DirectoryViewFilter (searchStr)
+            self.directoryViewFilter = DirectoryViewFilter(searchStr)
         else:
             self.directoryViewFilter = None
 
-    def setItems (self, items):
+    def setItems(self, items):
         self.items = items
         message = self.messageSignature + 'NEW ITEMS'
-        pubsub.Publisher ().sendMessage (message, self.items)
+        pubsub.Publisher().sendMessage(message, self.items)
 
-    def getIndexByItem (self, item):
+    def getIndexByItem(self, item):
         try:
-            return self.items.index (item)
+            return self.items.index(item)
         except ValueError:
             return 0
 
-    def fillListByWorkingDir (self, cwd):
-        allItems = collectListInfo (self.flatDirectoryView, cwd)
-        self.changeWorkingDir (cwd)
-        list = constructListForFilling (allItems, self.directoryViewFilter)
-        self.setItems (list)
+    def fillListByWorkingDir(self, cwd):
+        allItems = collectListInfo(self.flatDirectoryView, cwd)
+        self.changeWorkingDir(cwd)
+        list = constructListForFilling(allItems, self.directoryViewFilter)
+        self.setItems(list)
 
-    def updir (self):
-        if platform.system () == 'Windows':
-            if isRootOfDrive (self.workingDir):
-                self.setItems (collectDriveLetters ())
+    def updir(self):
+        if platform.system() == 'Windows':
+            if isRootOfDrive(self.workingDir):
+                self.setItems(collectDriveLetters())
                 return 0
 
-        self.setDirFilter (u'')
+        self.setDirFilter(u'')
         # if we're in self.flatDirectoryView, all we want is to refresh
         # the view of self.workingDir without flattening
         if self.flatDirectoryView:
-            self.unflattenDirectory ()
-            self.fillListByWorkingDir (os.getcwdu ())
+            self.unflattenDirectory()
+            self.fillListByWorkingDir(os.getcwdu())
             return 0
 
-        oldDir = os.path.split (os.getcwdu ())[1]
-        os.chdir (u'..')
-        self.fillListByWorkingDir (os.getcwdu ())
-        return self.getIndexByItem (oldDir)
+        oldDir = os.path.split(os.getcwdu())[1]
+        os.chdir(u'..')
+        self.fillListByWorkingDir(os.getcwdu())
+        return self.getIndexByItem(oldDir)
 
 
-class PanelController (object):
-    def __init__ (self, parent, modelSignature, controllerSignature):
-        self.model = PanelModel (modelSignature)
+class PanelController(object):
+    def __init__(self, parent, modelSignature, controllerSignature):
+        self.model = PanelModel(modelSignature)
         self.controllerSignature = controllerSignature
-        self.view = Panel (parent)
-        self.bindEvents ()
+        self.view = Panel(parent)
+        self.bindEvents()
         signature = modelSignature + 'NEW ITEMS'
-        pubsub.Publisher ().subscribe (self.afterDirChange, signature)
+        pubsub.Publisher().subscribe(self.afterDirChange, signature)
 
-        self.subscribe (self.searchCtrlEnter, 'CONTROL ENTER')
-        self.subscribe (self.searchEnter, 'ENTER')
-        self.subscribe (self.searchEscape, 'ESCAPE')
-        self.subscribe (self.searchNewStatusLineText, 'NEW STATUS LINE TEXT')
+        self.subscribe(self.searchCtrlEnter, 'CONTROL ENTER')
+        self.subscribe(self.searchEnter, 'ENTER')
+        self.subscribe(self.searchEscape, 'ESCAPE')
+        self.subscribe(self.searchNewStatusLineText, 'NEW STATUS LINE TEXT')
 
         # String being searched incrementally
         self.searchStr = ''
@@ -523,208 +523,208 @@ class PanelController (object):
         # Index of an item that is currently selected
         self.selectedItem = 0
 
-        self.keys = keyboard.KeyboardConfig ()
-        self.keys.load ('keys.conf', self)
+        self.keys = keyboard.KeyboardConfig()
+        self.keys.load('keys.conf', self)
 
-    def subscribe (self, func, signature):
+    def subscribe(self, func, signature):
         msg = self.controllerSignature + signature
-        pubsub.Publisher ().subscribe (func, msg)
+        pubsub.Publisher().subscribe(func, msg)
 
     # Used in tests
-    def clearList (self):
-        self.model.setItems ([])
+    def clearList(self):
+        self.model.setItems([])
         self.selectedItem = 0
         self.view.numFullColumns = 0
 
-    def initializeViewSettings (self, numColumns = 3):
-        self.view.initializeViewSettings (self.model.items, numColumns)
+    def initializeViewSettings(self, numColumns=3):
+        self.view.initializeViewSettings(self.model.items, numColumns)
 
-    def initializeAndShowInitialView (self):
-        self.initializeViewSettings ()
-        self.goHome ()
+    def initializeAndShowInitialView(self):
+        self.initializeViewSettings()
+        self.goHome()
 
         # This one is needed here to get the initial focus:
-        self.view.SetFocus ()
+        self.view.SetFocus()
 
-    def bindEvents (self):
-        self.view.Bind (wx.EVT_CHAR, self.OnChar)
-        self.view.Bind (wx.EVT_KEY_DOWN, self.OnKeyDown)
-        self.view.Bind (wx.EVT_SET_FOCUS, self.OnSetFocus)
+    def bindEvents(self):
+        self.view.Bind(wx.EVT_CHAR, self.OnChar)
+        self.view.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.view.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
 
-    def handleKeyEvent (self, evt, keyCode, keyMod):
-        skipper = lambda *a, **k: evt.Skip ()
-        func = self.keys.getFunc (skipper, keyCode, keyMod)
-        func ()
-        self.setSelectionOnCurrItem ()
-        self.displaySelectionInfo ()
+    def handleKeyEvent(self, evt, keyCode, keyMod):
+        skipper = lambda *a, **k: evt.Skip()
+        func = self.keys.getFunc(skipper, keyCode, keyMod)
+        func()
+        self.setSelectionOnCurrItem()
+        self.displaySelectionInfo()
 
-    def displaySelectionInfo (self):
+    def displaySelectionInfo(self):
         # in the line below, I'm subtracting 1 from number of items because
         # of '..' pseudoitem
         item = self.model.items[self.selectedItem]
         statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
-                     % (os.getcwdu (), len (self.model.items) - 1,
+                     % (os.getcwdu(), len(self.model.items) - 1,
                         item.fileName, item.path)
-        self.view.getFrame ().statusBar.SetStatusText (statusText)
+        self.view.getFrame().statusBar.SetStatusText(statusText)
 
-    def OnKeyDown (self, evt):
-        keyCode = evt.GetKeyCode ()
-        keyMod = evt.GetModifiers ()
-        self.handleKeyEvent (evt, keyCode, keyMod)
+    def OnKeyDown(self, evt):
+        keyCode = evt.GetKeyCode()
+        keyMod = evt.GetModifiers()
+        self.handleKeyEvent(evt, keyCode, keyMod)
 
-    def OnChar (self, evt):
-        keyCode = evt.GetKeyCode ()
-        self.handleKeyEvent (evt, keyCode, None)
+    def OnChar(self, evt):
+        keyCode = evt.GetKeyCode()
+        self.handleKeyEvent(evt, keyCode, None)
 
-    def OnSetFocus (self, evt):
-        self.view.onSetFocus ()
-        os.chdir (self.model.workingDir)
+    def OnSetFocus(self, evt):
+        self.view.onSetFocus()
+        os.chdir(self.model.workingDir)
 
-    def quiter (self):
-        sys.exit (0)
+    def quiter(self):
+        sys.exit(0)
 
-    def updateView (self):
-        self.view.updateDisplayByItems (self.model.items)
+    def updateView(self):
+        self.view.updateDisplayByItems(self.model.items)
 
-    def updir (self):
+    def updir(self):
         self.selectedItem = 0
-        self.view.clearScreen ()
-        self.selectedItem = self.model.updir ()
+        self.view.clearScreen()
+        self.selectedItem = self.model.updir()
 
-    def listDriveLetters (self):
-        if platform.system () != 'Windows':
+    def listDriveLetters(self):
+        if platform.system() != 'Windows':
             return
 
         self.selectedItem = 0
-        self.model.setItems (collectDriveLetters ())
+        self.model.setItems(collectDriveLetters())
 
-    def flattenDirectory (self):
-        self.model.flattenDirectory ()
-        self.model.fillListByWorkingDir (self.model.workingDir)
+    def flattenDirectory(self):
+        self.model.flattenDirectory()
+        self.model.fillListByWorkingDir(self.model.workingDir)
 
-    def changeDir (self, fullPath, searchStr = u''):
-        self.model.setDirFilter (searchStr)
-        os.chdir (fullPath)
-        self.view.clearScreen ()
+    def changeDir(self, fullPath, searchStr=u''):
+        self.model.setDirFilter(searchStr)
+        os.chdir(fullPath)
+        self.view.clearScreen()
         self.selectedItem = 0
-        self.model.fillListByWorkingDir (fullPath)
+        self.model.fillListByWorkingDir(fullPath)
 
-    def listSearchMatches (self, searchStr):
-        self.changeDir (self.model.workingDir, searchStr)
+    def listSearchMatches(self, searchStr):
+        self.changeDir(self.model.workingDir, searchStr)
 
-    def downdir (self, dirName):
-        self.changeDir (os.path.join (self.model.workingDir, dirName))
+    def downdir(self, dirName):
+        self.changeDir(os.path.join(self.model.workingDir, dirName))
 
-    def goHome (self):
-        self.changeDir (os.path.expanduser (u'~'))
+    def goHome(self):
+        self.changeDir(os.path.expanduser(u'~'))
 
-    def afterDirChange (self, message):
-        self.updateView ()
-        self.setSelectionOnCurrItem ()
-        self.displaySelectionInfo ()
+    def afterDirChange(self, message):
+        self.updateView()
+        self.setSelectionOnCurrItem()
+        self.displaySelectionInfo()
 
-    def searchCtrlEnter (self, msg):
-        self.view.SetFocus ()
-        self.listSearchMatches (self.searchStr)
+    def searchCtrlEnter(self, msg):
+        self.view.SetFocus()
+        self.listSearchMatches(self.searchStr)
 
-    def searchEnter (self, msg):
-        self.view.SetFocus ()
+    def searchEnter(self, msg):
+        self.view.SetFocus()
         # Here we want to stop searching and set focus on first search match.
         # But if there was no match, we want to behave more like when we cancel
         # search. Except we've no matches to clear, since no match means
         # nothing was highlighted
         if self.searchMatchIndex != -1:
             self.selectedItem = self.searchMatchIndex
-            self.setSelectionOnCurrItem ()
+            self.setSelectionOnCurrItem()
 
-    def searchEscape (self, msg):
-        self.view.SetFocus ()
-        self.view.applyDefaultStyles (self.model.items)  # clean matches
+    def searchEscape(self, msg):
+        self.view.SetFocus()
+        self.view.applyDefaultStyles(self.model.items)  # clean matches
 
-    def searchNewStatusLineText (self, msg):
+    def searchNewStatusLineText(self, msg):
         self.searchStr = msg.data
-        self.searchMatchIndex = self.incrementalSearch (self.searchStr)
+        self.searchMatchIndex = self.incrementalSearch(self.searchStr)
 
-    def onEnter (self):
+    def onEnter(self):
         selection = self.model.items[self.selectedItem]
 
         if selection.isDir:
             if selection.fileName == u'..':
-                self.updir ()
+                self.updir()
             else:
-                self.downdir (selection.fileName)
+                self.downdir(selection.fileName)
         else:
-            base, ext = os.path.splitext (selection.fileName)
-            commandLine = resolveCommandByFileExt (ext[1:].lower ())
+            base, ext = os.path.splitext(selection.fileName)
+            commandLine = resolveCommandByFileExt(ext[1:].lower())
 
             if commandLine:
-                os.system (commandLine % (selection.fileName))
+                os.system(commandLine % (selection.fileName))
 
-    def clearScreen (self):
-        self.view.clearScreen ()
+    def clearScreen(self):
+        self.view.clearScreen()
 
-    def onNextMatch (self):
+    def onNextMatch(self):
         item = self.selectedItem + 1
-        self.searchMatchIndex = self.nextSearchMatch (self.searchStr, item)
+        self.searchMatchIndex = self.nextSearchMatch(self.searchStr, item)
         self.selectedItem = self.searchMatchIndex
 
-    def wrappedRange (self, start, length):
+    def wrappedRange(self, start, length):
         # Construct a range of indices to produce wrapped search from
         # given position
-        return range (start, length) + range (start)
+        return range(start, length) + range(start)
 
-    def nextSearchMatch (self, searchStr, initPos):
-        searchRange = self.wrappedRange (initPos, len (self.model.items))
-        searchStrLower = searchStr.lower ()
+    def nextSearchMatch(self, searchStr, initPos):
+        searchRange = self.wrappedRange(initPos, len(self.model.items))
+        searchStrLower = searchStr.lower()
 
         for i in searchRange:
-            if searchStrLower in self.model.items[i].fileName.lower ():
+            if searchStrLower in self.model.items[i].fileName.lower():
                 return i
 
         return initPos
 
-    def incrementalSearch (self, searchStr):
-        matchIndex = self.nextSearchMatch (searchStr, self.selectedItem)
-        self.view.moveItemIntoView (self.model.items, matchIndex)
-        self.view.highlightSearchMatches (self.model.items, searchStr)
+    def incrementalSearch(self, searchStr):
+        matchIndex = self.nextSearchMatch(searchStr, self.selectedItem)
+        self.view.moveItemIntoView(self.model.items, matchIndex)
+        self.view.highlightSearchMatches(self.model.items, searchStr)
         return matchIndex
 
-    def onStartIncSearch (self):
+    def onStartIncSearch(self):
         self.searchStr = ''
-        self.view.getFrame ().statusLine.SetText (u'/')
-        self.view.getFrame ().statusLine.GotoPos (1)
-        self.view.getFrame ().statusLine.SetFocus ()
+        self.view.getFrame().statusLine.SetText(u'/')
+        self.view.getFrame().statusLine.GotoPos(1)
+        self.view.getFrame().statusLine.SetFocus()
 
-    def setSelectionOnCurrItem (self):
-        if len (self.model.items) <= 0:
+    def setSelectionOnCurrItem(self):
+        if len(self.model.items) <= 0:
             return
 
         item = self.model.items[self.selectedItem]
         if not item.visualItem or not item.visualItem.fullyInView:
-            self.view.moveItemIntoView (self.model.items, self.selectedItem)
+            self.view.moveItemIntoView(self.model.items, self.selectedItem)
 
-        self.view.setSelectionOnItem (item)
+        self.view.setSelectionOnItem(item)
 
-    def moveSelectionDown (self):
+    def moveSelectionDown(self):
         self.selectedItem += 1
 
-        if self.selectedItem >= len (self.model.items):
+        if self.selectedItem >= len(self.model.items):
             self.selectedItem = 0
 
-    def moveSelectionUp (self):
+    def moveSelectionUp(self):
         self.selectedItem -= 1
 
         if self.selectedItem < 0:
-            self.selectedItem = len (self.model.items) - 1
+            self.selectedItem = len(self.model.items) - 1
 
         # This can happen if self.model.items is empty
         if self.selectedItem < 0:
             self.selectedItem = 0
 
-    def moveSelectionLeft (self):
+    def moveSelectionLeft(self):
         self.selectedItem -= self.view.viewWindow.height
 
-        if len (self.model.items) == 0:
+        if len(self.model.items) == 0:
             self.selectedItem = 0
             return
 
@@ -736,58 +736,58 @@ class PanelController (object):
             # TODO: figure out how to deal with that long line without
             # splitting. It suggests some nasty coupling.
             selItem = self.selectedItem
-            numItems = len (self.model.items)
-            selItem = self.view.updateSelectedItemLeft (selItem, numItems)
+            numItems = len(self.model.items)
+            selItem = self.view.updateSelectedItemLeft(selItem, numItems)
             self.selectedItem = selItem
 
-    def moveSelectionRight (self):
+    def moveSelectionRight(self):
         self.selectedItem += self.view.viewWindow.height
 
-        if len (self.model.items) == 0:
+        if len(self.model.items) == 0:
             self.selectedItem = 0
             return
 
-        if self.selectedItem > len (self.model.items):
+        if self.selectedItem > len(self.model.items):
             self.selectedItem -= self.view.viewWindow.height
             self.selectedItem %= self.view.viewWindow.height
             self.selectedItem += 1
 
-    def moveSelectionZero (self):
+    def moveSelectionZero(self):
         self.selectedItem = 0
 
-    def moveSelectionLast (self):
-        self.selectedItem = len (self.model.items) - 1
+    def moveSelectionLast(self):
+        self.selectedItem = len(self.model.items) - 1
 
         if self.selectedItem < 0:
             self.selectedItem = 0
 
-    def startEditor (self):
-        os.system ('gvim ' + self.model.items[self.selectedItem].fileName)
+    def startEditor(self):
+        os.system('gvim ' + self.model.items[self.selectedItem].fileName)
 
-    def startViewer (self):
+    def startViewer(self):
         import viewr
         file = self.model.items[self.selectedItem].fileName
-        wnd = viewr.BuiltinViewerFrame (self.view, -1, file, file)
-        wnd.Show (True)
+        wnd = viewr.BuiltinViewerFrame(self.view, -1, file, file)
+        wnd.Show(True)
 
-    def switchPane (self):
-        self.view.getFrame ().switchPane ()
-        self.afterDirChange (None)
+    def switchPane(self):
+        self.view.getFrame().switchPane()
+        self.afterDirChange(None)
 
-    def switchSplittingMode (self):
-        self.view.switchSplittingMode ()
+    def switchSplittingMode(self):
+        self.view.switchSplittingMode()
 
 
-class Panel (stc.StyledTextCtrl):
-    def __init__ (self, parent):
-        stc.StyledTextCtrl.__init__ (self, parent)
+class Panel(stc.StyledTextCtrl):
+    def __init__(self, parent):
+        stc.StyledTextCtrl.__init__(self, parent)
 
         # No margins and scroll bars over here!
-        self.SetMarginWidth (1, 0)
-        self.SetUseHorizontalScrollBar (0)
+        self.SetMarginWidth(1, 0)
+        self.SetUseHorizontalScrollBar(0)
 
-        self.bindEvents ()
-        self.setStyles ()
+        self.bindEvents()
+        self.setStyles()
 
         self.viewWindow = None
 
@@ -808,71 +808,71 @@ class Panel (stc.StyledTextCtrl):
         # long lines correctly.
         self.fullTextLines = []
 
-    def bindEvents (self):
-        self.Bind (wx.EVT_WINDOW_DESTROY, self.OnDestroy)
-        self.Bind (wx.EVT_KILL_FOCUS, self.OnLoseFocus)
+    def bindEvents(self):
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
+        self.Bind(wx.EVT_KILL_FOCUS, self.OnLoseFocus)
 
-    def setStyles (self):
+    def setStyles(self):
         # This repeats the default: the five bits are for styling, the rest
         # three are for indicators (like green squiggle line). I'm setting it
         # explicitly to have a reference to the starting point in the code if I
         # ever need some messing around with indicators.
-        self.SetStyleBits (5)
+        self.SetStyleBits(5)
 
         faceCourier = generalConfig['font-face'] # 'Courier'
-        pb = int (generalConfig['font-size']) # 12
+        pb = int(generalConfig['font-size']) # 12
         sizeAndFace = 'size:%d,face:%s' % (pb, faceCourier)
 
         # Set the styles according to color scheme
         styleSpec = sizeAndFace + ',back:%s,fore:%s' \
                     % (colorScheme['background'], colorScheme['default-text'])
-        self.StyleSetSpec (stc.STC_STYLE_DEFAULT, styleSpec)
-        self.StyleClearAll ()
+        self.StyleSetSpec(stc.STC_STYLE_DEFAULT, styleSpec)
+        self.StyleClearAll()
         styleSpec = sizeAndFace + ',bold,fore:%s' % (colorScheme['folder'])
-        self.StyleSetSpec (STYLE_FOLDER, styleSpec)
+        self.StyleSetSpec(STYLE_FOLDER, styleSpec)
         styleSpec = sizeAndFace + ',bold,fore:%s,back:%s' \
                     % (colorScheme['search-highlight-fore'],
                        colorScheme['search-highlight-back'])
-        self.StyleSetSpec (STYLE_INC_SEARCH, styleSpec)
-        self.SetSelBackground (1, colorScheme['selection-inactive'])
-        self.SetSelForeground (1, colorScheme['selection-fore'])
+        self.StyleSetSpec(STYLE_INC_SEARCH, styleSpec)
+        self.SetSelBackground(1, colorScheme['selection-inactive'])
+        self.SetSelForeground(1, colorScheme['selection-fore'])
 
-    def initializeViewSettings (self, items, numColumns):
-        width, height = self.GetClientSizeTuple ()
-        lineHeight = self.TextHeight (0)
-        charWidth = self.TextWidth (stc.STC_STYLE_DEFAULT, 'a')
+    def initializeViewSettings(self, items, numColumns):
+        width, height = self.GetClientSizeTuple()
+        lineHeight = self.TextHeight(0)
+        charWidth = self.TextWidth(stc.STC_STYLE_DEFAULT, 'a')
 
         # Here viewWindow.left will be set to 0. Even if it's not,
         # it will be brought back to life when doing moveItemIntoView:
-        self.viewWindow = ViewWindow (width / charWidth,
-                                      height / lineHeight)
+        self.viewWindow = ViewWindow(width / charWidth,
+                                     height / lineHeight)
         self.viewWindow.numColumns = numColumns
         self.charsPerCol = width / charWidth / self.viewWindow.numColumns
-        self.clearScreen ()
-        self.updateDisplayByItems (items)
+        self.clearScreen()
+        self.updateDisplayByItems(items)
 
-    def setDebugWhitespace (self):
-        if generalConfig['debug-whitespace'].lower () == 'true':
-            self.SetViewWhiteSpace (stc.STC_WS_VISIBLEALWAYS)
-            self.SetViewEOL (True)
+    def setDebugWhitespace(self):
+        if generalConfig['debug-whitespace'].lower() == 'true':
+            self.SetViewWhiteSpace(stc.STC_WS_VISIBLEALWAYS)
+            self.SetViewEOL(True)
         else:
-            self.SetViewWhiteSpace (stc.STC_WS_INVISIBLE)
-            self.SetViewEOL (False)
+            self.SetViewWhiteSpace(stc.STC_WS_INVISIBLE)
+            self.SetViewEOL(False)
 
-    def createVisualItem (self, rawItem):
+    def createVisualItem(self, rawItem):
         row = rawItem.coords[1]
-        vi = VisualItem ()
+        vi = VisualItem()
         startCharOnLine = rawItem.startCharOnLine - self.viewWindow.left
-        endCharOnLine = startCharOnLine + len (rawItem.visiblePart)
-        visibleLine = self.GetLine (row)
+        endCharOnLine = startCharOnLine + len(rawItem.visiblePart)
+        visibleLine = self.GetLine(row)
 
         # Partially, to the left of ViewWindow:
         if startCharOnLine < 0 and endCharOnLine >= 0:
-            vi.visLenInChars = startCharOnLine + len (rawItem.visiblePart)
+            vi.visLenInChars = startCharOnLine + len(rawItem.visiblePart)
             vi.startCharOnLine = 0
-            vi.setStartByte (visibleLine)
+            vi.setStartByte(visibleLine)
             tail = rawItem.visiblePart[-vi.visLenInChars:]
-            vi.visLenInBytes = len (tail.encode ('utf-8'))
+            vi.visLenInBytes = len(tail.encode('utf-8'))
             vi.fullyInView = False
             return vi
 
@@ -881,61 +881,61 @@ class Panel (stc.StyledTextCtrl):
            and startCharOnLine < self.viewWindow.width:
             vi.startCharOnLine = startCharOnLine
             vi.visLenInChars = self.viewWindow.width - vi.startCharOnLine
-            vi.setStartByte (visibleLine)
+            vi.setStartByte(visibleLine)
             head = rawItem.visiblePart[:vi.visLenInChars]
-            vi.visLenInBytes = len (head.encode ('utf-8'))
+            vi.visLenInBytes = len(head.encode('utf-8'))
             vi.fullyInView = False
             return vi
 
         # Fully in view:
         vi.startCharOnLine = startCharOnLine
-        vi.visLenInChars = len (rawItem.visiblePart)
-        vi.setStartByte (visibleLine)
-        vi.visLenInBytes = len (rawItem.visiblePart.encode ('utf-8'))
+        vi.visLenInChars = len(rawItem.visiblePart)
+        vi.setStartByte(visibleLine)
+        vi.visLenInBytes = len(rawItem.visiblePart.encode('utf-8'))
         vi.fullyInView = True
         return vi
 
-    def extractVisualItems (self, items):
+    def extractVisualItems(self, items):
         self.visualItems = []
 
         for i in items:
             i.visualItem = None
-            startCharInView = self.viewWindow.charInView (i.startCharOnLine)
-            endCharPos = i.startCharOnLine + len (i.visiblePart)
-            endCharInView = self.viewWindow.charInView (endCharPos)
+            startCharInView = self.viewWindow.charInView(i.startCharOnLine)
+            endCharPos = i.startCharOnLine + len(i.visiblePart)
+            endCharInView = self.viewWindow.charInView(endCharPos)
 
             if startCharInView or endCharInView:
-                i.visualItem = self.createVisualItem (i)
-                self.visualItems.append (i.visualItem)
+                i.visualItem = self.createVisualItem(i)
+                self.visualItems.append(i.visualItem)
 
-    def extractVisibleSubLines (self):
+    def extractVisibleSubLines(self):
         visibleSublines = []
 
         for line in self.fullTextLines:
-            rawSubLine = line[self.viewWindow.left : self.viewWindow.right ()]
-            subLine = rawSubLine.ljust (self.viewWindow.width)
-            visibleSublines.append (subLine)
+            rawSubLine = line[self.viewWindow.left : self.viewWindow.right()]
+            subLine = rawSubLine.ljust(self.viewWindow.width)
+            visibleSublines.append(subLine)
 
-        return u'\n'.join (visibleSublines).encode ('utf-8')
+        return u'\n'.join(visibleSublines).encode('utf-8')
 
-    def constructFullTextLines (self, items):
+    def constructFullTextLines(self, items):
         if self.viewWindow.height == 0:
             # Avoid division by zero
             self.viewWindow.height = 1
 
-        self.numFullColumns = len (items) / self.viewWindow.height
-        self.fullTextLines = ['' for i in range (self.viewWindow.height)]
+        self.numFullColumns = len(items) / self.viewWindow.height
+        self.fullTextLines = ['' for i in range(self.viewWindow.height)]
 
         row = 0
         column = 0
-        sj = SmartJustifier (self.charsPerCol - 1)
+        sj = SmartJustifier(self.charsPerCol - 1)
 
         for item in items:
-            visiblePart = sj.justify (item.fileName) + u' '
-            item.coords = (column, row)
-            item.startCharOnLine = len (self.fullTextLines[row])
-            utf8Line = self.fullTextLines[row].encode ('utf-8')
-            item.startByteOnLine = len (utf8Line)
+            visiblePart = sj.justify(item.fileName) + u' '
+            item.coords =(column, row)
+            item.startCharOnLine = len(self.fullTextLines[row])
+            utf8Line = self.fullTextLines[row].encode('utf-8')
+            item.startByteOnLine = len(utf8Line)
             item.visiblePart = visiblePart
             self.fullTextLines[row] += visiblePart
             row += 1
@@ -944,56 +944,56 @@ class Panel (stc.StyledTextCtrl):
                 row = 0
                 column += 1
 
-    def updateDisplayByItems (self, rawItems, constructFullLines = True):
-        self.clearScreen ()
-        self.SetReadOnly (False)
+    def updateDisplayByItems(self, rawItems, constructFullLines=True):
+        self.clearScreen()
+        self.SetReadOnly(False)
 
         if constructFullLines:
-            self.constructFullTextLines (rawItems)
+            self.constructFullTextLines(rawItems)
 
-        self.SetTextUTF8 (self.extractVisibleSubLines ())
-        self.extractVisualItems (rawItems)
-        self.EmptyUndoBuffer ()
-        self.SetReadOnly (True)
-        self.setDebugWhitespace ()
-        self.applyDefaultStyles (rawItems)
+        self.SetTextUTF8(self.extractVisibleSubLines())
+        self.extractVisualItems(rawItems)
+        self.EmptyUndoBuffer()
+        self.SetReadOnly(True)
+        self.setDebugWhitespace()
+        self.applyDefaultStyles(rawItems)
 
-    def getFrame (self):
-        return self.GetParent ().GetParent ()
+    def getFrame(self):
+        return self.GetParent().GetParent()
 
-    def OnDestroy (self, evt):
+    def OnDestroy(self, evt):
         # This is how the clipboard contents can be preserved after
         # the app has exited.
-        wx.TheClipboard.Flush ()
-        evt.Skip ()
+        wx.TheClipboard.Flush()
+        evt.Skip()
 
-    def clearScreen (self):
-        self.SetReadOnly (False)
-        self.ClearAll ()
-        self.SetReadOnly (True)
+    def clearScreen(self):
+        self.SetReadOnly(False)
+        self.ClearAll()
+        self.SetReadOnly(True)
 
-    def switchSplittingMode (self):
-        self.getFrame ().switchSplittingMode ()
+    def switchSplittingMode(self):
+        self.getFrame().switchSplittingMode()
 
-    def onSetFocus (self):
-        self.SetSelBackground (1, colorScheme['selection-back'])
-        self.SetSelForeground (1, colorScheme['selection-fore'])
+    def onSetFocus(self):
+        self.SetSelBackground(1, colorScheme['selection-back'])
+        self.SetSelForeground(1, colorScheme['selection-fore'])
 
-    def OnLoseFocus (self, evt):
-        self.SetSelBackground (1, colorScheme['selection-inactive'])
-        self.SetSelForeground (1, colorScheme['selection-fore'])
+    def OnLoseFocus(self, evt):
+        self.SetSelBackground(1, colorScheme['selection-inactive'])
+        self.SetSelForeground(1, colorScheme['selection-fore'])
 
-    def highlightSearchMatches (self, items, searchStr):
-        self.applyDefaultStyles (items)
-        searchStrLower = searchStr.lower ()
+    def highlightSearchMatches(self, items, searchStr):
+        self.applyDefaultStyles(items)
+        searchStrLower = searchStr.lower()
 
         for i in items:
             if i.visualItem:
-                matchOffset = i.fileName.lower ().find (searchStrLower)
+                matchOffset = i.fileName.lower().find(searchStrLower)
 
                 if matchOffset != -1:
                     endOfHighlight = i.visualItem.visLenInChars
-                    if matchOffset + len (searchStr) > endOfHighlight:
+                    if matchOffset + len(searchStr) > endOfHighlight:
                         # TODO: this is a temporary hack to make the highlight
                         # always fit the visible part of an item. As we must
                         # run the search through the actual filename by
@@ -1004,42 +1004,42 @@ class Panel (stc.StyledTextCtrl):
                         # suffice to make it less visually disturbing.
                         matchOffset = 0
 
-                    selectionStart = self.getItemStartByte (i) + matchOffset
+                    selectionStart = self.getItemStartByte(i) + matchOffset
 
                     # Set the style for the new match:
-                    self.StartStyling (selectionStart, 0xff)
-                    stylingRegion = len (searchStr.encode ('utf-8'))
-                    self.SetStyling (stylingRegion, STYLE_INC_SEARCH)
+                    self.StartStyling(selectionStart, 0xff)
+                    stylingRegion = len(searchStr.encode('utf-8'))
+                    self.SetStyling(stylingRegion, STYLE_INC_SEARCH)
 
-    def moveItemIntoView (self, items, index):
+    def moveItemIntoView(self, items, index):
         item = items[index]
         startCharOnLine = item.startCharOnLine
-        endCharOnLine = startCharOnLine + len (item.visiblePart)
+        endCharOnLine = startCharOnLine + len(item.visiblePart)
 
         if startCharOnLine < self.viewWindow.left:
             # move view window left
             self.viewWindow.left = startCharOnLine
-        elif endCharOnLine > self.viewWindow.right ():
+        elif endCharOnLine > self.viewWindow.right():
             # move view window right
             self.viewWindow.left = endCharOnLine - self.viewWindow.width
         else:
             return      # The item is already in view
 
-        self.updateDisplayByItems (items, False)
+        self.updateDisplayByItems(items, False)
 
-    def setSelectionOnItem (self, item):
-        selectionStart = self.getItemStartByte (item)
-        self.SetCurrentPos (selectionStart)
-        self.EnsureCaretVisible ()
+    def setSelectionOnItem(self, item):
+        selectionStart = self.getItemStartByte(item)
+        self.SetCurrentPos(selectionStart)
+        self.EnsureCaretVisible()
 
         if item:
             numCharsToSelect = item.visualItem.visLenInBytes
         else:
             numCharsToSelect = self.charsPerCol
 
-        self.SetSelection (selectionStart, selectionStart + numCharsToSelect)
+        self.SetSelection(selectionStart, selectionStart + numCharsToSelect)
 
-    def updateSelectedItemLeft (self, selectedItem, numItems):
+    def updateSelectedItemLeft(self, selectedItem, numItems):
         numFullLines = numItems % self.viewWindow.height
         bottomRightIndex = self.viewWindow.height * (self.numFullColumns + 1)
         bottomRightIndex -= 1
@@ -1049,7 +1049,7 @@ class Panel (stc.StyledTextCtrl):
 
         return selectedItem - self.viewWindow.height + bottomRightIndex
 
-    def getItemStartByte (self, item):
+    def getItemStartByte(self, item):
         # -1 below because I want to get byte count for the lines [0..currLine)
         row = item.coords[1] - 1
         sumBytes = 0
@@ -1058,84 +1058,84 @@ class Panel (stc.StyledTextCtrl):
             # +1 below because GetLineEndPosition doesn't account for newlines
             # TODO: why not +row? If it skips newlines, it should have
             # skipped N (=row) of them
-            sumBytes = self.GetLineEndPosition (row) + 1
+            sumBytes = self.GetLineEndPosition(row) + 1
 
         return sumBytes + item.visualItem.startByteOnLine
 
-    def applyDefaultStyles (self, rawItems):
-        for index, item in enumerate (rawItems):
+    def applyDefaultStyles(self, rawItems):
+        for index, item in enumerate(rawItems):
             if item.visualItem:
-                selStart = self.getItemStartByte (item)
+                selStart = self.getItemStartByte(item)
 
                 # Note the 0x1f. It means I'm only affecting the style
                 # bits, leaving the indicators alone. This avoids having
                 # the nasty green squiggle underline.
-                self.StartStyling (selStart, 0x1f)
+                self.StartStyling(selStart, 0x1f)
 
                 itemNameLen = item.visualItem.visLenInBytes
-                self.SetStyling (itemNameLen, item.style)
+                self.SetStyling(itemNameLen, item.style)
 
 
-class Candy (wx.Frame):
-    def __init__ (self, parent, id, title):
-        wx.Frame.__init__ (self, parent, -1, title)
+class Candy(wx.Frame):
+    def __init__(self, parent, id, title):
+        wx.Frame.__init__(self, parent, -1, title)
 
-        self.splitter = wx.SplitterWindow (self, ID_SPLITTER,
-                                           style = wx.SP_BORDER)
-        self.splitter.SetMinimumPaneSize (50)
+        self.splitter = wx.SplitterWindow(self, ID_SPLITTER,
+                                          style=wx.SP_BORDER)
+        self.splitter.SetMinimumPaneSize(50)
 
-        displaySize = wx.DisplaySize ()
+        displaySize = wx.DisplaySize()
         appSize = (displaySize[0] / 2, displaySize[1] / 2)
-        self.SetSize (appSize)
+        self.SetSize(appSize)
 
-        self.sizer = wx.BoxSizer (wx.VERTICAL)
-        self.sizer.Add (self.splitter, 1, wx.EXPAND)
-        self.statusLine = StatusLine (self, ID_STATUS_LINE, appSize[0])
-        self.sizer.AddSpacer (2)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.splitter, 1, wx.EXPAND)
+        self.statusLine = StatusLine(self, ID_STATUS_LINE, appSize[0])
+        self.sizer.AddSpacer(2)
         sizerFlags = wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND
-        self.sizer.Add (self.statusLine, 0, sizerFlags)
-        self.SetSizer (self.sizer)
+        self.sizer.Add(self.statusLine, 0, sizerFlags)
+        self.SetSizer(self.sizer)
 
-        self.p1 = PanelController (self.splitter, 'm1.', 'c1.')
-        self.p2 = PanelController (self.splitter, 'm2.', 'c2.')
-        self.splitter.SplitVertically (self.p1.view, self.p2.view)
+        self.p1 = PanelController(self.splitter, 'm1.', 'c1.')
+        self.p2 = PanelController(self.splitter, 'm2.', 'c2.')
+        self.splitter.SplitVertically(self.p1.view, self.p2.view)
 
-        self.Bind (wx.EVT_SIZE, self.OnSize)
-        self.Bind (wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id = ID_SPLITTER)
-        self.Bind (wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged,
-                   id = ID_SPLITTER)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id=ID_SPLITTER)
+        self.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged,
+                  id=ID_SPLITTER)
 
-        self.statusBar = self.CreateStatusBar ()
-        self.statusBar.SetStatusText (os.getcwdu ())
-        self.Center ()
-        self.setActivePane (self.p1)
+        self.statusBar = self.CreateStatusBar()
+        self.statusBar.SetStatusText(os.getcwdu())
+        self.Center()
+        self.setActivePane(self.p1)
 
-    def setActivePane (self, pane):
+    def setActivePane(self, pane):
         self.activePane = pane
-        pane.view.SetFocus ()
+        pane.view.SetFocus()
         self.statusLine.messagePrefix = pane.controllerSignature
 
-    def setUpAndShow (self):
-        self.p2.initializeAndShowInitialView ()
-        self.p1.initializeAndShowInitialView ()
-        self.setActivePane (self.p1)
+    def setUpAndShow(self):
+        self.p2.initializeAndShowInitialView()
+        self.p1.initializeAndShowInitialView()
+        self.setActivePane(self.p1)
 
-    def OnExit (self, e):
-        self.Close (True)
+    def OnExit(self, e):
+        self.Close(True)
 
-    def updatePanesOnSize (self):
+    def updatePanesOnSize(self):
         numColumns = 3
 
-        if self.splitter.GetSplitMode () == wx.SPLIT_HORIZONTAL:
+        if self.splitter.GetSplitMode() == wx.SPLIT_HORIZONTAL:
             numColumns = 5
 
-        self.p1.initializeViewSettings (numColumns)
-        self.p2.initializeViewSettings (numColumns)
+        self.p1.initializeViewSettings(numColumns)
+        self.p2.initializeViewSettings(numColumns)
 
-    def splitEqual (self):
-        size = self.GetSize ()
+    def splitEqual(self):
+        size = self.GetSize()
 
-        splitMode = self.splitter.GetSplitMode ()
+        splitMode = self.splitter.GetSplitMode()
         sashDimension = size.x
 
         if splitMode == wx.SPLIT_HORIZONTAL:
@@ -1143,29 +1143,29 @@ class Candy (wx.Frame):
 
         # compensate for the five pixels of sash itself (dammit!)
         sashDimension -= 5
-        self.splitter.SetSashPosition (sashDimension / 2)
-        self.updatePanesOnSize ()
+        self.splitter.SetSashPosition(sashDimension / 2)
+        self.updatePanesOnSize()
 
-    def OnSize (self, event):
-        self.splitEqual ()
-        event.Skip ()
+    def OnSize(self, event):
+        self.splitEqual()
+        event.Skip()
 
-    def OnDoubleClick (self, event):
-        self.splitEqual ()
+    def OnDoubleClick(self, event):
+        self.splitEqual()
 
-    def OnSashPosChanged (self, event):
-        self.splitter.UpdateSize ()
-        self.updatePanesOnSize ()
-        event.Skip ()
+    def OnSashPosChanged(self, event):
+        self.splitter.UpdateSize()
+        self.updatePanesOnSize()
+        event.Skip()
 
-    def switchPane (self):
+    def switchPane(self):
         if self.activePane == self.p1:
-            self.setActivePane (self.p2)
+            self.setActivePane(self.p2)
         else:
-            self.setActivePane (self.p1)
+            self.setActivePane(self.p1)
 
-    def switchSplittingMode (self):
-        currSplitMode = self.splitter.GetSplitMode ()
+    def switchSplittingMode(self):
+        currSplitMode = self.splitter.GetSplitMode()
         newSplitMode = wx.SPLIT_VERTICAL
         numColumns = 3
 
@@ -1173,20 +1173,20 @@ class Candy (wx.Frame):
             newSplitMode = wx.SPLIT_HORIZONTAL
             numColumns = 5
 
-        self.splitter.SetSplitMode (newSplitMode)
-        self.splitEqual ()
-        self.p1.initializeViewSettings (numColumns)
-        self.p2.initializeViewSettings (numColumns)
+        self.splitter.SetSplitMode(newSplitMode)
+        self.splitEqual()
+        self.p1.initializeViewSettings(numColumns)
+        self.p2.initializeViewSettings(numColumns)
 
 
-def main ():
-    app = wx.App (0)
-    candy = Candy (None, -1, 'Candy')
-    candy.Show ()
-    candy.setUpAndShow ()
-    app.MainLoop ()
+def main():
+    app = wx.App(0)
+    candy = Candy(None, -1, 'Candy')
+    candy.Show()
+    candy.setUpAndShow()
+    app.MainLoop()
 
 
 if __name__ == '__main__':
-    main ()
+    main()
 
