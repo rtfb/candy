@@ -21,8 +21,10 @@
 import wx
 import wx.stc as stc
 
+
 faceCourier = 'Courier'
 pb = 12
+
 
 class BuiltinViewerControl (stc.StyledTextCtrl):
     def __init__ (self, parent, ID):
@@ -53,6 +55,7 @@ class BuiltinViewerControl (stc.StyledTextCtrl):
         elif key == '/':
             self.searchMode = True
             self.searchStr = ''
+
 
 class BuiltinViewerFrame (wx.Frame):
     def __init__ (self, parent, ID, title, file, pos = wx.DefaultPosition,
@@ -87,6 +90,7 @@ class BuiltinViewerFrame (wx.Frame):
 
         if key == 'Q':
             self.OnCloseWindow (evt)
+
 
 if __name__ == '__main__':
     print 'not a program :-)'

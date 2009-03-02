@@ -62,6 +62,7 @@ def resolveColorNameOrReturn (name):
 
     return name
 
+
 def readConfig (fileName):
     lines = open (fileName).readlines ()
     dict = {}
@@ -76,11 +77,13 @@ def readConfig (fileName):
 
     return dict
 
+
 projectDir = os.path.dirname (__file__)
 generalConfPath = os.path.join (projectDir, 'general.conf')
 generalConfig = readConfig (generalConfPath)
 colorConf = os.path.join (projectDir, 'colorscheme-default.conf')
 colorScheme = readConfig (colorConf)
+
 
 class DirectoryViewFilter (object):
     def __init__ (self, searchStr):
@@ -88,6 +91,7 @@ class DirectoryViewFilter (object):
 
     def __call__ (self, item):
         return self.searchStr in item.fileName.lower ()
+
 
 class VisualItem (object):
     """
@@ -127,6 +131,7 @@ class VisualItem (object):
         charsBeforeThisItem = visibleTextLine[:self.startCharOnLine]
         self.startByteOnLine = len (charsBeforeThisItem.encode ('utf-8'))
 
+
 class RawItem (object):
     """
     An item to hold the representation close to the one outside of the program.
@@ -157,6 +162,7 @@ class RawItem (object):
 
     def __str__ (self):
         return self.fileName
+
 
 def resolveCommandByFileExt (ext):
     extDict = {
@@ -189,6 +195,7 @@ def resolveCommandByFileExt (ext):
 
     return cmd
 
+
 def listOfTuples (list, secondItem):
     tuples = []
 
@@ -196,6 +203,7 @@ def listOfTuples (list, secondItem):
         tuples.append ((i, secondItem))
 
     return tuples
+
 
 # Obviously excludes subdirectories
 def recursiveListDir (cwd):
@@ -206,6 +214,7 @@ def recursiveListDir (cwd):
 
     return allFiles
 
+
 def listFiles (isFlatDirectoryView, cwd):
     files = []
 
@@ -215,6 +224,7 @@ def listFiles (isFlatDirectoryView, cwd):
         files = listOfTuples (os.listdir (cwd), cwd)
 
     return files
+
 
 def collectListInfo (isFlatDirectoryView, cwd):
     items = []
@@ -236,6 +246,7 @@ def collectListInfo (isFlatDirectoryView, cwd):
 
     return items
 
+
 def collectDriveLetters ():
     items = []
     driveLetters = win32api.GetLogicalDriveStrings ().split ('\x00')[:-1]
@@ -249,11 +260,13 @@ def collectDriveLetters ():
 
     return items
 
+
 def isRootOfDrive (path):
     letters = [chr (n) for n in range (ord (u'a'), ord (u'z') + 1)]
     return len (path) == 3 \
            and path.lower ()[0] in letters \
            and path[1:] == u':\\'
+
 
 def constructListForFilling (fullList, specialFilter):
     dirList = filter (lambda (f): f.isDir, fullList)
@@ -276,11 +289,14 @@ def constructListForFilling (fullList, specialFilter):
     else:
         return notHidden
 
+
 def intDivCeil (a, b):
     return int (math.ceil (float (a) / b))
 
+
 def intDivFloor (a, b):
     return int (math.floor (float (a) / b))
+
 
 class SmartJustifier (object):
     def __init__ (self, width):
@@ -316,6 +332,7 @@ class SmartJustifier (object):
 
         return newText
 
+
 # The width/height/left/right are in characters
 class ViewWindow (object):
     def __init__ (self, width, height):
@@ -337,6 +354,7 @@ class ViewWindow (object):
     # only handles horizontal dimension
     def charInView (self, charPos):
         return charPos >= self.left and charPos < self.right ()
+
 
 class StatusLine (stc.StyledTextCtrl):
     def __init__ (self, parent, id, width):
@@ -399,6 +417,7 @@ class StatusLine (stc.StyledTextCtrl):
 
         if text != '':
             pubsub.Publisher ().sendMessage (message, text[1:])
+
 
 class PanelModel (object):
     def __init__ (self, msgSign):
@@ -474,6 +493,7 @@ class PanelModel (object):
         os.chdir (u'..')
         self.fillListByWorkingDir (os.getcwdu ())
         return self.getIndexByItem (oldDir)
+
 
 class PanelController (object):
     def __init__ (self, parent, modelSignature, controllerSignature):
@@ -752,6 +772,7 @@ class PanelController (object):
 
     def switchSplittingMode (self):
         self.view.switchSplittingMode ()
+
 
 class Panel (stc.StyledTextCtrl):
     def __init__ (self, parent):
@@ -1050,6 +1071,7 @@ class Panel (stc.StyledTextCtrl):
                 itemNameLen = item.visualItem.visLenInBytes
                 self.SetStyling (itemNameLen, item.style)
 
+
 class Candy (wx.Frame):
     def __init__ (self, parent, id, title):
         wx.Frame.__init__ (self, parent, -1, title)
@@ -1152,12 +1174,14 @@ class Candy (wx.Frame):
         self.p1.initializeViewSettings (numColumns)
         self.p2.initializeViewSettings (numColumns)
 
+
 def main ():
     app = wx.App (0)
     candy = Candy (None, -1, 'Candy')
     candy.Show ()
     candy.setUpAndShow ()
     app.MainLoop ()
+
 
 if __name__ == '__main__':
     main ()

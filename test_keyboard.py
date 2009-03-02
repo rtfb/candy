@@ -23,6 +23,7 @@ import wx
 import keyboard
 import pdb
 
+
 class TestKeyboardEventHandler (unittest.TestCase):
     def setUp (self):
         pass
@@ -171,9 +172,11 @@ class TestKeyboardEventHandler (unittest.TestCase):
         self.assertTrue (ke.modAlt)
         self.assertTrue (ke.modCtrl)
 
+
 def suite ():
     keyboardHandlerSuite = unittest.makeSuite (TestKeyboardEventHandler, 'test')
     return unittest.TestSuite ([keyboardHandlerSuite])
+
 
 if __name__ == '__main__':
     unittest.main (defaultTest = 'suite')

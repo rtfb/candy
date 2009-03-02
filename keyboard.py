@@ -24,12 +24,14 @@ import wx
 import os
 import exceptions
 
+
 class EventParseError (exceptions.Exception):
     def __init__ (self, eventStr):
         self.eventStr = eventStr
 
     def __str__ (self):
         return 'Failed to parse event \'%s\'' % (self.eventStr)
+
 
 class KeyboardEvent (object):
     def __init__ (self, command = ''):
@@ -122,6 +124,7 @@ class KeyboardEvent (object):
             self.keyCode = ord (str)
             self.modShift = True
             return
+
 
 class KeyboardConfig (object):
     def __init__ (self):

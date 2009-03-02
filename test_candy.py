@@ -24,6 +24,7 @@ import wx
 import os
 import pdb
 
+
 def fakeFileLister (isFlatDirectoryView, cwd):
     dirs = []
     files = []
@@ -42,7 +43,9 @@ def fakeFileLister (isFlatDirectoryView, cwd):
 
     return dirs + files + hidden
 
+
 candy.listFiles = fakeFileLister
+
 
 class TestSmartJustifier (unittest.TestCase):
     def setUp (self):
@@ -89,6 +92,7 @@ class TestSmartJustifier (unittest.TestCase):
         sj = candy.SmartJustifier (len (target))
         self.assertEquals (target, sj.justify ('0123456789.gnumeric'))
 
+
 class TestModel (unittest.TestCase):
     def setUp (self):
         self.model = candy.PanelModel ('m.')
@@ -113,6 +117,7 @@ class TestModel (unittest.TestCase):
         self.model.fillListByWorkingDir ('.')
         self.model.flattenDirectory ()
         self.assertEquals (self.model.updir (), 0)
+
 
 class TestCandy (unittest.TestCase):
     def setUp (self):
@@ -201,6 +206,7 @@ class TestCandy (unittest.TestCase):
             referenceValue = view.charsPerCol * column + 36 * row
             self.assertEquals (view.getItemStartByte (item), referenceValue)
 
+
 def suite ():
     import test_keyboard
     candySuite = unittest.makeSuite (TestCandy, 'test')
@@ -209,6 +215,7 @@ def suite ():
     keyboardSuite = unittest.makeSuite (test_keyboard.TestKeyboardEventHandler)
     return unittest.TestSuite ([smartJustifierSuite, keyboardSuite,
                                 modelSuite, candySuite])
+
 
 if __name__ == '__main__':
     unittest.main (defaultTest = 'suite')
