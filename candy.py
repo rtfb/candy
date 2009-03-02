@@ -374,6 +374,10 @@ class StatusLine (stc.StyledTextCtrl):
             message += 'ENTER'
         elif keyCode == wx.WXK_ESCAPE:
             message += 'ESCAPE'
+        elif keyCode == wx.WXK_BACK:
+            text = self.GetText ()
+            if text == u'/':
+                message += 'ESCAPE'
 
         if message != self.messagePrefix:
             text = self.GetText ()
