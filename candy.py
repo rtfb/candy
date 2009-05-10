@@ -561,11 +561,12 @@ class PanelController(object):
     def displaySelectionInfo(self):
         # in the line below, I'm subtracting 1 from number of items because
         # of '..' pseudoitem
-        item = self.model.items[self.selectedItem]
-        statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
-                     % (os.getcwdu(), len(self.model.items) - 1,
-                        item.fileName, item.path)
-        self.view.getFrame().statusBar.SetStatusText(statusText)
+        if len(self.model.items) > 0:
+            item = self.model.items[self.selectedItem]
+            statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
+                         % (os.getcwdu(), len(self.model.items) - 1,
+                            item.fileName, item.path)
+            self.view.getFrame().statusBar.SetStatusText(statusText)
 
     def OnKeyDown(self, evt):
         keyCode = evt.GetKeyCode()
