@@ -239,11 +239,11 @@ def collectListInfo(isFlatDirectoryView, cwd):
         path = f[1]
         item = RawItem(fileName, path)
 
-        if os.path.isdir(fileName):
+        if os.path.isdir(item.fileName):
             item.style = STYLE_FOLDER
             item.isDir = True
 
-        if fileName.startswith(u'.'):
+        if item.fileName.startswith(u'.'):
             item.isHidden = True
 
         items.append(item)

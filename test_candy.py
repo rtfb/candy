@@ -43,10 +43,26 @@ def fakeFileLister(isFlatDirectoryView, cwd):
     for i in range(5):
         hidden.append('.hid' + str(i))
 
-    return dirs + files + hidden
+    return candy.listOfTuples(dirs + files + hidden, '.')
 
 
 candy.listFiles = fakeFileLister
+
+
+class TestFileLister(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def testNoItemsGetLost(self):
+        ret = candy.collectListInfo(False, u'.')
+        self.assertEquals(len(ret), len(fakeFileLister(False, u'.')))
+
+    def testItemName(self):
+        ret = candy.collectListInfo(False, u'.')
+        self.assertEquals(ret[0].fileName, u'..')
 
 
 class TestSmartJustifier(unittest.TestCase):
@@ -215,8 +231,9 @@ def suite():
     modelSuite = unittest.makeSuite(TestModel, 'test')
     smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
     keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
+    fileListerSuite = unittest.makeSuite(TestFileLister)
     return unittest.TestSuite([smartJustifierSuite, keyboardSuite,
-                                modelSuite, candySuite])
+                                modelSuite, candySuite, fileListerSuite])
 
 
 if __name__ == '__main__':
