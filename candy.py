@@ -83,9 +83,9 @@ def readConfig(fileName):
 
 
 projectDir = os.path.dirname(__file__)
-generalConfPath = os.path.join(projectDir, 'general.conf')
+generalConfPath = os.path.join(projectDir, u'general.conf')
 generalConfig = readConfig(generalConfPath)
-colorConf = os.path.join(projectDir, 'colorscheme-default.conf')
+colorConf = os.path.join(projectDir, u'colorscheme-default.conf')
 colorScheme = readConfig(colorConf)
 
 
@@ -524,7 +524,7 @@ class PanelController(object):
         self.selectedItem = 0
 
         self.keys = keyboard.KeyboardConfig()
-        self.keys.load('keys.conf', self)
+        self.keys.load(u'keys.conf', self)
 
     def subscribe(self, func, signature):
         msg = self.controllerSignature + signature

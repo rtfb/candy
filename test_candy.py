@@ -65,6 +65,32 @@ class TestFileLister(unittest.TestCase):
         self.assertEquals(ret[0].fileName, u'..')
 
 
+class TestListFiltering(unittest.TestCase):
+    def setUp(self):
+        allItems = candy.collectListInfo(False, u'.')
+        self.list = candy.constructListForFilling(allItems, None)
+
+    def tearDown(self):
+        pass
+
+    def testNothingHiddenRemains(self):
+        """Nothing should start with a dot, except for the '..'
+        """
+
+        for i in self.list[1:]:
+            self.assertFalse(i.fileName.startswith(u'.'))
+
+    def testOnlyDirsInFront(self):
+        def looks_like_dir(str):
+            return str.startswith(u'dir') or str == u'..'
+
+        for item in self.list:
+            if not looks_like_dir(item.fileName):
+                break
+
+            self.assertTrue(looks_like_dir(item.fileName))
+
+
 class TestSmartJustifier(unittest.TestCase):
     def setUp(self):
         pass
@@ -232,8 +258,10 @@ def suite():
     smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
     keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
     fileListerSuite = unittest.makeSuite(TestFileLister)
+    listFiltererSuite = unittest.makeSuite(TestListFiltering)
     return unittest.TestSuite([smartJustifierSuite, keyboardSuite,
-                                modelSuite, candySuite, fileListerSuite])
+                               modelSuite, candySuite, fileListerSuite,
+                               listFiltererSuite])
 
 
 if __name__ == '__main__':
