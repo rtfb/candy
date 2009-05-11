@@ -27,6 +27,7 @@ import sys
 import pdb
 import math
 import platform
+import subprocess
 
 import wx
 import wx.stc as stc
@@ -170,34 +171,30 @@ class RawItem(object):
 
 def resolveCommandByFileExt(ext):
     extDict = {
-        'wmv':  'mplayer %s',
-        'mpeg': 'mplayer %s',
-        'mpg':  'mplayer %s',
-        'avi':  'mplayer %s',
-        'asf':  'mplayer %s',
-        'pdf':  'evince %s',
-        'ps':   'evince %s',
-        'jpg':  'gqview %s',
-        'jpeg': 'gqview %s',
-        'png':  'gqview %s',
-        'bmp':  'gqview %s',
-        'xpm':  'gqview %s',
-        'gif':  'gqview %s',
+        'wmv':  'mplayer',
+        'mpeg': 'mplayer',
+        'mpg':  'mplayer',
+        'avi':  'mplayer',
+        'asf':  'mplayer',
+        'pdf':  'evince',
+        'ps':   'evince',
+        'jpg':  'gqview',
+        'jpeg': 'gqview',
+        'png':  'gqview',
+        'bmp':  'gqview',
+        'xpm':  'gqview',
+        'gif':  'gqview',
         # TODO: handle archives as folders
-        'rar':  'file-roller %s',
-        'zip':  'file-roller %s',
-        'gz':   'file-roller %s',
-        'tar':  'file-roller %s',
-        'txt':  'gvim %s'}
-
-    cmd = None
+        'rar':  'file-roller',
+        'zip':  'file-roller',
+        'gz':   'file-roller',
+        'tar':  'file-roller',
+        'txt':  'gvim'}
 
     try:
-        cmd = extDict[ext]
+        return extDict[ext]
     except KeyError:
-        pass
-
-    return cmd
+        return None
 
 
 def listOfTuples(list, secondItem):
@@ -659,7 +656,7 @@ class PanelController(object):
             commandLine = resolveCommandByFileExt(ext[1:].lower())
 
             if commandLine:
-                os.system(commandLine % (selection.fileName))
+                subprocess.call([commandLine, selection.fileName])
 
     def clearScreen(self):
         self.view.clearScreen()
@@ -763,7 +760,7 @@ class PanelController(object):
             self.selectedItem = 0
 
     def startEditor(self):
-        os.system('gvim ' + self.model.items[self.selectedItem].fileName)
+        subprocess.call([u'gvim', self.model.items[self.selectedItem].fileName])
 
     def startViewer(self):
         import viewr
