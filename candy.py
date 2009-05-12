@@ -672,6 +672,9 @@ class PanelController(object):
         return range(start, length) + range(start)
 
     def nextSearchMatch(self, searchStr, initPos):
+        if initPos >= len(self.model.items):
+            initPos = 0
+
         searchRange = self.wrappedRange(initPos, len(self.model.items))
         searchStrLower = searchStr.lower()
 

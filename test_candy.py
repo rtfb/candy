@@ -227,6 +227,11 @@ class TestCandy(unittest.TestCase):
         match = self.frame.p1.nextSearchMatch(searchStr, currPos + 1)
         self.assertEquals(match, currPos + 1)
 
+    def testNextSearchMatchDoesNotOverflowWhenNearEnd(self):
+        onePastLast = len(self.frame.p1.model.items)
+        match = self.frame.p1.nextSearchMatch('no_such_match', onePastLast)
+        self.assertEquals(match, 0)
+
     def testItemStartCharOnLine(self):
         item = self.frame.p1.model.items[0]
         self.assertEquals(item.visualItem.startCharOnLine, 0)
