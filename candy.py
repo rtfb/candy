@@ -299,6 +299,12 @@ def intDivFloor(a, b):
     return int(math.floor(float(a) / b))
 
 
+def wrappedRange(start, length):
+    # Construct a range of indices to produce wrapped search from
+    # given position
+    return range(start, length) + range(start)
+
+
 class SmartJustifier(object):
     def __init__(self, width):
         self.width = width
@@ -495,6 +501,19 @@ class PanelModel(object):
         self.fillListByWorkingDir(os.getcwdu())
         return self.getIndexByItem(oldDir)
 
+    def nextSearchMatch(self, searchStr, initPos):
+        if initPos >= len(self.items):
+            initPos = 0
+
+        searchRange = wrappedRange(initPos, len(self.items))
+        searchStrLower = searchStr.lower()
+
+        for i in searchRange:
+            if searchStrLower in self.items[i].fileName.lower():
+                return i
+
+        return initPos
+
 
 class PanelController(object):
     def __init__(self, parent, modelSignature, controllerSignature):
@@ -663,29 +682,11 @@ class PanelController(object):
 
     def onNextMatch(self):
         item = self.selectedItem + 1
-        self.searchMatchIndex = self.nextSearchMatch(self.searchStr, item)
+        self.searchMatchIndex = self.model.nextSearchMatch(self.searchStr, item)
         self.selectedItem = self.searchMatchIndex
 
-    def wrappedRange(self, start, length):
-        # Construct a range of indices to produce wrapped search from
-        # given position
-        return range(start, length) + range(start)
-
-    def nextSearchMatch(self, searchStr, initPos):
-        if initPos >= len(self.model.items):
-            initPos = 0
-
-        searchRange = self.wrappedRange(initPos, len(self.model.items))
-        searchStrLower = searchStr.lower()
-
-        for i in searchRange:
-            if searchStrLower in self.model.items[i].fileName.lower():
-                return i
-
-        return initPos
-
     def incrementalSearch(self, searchStr):
-        matchIndex = self.nextSearchMatch(searchStr, self.selectedItem)
+        matchIndex = self.model.nextSearchMatch(searchStr, self.selectedItem)
         self.view.moveItemIntoView(self.model.items, matchIndex)
         self.view.highlightSearchMatches(self.model.items, searchStr)
         return matchIndex

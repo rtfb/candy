@@ -162,6 +162,11 @@ class TestModel(unittest.TestCase):
         self.model.flattenDirectory()
         self.assertEquals(self.model.updir(), 0)
 
+    def testNextSearchMatchDoesNotOverflowWhenNearEnd(self):
+        onePastLast = len(self.model.items)
+        match = self.model.nextSearchMatch('no_such_match', onePastLast)
+        self.assertEquals(match, 0)
+
 
 class TestCandy(unittest.TestCase):
     def setUp(self):
@@ -224,13 +229,8 @@ class TestCandy(unittest.TestCase):
     def testNextSearchMatch(self):
         searchStr = 'file'
         currPos = self.frame.p1.incrementalSearch(searchStr)
-        match = self.frame.p1.nextSearchMatch(searchStr, currPos + 1)
+        match = self.frame.p1.model.nextSearchMatch(searchStr, currPos + 1)
         self.assertEquals(match, currPos + 1)
-
-    def testNextSearchMatchDoesNotOverflowWhenNearEnd(self):
-        onePastLast = len(self.frame.p1.model.items)
-        match = self.frame.p1.nextSearchMatch('no_such_match', onePastLast)
-        self.assertEquals(match, 0)
 
     def testItemStartCharOnLine(self):
         item = self.frame.p1.model.items[0]
