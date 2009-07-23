@@ -567,7 +567,7 @@ class PanelController(object):
         self.view.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
         self.view.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
 
-    def handleKeyEvent(self, evt, keyCode, keyMod):
+    def handleKeyEvent(self, keyCode, keyMod):
         func = self.keys.getFunc(keyCode, keyMod)
 
         if func:
@@ -588,11 +588,11 @@ class PanelController(object):
     def OnKeyDown(self, evt):
         keyCode = evt.GetKeyCode()
         keyMod = evt.GetModifiers()
-        self.handleKeyEvent(evt, keyCode, keyMod)
+        self.handleKeyEvent(keyCode, keyMod)
 
     def OnChar(self, evt):
         keyCode = evt.GetKeyCode()
-        self.handleKeyEvent(evt, keyCode, None)
+        self.handleKeyEvent(keyCode, None)
 
     def OnSetFocus(self, evt):
         self.view.onSetFocus()

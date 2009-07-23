@@ -262,7 +262,7 @@ class TestCandy(unittest.TestCase):
 
         try:
             # XXX: there should not be such a code and mod combo:
-            panel.handleKeyEvent(None, 0, 0)
+            panel.handleKeyEvent(0, 0)
         except TypeError as e:
             self.assertEquals(e.what(), "'NoneType' object is not callable")
 
