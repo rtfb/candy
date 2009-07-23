@@ -177,7 +177,7 @@ class TestCandy(unittest.TestCase):
         self.frame.Show(True)
         self.frame.Show(False)
 
-        # Now when dimensions are known, lets proceed initializing
+        # Now when dimensions are known, let's proceed initializing
         self.frame.setUpAndShow()
 
         # Speed up the tests by not executing updateView()
@@ -255,6 +255,19 @@ class TestCandy(unittest.TestCase):
             referenceValue = view.charsPerCol * column + 36 * row
             self.assertEquals(view.getItemStartByte(item), referenceValue)
 
+    def testHandleKeyEventDoesNothingOnBadKey(self):
+        panel = self.frame.p1
+        temp = panel.setSelectionOnCurrItem
+        panel.setSelectionOnCurrItem = None
+
+        try:
+            # XXX: there should not be such a code and mod combo:
+            panel.handleKeyEvent(None, 0, 0)
+        except TypeError as e:
+            self.assertEquals(e.what(), "'NoneType' object is not callable")
+
+        panel.setSelectionOnCurrItem = temp
+
 
 def suite():
     import test_keyboard
@@ -269,6 +282,23 @@ def suite():
                                listFiltererSuite])
 
 
+def fast():
+    import test_keyboard
+    modelSuite = unittest.makeSuite(TestModel, 'test')
+    smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
+    keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
+    fileListerSuite = unittest.makeSuite(TestFileLister)
+    listFiltererSuite = unittest.makeSuite(TestListFiltering)
+    return unittest.TestSuite([smartJustifierSuite, keyboardSuite,
+                               modelSuite, fileListerSuite,
+                               listFiltererSuite])
+
+
+
 if __name__ == '__main__':
-    unittest.main(defaultTest='suite')
+    import sys
+    if len(sys.argv) > 0 and sys.argv[0] == 'fast':
+        unittest.main(defaultTest='fast')
+    else:
+        unittest.main(defaultTest='suite')
 

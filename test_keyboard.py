@@ -174,6 +174,11 @@ class TestKeyboardEventHandler(unittest.TestCase):
         self.assertTrue(ke.modAlt)
         self.assertTrue(ke.modCtrl)
 
+    def testGetFuncReturnsNone(self):
+        kc = keyboard.KeyboardConfig()
+        # XXX: there should not be such a code and mod combo:
+        f = kc.getFunc(0, 0)
+        self.assertEquals(f, None)
 
 def suite():
     keyboardHandlerSuite = unittest.makeSuite(TestKeyboardEventHandler, 'test')

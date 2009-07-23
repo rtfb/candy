@@ -131,7 +131,7 @@ class KeyboardConfig(object):
     def __init__(self):
         self.events = {}
 
-    def getFunc(self, notFound, keyCode, keyMod):
+    def getFunc(self, keyCode, keyMod):
         for e in self.events:
             if keyCode == e.keyCode:
                 if not keyMod:
@@ -140,7 +140,7 @@ class KeyboardConfig(object):
                 if keyMod == e.modifiersBitMask():
                     return self.events[e]
 
-        return notFound
+        return None
 
     def _parseBindings(self, command, bindings):
         bs = bindings.split(',')

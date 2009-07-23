@@ -285,7 +285,7 @@ def constructListForFilling(fullList, specialFilter):
     dotDot.visiblePartLength = len(dotDot.fileName)
     notHidden.insert(0, dotDot)
 
-    if specialFilter:
+    if specialFilter is not None:
         return filter(specialFilter, notHidden)
     else:
         return notHidden
@@ -317,7 +317,7 @@ class SmartJustifier(object):
         root, ext = os.path.splitext(text)
         newWidth = self.width - self.numDots
 
-        if ext != u'':
+        if ext and ext != u'':
             newWidth -= len(ext)
 
         if newWidth <= 5:       # 5 = len('a...b')
@@ -401,7 +401,7 @@ class StatusLine(stc.StyledTextCtrl):
             message += 'ESCAPE'
         elif keyCode == wx.WXK_BACK:
             text = self.GetText()
-            if text == u'/':
+            if text and text == u'/':
                 message += 'ESCAPE'
 
         if message != self.messagePrefix:
@@ -568,11 +568,12 @@ class PanelController(object):
         self.view.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
 
     def handleKeyEvent(self, evt, keyCode, keyMod):
-        skipper = lambda *a, **k: evt.Skip()
-        func = self.keys.getFunc(skipper, keyCode, keyMod)
-        func()
-        self.setSelectionOnCurrItem()
-        self.displaySelectionInfo()
+        func = self.keys.getFunc(keyCode, keyMod)
+
+        if func:
+            func()
+            self.setSelectionOnCurrItem()
+            self.displaySelectionInfo()
 
     def displaySelectionInfo(self):
         # in the line below, I'm subtracting 1 from number of items because
