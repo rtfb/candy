@@ -269,6 +269,9 @@ class TestCandy(unittest.TestCase):
         panel.setSelectionOnCurrItem = temp
 
 
+    def testGetSelection(self):
+        self.assertEquals(self.frame.p1.getSelection().fileName, '..')
+
 def suite():
     import test_keyboard
     candySuite = unittest.makeSuite(TestCandy, 'test')

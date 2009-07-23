@@ -579,7 +579,7 @@ class PanelController(object):
         # in the line below, I'm subtracting 1 from number of items because
         # of '..' pseudoitem
         if len(self.model.items) > 0:
-            item = self.model.items[self.selectedItem]
+            item = self.getSelection()
             statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
                          % (os.getcwdu(), len(self.model.items) - 1,
                             item.fileName, item.path)
@@ -664,7 +664,7 @@ class PanelController(object):
         self.searchMatchIndex = self.incrementalSearch(self.searchStr)
 
     def onEnter(self):
-        selection = self.model.items[self.selectedItem]
+        selection = self.getSelection()
 
         if selection.isDir:
             if selection.fileName == u'..':
@@ -702,7 +702,7 @@ class PanelController(object):
         if len(self.model.items) <= 0:
             return
 
-        item = self.model.items[self.selectedItem]
+        item = self.getSelection()
         if not item.visualItem or not item.visualItem.fullyInView:
             self.view.moveItemIntoView(self.model.items, self.selectedItem)
 
@@ -765,11 +765,14 @@ class PanelController(object):
             self.selectedItem = 0
 
     def startEditor(self):
-        subprocess.call([u'gvim', self.model.items[self.selectedItem].fileName])
+        subprocess.call([u'gvim', self.getSelection().fileName])
+
+    def getSelection(self):
+        return self.model.items[self.selectedItem]
 
     def startViewer(self):
         import viewr
-        file = self.model.items[self.selectedItem].fileName
+        file = self.getSelection().fileName
         wnd = viewr.BuiltinViewerFrame(self.view, -1, file, file)
         wnd.Show(True)
 
