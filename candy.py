@@ -544,6 +544,9 @@ class PanelController(object):
         msg = self.controllerSignature + signature
         pubsub.Publisher().subscribe(func, msg)
 
+    def numItems(self):
+        return len(self.model.items)
+
     # Used in tests
     def clearList(self):
         self.model.setItems([])
@@ -576,10 +579,10 @@ class PanelController(object):
     def displaySelectionInfo(self):
         # in the line below, I'm subtracting 1 from number of items because
         # of '..' pseudoitem
-        if len(self.model.items) > 0:
+        if self.numItems() > 0:
             item = self.getSelection()
             statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
-                         % (os.getcwdu(), len(self.model.items) - 1,
+                         % (os.getcwdu(), self.numItems() - 1,
                             item.fileName, item.path)
             self.view.getFrame().statusBar.SetStatusText(statusText)
 
@@ -697,7 +700,7 @@ class PanelController(object):
         self.view.getFrame().statusLine.SetFocus()
 
     def setSelectionOnCurrItem(self):
-        if len(self.model.items) <= 0:
+        if self.numItems() <= 0:
             return
 
         item = self.getSelection()
@@ -709,14 +712,14 @@ class PanelController(object):
     def moveSelectionDown(self):
         self.selectedItem += 1
 
-        if self.selectedItem >= len(self.model.items):
+        if self.selectedItem >= self.numItems():
             self.selectedItem = 0
 
     def moveSelectionUp(self):
         self.selectedItem -= 1
 
         if self.selectedItem < 0:
-            self.selectedItem = len(self.model.items) - 1
+            self.selectedItem = self.numItems() - 1
 
         # This can happen if self.model.items is empty
         if self.selectedItem < 0:
@@ -725,7 +728,7 @@ class PanelController(object):
     def moveSelectionLeft(self):
         self.selectedItem -= self.view.viewWindow.height
 
-        if len(self.model.items) == 0:
+        if self.numItems() == 0:
             self.selectedItem = 0
             return
 
@@ -737,33 +740,33 @@ class PanelController(object):
             # TODO: figure out how to deal with that long line without
             # splitting. It suggests some nasty coupling.
             selItem = self.selectedItem
-            numItems = len(self.model.items)
+            numItems = self.numItems()
             selItem = self.view.updateSelectedItemLeft(selItem, numItems)
             self.selectedItem = selItem
 
         if self.selectedItem == -1:
-            self.selectedItem = len(self.model.items) - 1
+            self.selectedItem = self.numItems() - 1
 
     def moveSelectionRight(self):
         self.selectedItem += self.view.viewWindow.height
 
-        if len(self.model.items) == 0:
+        if self.numItems() == 0:
             self.selectedItem = 0
             return
 
-        if self.selectedItem > len(self.model.items):
+        if self.selectedItem > self.numItems():
             self.selectedItem -= self.view.viewWindow.height
             self.selectedItem %= self.view.viewWindow.height
             self.selectedItem += 1
 
-        if self.selectedItem == len(self.model.items):
+        if self.selectedItem == self.numItems():
             self.selectedItem = 0
 
     def moveSelectionZero(self):
         self.selectedItem = 0
 
     def moveSelectionLast(self):
-        self.selectedItem = len(self.model.items) - 1
+        self.selectedItem = self.numItems() - 1
 
         if self.selectedItem < 0:
             self.selectedItem = 0

@@ -360,6 +360,10 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         self.assertEquals('file2', panel.getSelection().fileName)
         self.assertEquals(len(panel.model.items) - 1, panel.selectedItem)
 
+    def testNumItems(self):
+        panel = self.frame.p1
+        self.assertEquals(panel.numItems(), len(panel.model.items))
+
 
 def suite():
     import test_keyboard
