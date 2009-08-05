@@ -46,6 +46,10 @@ def fakeFileLister(isFlatDirectoryView, cwd):
     return candy.listOfTuples(dirs + files + hidden, '.')
 
 
+def failingFileLister(isFlatDirectoryView, cwd):
+    raise RuntimeError('blerk')
+
+
 candy.listFiles = fakeFileLister
 
 
@@ -268,9 +272,29 @@ class TestCandy(unittest.TestCase):
 
         panel.setSelectionOnCurrItem = temp
 
+    def testRefreshReadsDisk(self):
+        candy.listFiles = failingFileLister
+
+        try:
+            self.frame.p1.refresh()
+            self.assertTrue(False)
+        except RuntimeError as e:
+            self.assertEquals(str(e), 'blerk')
+
+        candy.listFiles = fakeFileLister
 
     def testGetSelection(self):
         self.assertEquals(self.frame.p1.getSelection().fileName, '..')
+
+    def testRefreshMaintainsPosition(self):
+        panel = self.frame.p1
+        panel.handleKeyEvent(ord('J'), None)
+        panel.handleKeyEvent(ord('J'), None)
+        panel.handleKeyEvent(ord('J'), None)
+        file = panel.getSelection().fileName
+        panel.refresh()
+        self.assertEquals(file, panel.getSelection().fileName)
+
 
 def suite():
     import test_keyboard

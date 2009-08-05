@@ -767,6 +767,11 @@ class PanelController(object):
     def startEditor(self):
         subprocess.call([u'gvim', self.getSelection().fileName])
 
+    def refresh(self):
+        backup = self.selectedItem
+        self.changeDir(self.model.workingDir)
+        self.selectedItem = backup
+
     def getSelection(self):
         return self.model.items[self.selectedItem]
 
@@ -1038,7 +1043,7 @@ class Panel(stc.StyledTextCtrl):
         self.SetCurrentPos(selectionStart)
         self.EnsureCaretVisible()
 
-        if item:
+        if item and item.visualItem:
             numCharsToSelect = item.visualItem.visLenInBytes
         else:
             numCharsToSelect = self.charsPerCol
@@ -1066,7 +1071,12 @@ class Panel(stc.StyledTextCtrl):
             # skipped N (=row) of them
             sumBytes = self.GetLineEndPosition(row) + 1
 
-        return sumBytes + item.visualItem.startByteOnLine
+        startByteOnLine = 0
+
+        if item.visualItem:
+            startByteOnLine = item.visualItem.startByteOnLine
+
+        return sumBytes + startByteOnLine
 
     def applyDefaultStyles(self, rawItems):
         for index, item in enumerate(rawItems):
