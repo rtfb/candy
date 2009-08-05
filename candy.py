@@ -606,7 +606,7 @@ class PanelController(object):
 
     def updir(self):
         self.selectedItem = 0
-        self.view.clearScreen()
+        self.clearScreen()
         self.selectedItem = self.model.updir()
 
     def listDriveLetters(self):
@@ -623,7 +623,7 @@ class PanelController(object):
     def changeDir(self, fullPath, searchStr=u''):
         self.model.setDirFilter(searchStr)
         os.chdir(fullPath)
-        self.view.clearScreen()
+        self.clearScreen()
         self.selectedItem = 0
         self.model.fillListByWorkingDir(fullPath)
 
