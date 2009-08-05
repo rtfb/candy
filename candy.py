@@ -231,9 +231,7 @@ def collectListInfo(isFlatDirectoryView, cwd):
     items = []
     files = listFiles(isFlatDirectoryView, cwd)
 
-    for f in files:
-        fileName = f[0]
-        path = f[1]
+    for fileName, path in files:
         item = RawItem(fileName, path)
 
         if os.path.isdir(item.fileName):
