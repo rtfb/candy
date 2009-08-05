@@ -741,6 +741,9 @@ class PanelController(object):
             selItem = self.view.updateSelectedItemLeft(selItem, numItems)
             self.selectedItem = selItem
 
+        if self.selectedItem == -1:
+            self.selectedItem = len(self.model.items) - 1
+
     def moveSelectionRight(self):
         self.selectedItem += self.view.viewWindow.height
 
@@ -752,6 +755,9 @@ class PanelController(object):
             self.selectedItem -= self.view.viewWindow.height
             self.selectedItem %= self.view.viewWindow.height
             self.selectedItem += 1
+
+        if self.selectedItem == len(self.model.items):
+            self.selectedItem = 0
 
     def moveSelectionZero(self):
         self.selectedItem = 0

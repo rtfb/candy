@@ -46,6 +46,26 @@ def fakeFileLister(isFlatDirectoryView, cwd):
     return candy.listOfTuples(dirs + files + hidden, '.')
 
 
+# This one produces only few items to test the case with a single column
+def fakeFileLister2(isFlatDirectoryView, cwd):
+    dirs = []
+    files = []
+    hidden = []
+
+    for i in range(2):
+        dirs.append('dir' + str(i))
+
+    dirs.insert(0, '..')
+
+    for i in range(3):
+        files.append('file' + str(i))
+
+    for i in range(1):
+        hidden.append('.hid' + str(i))
+
+    return candy.listOfTuples(dirs + files + hidden, '.')
+
+
 def failingFileLister(isFlatDirectoryView, cwd):
     raise RuntimeError('blerk')
 
@@ -296,17 +316,63 @@ class TestCandy(unittest.TestCase):
         self.assertEquals(file, panel.getSelection().fileName)
 
 
+class TestCandyWithSingleColumn(unittest.TestCase):
+    def setUp(self):
+        self.app = wx.PySimpleApp()
+        self.frame = candy.Candy(None, -1, 'foo')
+
+        # Let application know its dimensions
+        self.frame.Show(True)
+        self.frame.Show(False)
+
+        candy.listFiles = fakeFileLister2
+
+        # Now when dimensions are known, let's proceed initializing
+        self.frame.setUpAndShow()
+
+        # Speed up the tests by not executing updateView()
+        self.frame.p1.updateView = lambda: None
+        self.frame.p2.updateView = lambda: None
+
+    def tearDown(self):
+        candy.listFiles = fakeFileLister
+        self.frame.Destroy()
+
+    def testMoveRightOnSingleColumnMovesDown(self):
+        panel = self.frame.p1
+        panel.handleKeyEvent(ord('L'), None)
+        self.assertEquals('dir0', panel.getSelection().fileName)
+
+    def testMoveRightOnLastItemMovesToFirst(self):
+        panel = self.frame.p1
+        panel.handleKeyEvent(ord('9'), None)
+        panel.handleKeyEvent(ord('L'), None)
+        self.assertEquals('..', panel.getSelection().fileName)
+
+    def testMoveLeftOnFirstItemMovesToLast(self):
+        panel = self.frame.p1
+        panel.handleKeyEvent(ord('0'), None)
+        panel.handleKeyEvent(ord('H'), None)
+
+        # This is a double test here: the first test is what I actually want to
+        # know, and the second one makes sure I don't get fooled by Python's
+        # ability to subscribe lists with negative indices
+        self.assertEquals('file2', panel.getSelection().fileName)
+        self.assertEquals(len(panel.model.items) - 1, panel.selectedItem)
+
+
 def suite():
     import test_keyboard
     candySuite = unittest.makeSuite(TestCandy, 'test')
+    candySuiteSingleCol = unittest.makeSuite(TestCandyWithSingleColumn, 'test')
     modelSuite = unittest.makeSuite(TestModel, 'test')
     smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
     keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
     fileListerSuite = unittest.makeSuite(TestFileLister)
     listFiltererSuite = unittest.makeSuite(TestListFiltering)
     return unittest.TestSuite([smartJustifierSuite, keyboardSuite,
-                               modelSuite, candySuite, fileListerSuite,
-                               listFiltererSuite])
+                               modelSuite, candySuite, candySuiteSingleCol,
+                               fileListerSuite, listFiltererSuite])
 
 
 def fast():
