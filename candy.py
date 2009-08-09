@@ -50,11 +50,11 @@ STYLE_INC_SEARCH = 2
 ID_SPLITTER = 100
 ID_STATUS_LINE = 101
 
-projectDir = os.path.dirname(__file__)
-generalConfPath = os.path.join(projectDir, u'general.conf')
-generalConfig = util.read_config(generalConfPath)
-colorConf = os.path.join(projectDir, u'colorscheme-default.conf')
-colorScheme = util.read_config(colorConf)
+project_dir = os.path.dirname(__file__)
+general_conf_path = os.path.join(project_dir, u'general.conf')
+general_config = util.read_config(general_conf_path)
+color_conf = os.path.join(project_dir, u'colorscheme-default.conf')
+color_scheme = util.read_config(color_conf)
 
 
 class DirectoryViewFilter(object):
@@ -685,23 +685,23 @@ class Panel(stc.StyledTextCtrl):
         # ever need some messing around with indicators.
         self.SetStyleBits(5)
 
-        faceCourier = generalConfig['font-face'] # 'Courier'
-        pb = int(generalConfig['font-size']) # 12
+        faceCourier = general_config['font-face'] # 'Courier'
+        pb = int(general_config['font-size']) # 12
         sizeAndFace = 'size:%d,face:%s' % (pb, faceCourier)
 
         # Set the styles according to color scheme
         styleSpec = sizeAndFace + ',back:%s,fore:%s' \
-                    % (colorScheme['background'], colorScheme['default-text'])
+                    % (color_scheme['background'], color_scheme['default-text'])
         self.StyleSetSpec(stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll()
-        styleSpec = sizeAndFace + ',bold,fore:%s' % (colorScheme['folder'])
+        styleSpec = sizeAndFace + ',bold,fore:%s' % (color_scheme['folder'])
         self.StyleSetSpec(STYLE_FOLDER, styleSpec)
         styleSpec = sizeAndFace + ',bold,fore:%s,back:%s' \
-                    % (colorScheme['search-highlight-fore'],
-                       colorScheme['search-highlight-back'])
+                    % (color_scheme['search-highlight-fore'],
+                       color_scheme['search-highlight-back'])
         self.StyleSetSpec(STYLE_INC_SEARCH, styleSpec)
-        self.SetSelBackground(1, colorScheme['selection-inactive'])
-        self.SetSelForeground(1, colorScheme['selection-fore'])
+        self.SetSelBackground(1, color_scheme['selection-inactive'])
+        self.SetSelForeground(1, color_scheme['selection-fore'])
 
     def initializeViewSettings(self, items, numColumns):
         width, height = self.GetClientSizeTuple()
@@ -718,7 +718,7 @@ class Panel(stc.StyledTextCtrl):
         self.updateDisplayByItems(items)
 
     def setDebugWhitespace(self):
-        if generalConfig['debug-whitespace'].lower() == 'true':
+        if general_config['debug-whitespace'].lower() == 'true':
             self.SetViewWhiteSpace(stc.STC_WS_VISIBLEALWAYS)
             self.SetViewEOL(True)
         else:
@@ -842,12 +842,12 @@ class Panel(stc.StyledTextCtrl):
         self.getFrame().switchSplittingMode()
 
     def onSetFocus(self):
-        self.SetSelBackground(1, colorScheme['selection-back'])
-        self.SetSelForeground(1, colorScheme['selection-fore'])
+        self.SetSelBackground(1, color_scheme['selection-back'])
+        self.SetSelForeground(1, color_scheme['selection-fore'])
 
     def OnLoseFocus(self, evt):
-        self.SetSelBackground(1, colorScheme['selection-inactive'])
-        self.SetSelForeground(1, colorScheme['selection-fore'])
+        self.SetSelBackground(1, color_scheme['selection-inactive'])
+        self.SetSelForeground(1, color_scheme['selection-fore'])
 
     def highlightSearchMatches(self, items, searchStr):
         self.applyDefaultStyles(items)
@@ -962,7 +962,7 @@ class Candy(wx.Frame):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.splitter, 1, wx.EXPAND)
         self.statusLine = StatusLine(self, ID_STATUS_LINE, appSize[0],
-                                     generalConfig, colorScheme)
+                                     general_config, color_scheme)
         self.sizer.AddSpacer(2)
         sizerFlags = wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND
         self.sizer.Add(self.statusLine, 0, sizerFlags)
