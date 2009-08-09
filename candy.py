@@ -98,7 +98,7 @@ class VisualItem(object):
         # record whether the whole item was fit to screen
         self.fullyInView = False
 
-    def setStartByte(self, visibleTextLine):
+    def set_start_byte(self, visibleTextLine):
         charsBeforeThisItem = visibleTextLine[:self.startCharOnLine]
         self.startByteOnLine = len(charsBeforeThisItem.encode('utf-8'))
 
@@ -265,7 +265,7 @@ class ViewWindow(object):
         return self.left + self.width
 
     # only handles horizontal dimension
-    def charInView(self, charPos):
+    def char_in_view(self, charPos):
         return charPos >= self.left and charPos < self.right()
 
 
@@ -286,17 +286,17 @@ class StatusLine(stc.StyledTextCtrl):
         self.StyleSetSpec(stc.STC_STYLE_DEFAULT, styleSpec)
         self.StyleClearAll()
 
-        self.Bind(stc.EVT_STC_MODIFIED, self.onStatusLineChange)
-        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind(stc.EVT_STC_MODIFIED, self.on_status_line_change)
+        self.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
 
-    def OnKeyDown(self, evt):
+    def on_key_down(self, evt):
         keyCode = evt.GetKeyCode()
         keyMod = evt.GetModifiers()
 
-        if not self.processKeyEvent(keyCode, keyMod):
+        if not self.process_key_event(keyCode, keyMod):
             evt.Skip()
 
-    def processKeyEvent(self, keyCode, keyMod):
+    def process_key_event(self, keyCode, keyMod):
         message = self.messagePrefix
 
         if keyCode == wx.WXK_RETURN:
@@ -318,7 +318,7 @@ class StatusLine(stc.StyledTextCtrl):
 
         return False
 
-    def onStatusLineChange(self, evt):
+    def on_status_line_change(self, evt):
         type = evt.GetModificationType()
 
         if stc.STC_MOD_BEFOREINSERT & type != 0 \
@@ -798,7 +798,7 @@ class Panel(stc.StyledTextCtrl):
         if startCharOnLine < 0 and endCharOnLine >= 0:
             vi.visLenInChars = startCharOnLine + len(rawItem.visiblePart)
             vi.startCharOnLine = 0
-            vi.setStartByte(visibleLine)
+            vi.set_start_byte(visibleLine)
             tail = rawItem.visiblePart[-vi.visLenInChars:]
             vi.visLenInBytes = len(tail.encode('utf-8'))
             vi.fullyInView = False
@@ -809,7 +809,7 @@ class Panel(stc.StyledTextCtrl):
            and startCharOnLine < self.viewWindow.width:
             vi.startCharOnLine = startCharOnLine
             vi.visLenInChars = self.viewWindow.width - vi.startCharOnLine
-            vi.setStartByte(visibleLine)
+            vi.set_start_byte(visibleLine)
             head = rawItem.visiblePart[:vi.visLenInChars]
             vi.visLenInBytes = len(head.encode('utf-8'))
             vi.fullyInView = False
@@ -818,7 +818,7 @@ class Panel(stc.StyledTextCtrl):
         # Fully in view:
         vi.startCharOnLine = startCharOnLine
         vi.visLenInChars = len(rawItem.visiblePart)
-        vi.setStartByte(visibleLine)
+        vi.set_start_byte(visibleLine)
         vi.visLenInBytes = len(rawItem.visiblePart.encode('utf-8'))
         vi.fullyInView = True
         return vi
@@ -828,9 +828,9 @@ class Panel(stc.StyledTextCtrl):
 
         for i in items:
             i.visualItem = None
-            startCharInView = self.viewWindow.charInView(i.startCharOnLine)
+            startCharInView = self.viewWindow.char_in_view(i.startCharOnLine)
             endCharPos = i.startCharOnLine + len(i.visiblePart)
-            endCharInView = self.viewWindow.charInView(endCharPos)
+            endCharInView = self.viewWindow.char_in_view(endCharPos)
 
             if startCharInView or endCharInView:
                 i.visualItem = self.createVisualItem(i)
