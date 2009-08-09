@@ -54,7 +54,7 @@ def read_config(fileName):
 
 
 def resolve_command_by_file_ext(ext):
-    extDict = {
+    ext_dict = {
         'wmv':  'mplayer',
         'mpeg': 'mplayer',
         'mpg':  'mplayer',
@@ -76,7 +76,7 @@ def resolve_command_by_file_ext(ext):
         'txt':  'gvim'}
 
     try:
-        return extDict[ext]
+        return ext_dict[ext]
     except KeyError:
         return None
 
@@ -109,4 +109,52 @@ def wrapped_range(start, length):
     # Construct a range of indices to produce wrapped search from
     # given position
     return range(start, length) + range(start)
+
+
+#==========================================================
+# Utilities for testing
+#==========================================================
+
+
+def fake_file_lister(is_flat_directory_view, cwd):
+    dirs = []
+    files = []
+    hidden = []
+
+    for i in range(10):
+        dirs.append('dir' + str(i))
+
+    dirs.insert(0, '..')
+
+    for i in range(20):
+        files.append('file' + str(i))
+
+    for i in range(5):
+        hidden.append('.hid' + str(i))
+
+    return list_of_tuples(dirs + files + hidden, '.')
+
+
+# This one produces only few items to test the case with a single column
+def fake_file_lister2(is_flat_directory_view, cwd):
+    dirs = []
+    files = []
+    hidden = []
+
+    for i in range(2):
+        dirs.append('dir' + str(i))
+
+    dirs.insert(0, '..')
+
+    for i in range(3):
+        files.append('file' + str(i))
+
+    for i in range(1):
+        hidden.append('.hid' + str(i))
+
+    return list_of_tuples(dirs + files + hidden, '.')
+
+
+def failing_file_lister(is_flat_directory_view, cwd):
+    raise RuntimeError('blerk')
 

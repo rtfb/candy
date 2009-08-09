@@ -26,52 +26,10 @@ import wx
 
 import candy
 import util
+import data
 
 
-def fakeFileLister(isFlatDirectoryView, cwd):
-    dirs = []
-    files = []
-    hidden = []
-
-    for i in range(10):
-        dirs.append('dir' + str(i))
-
-    dirs.insert(0, '..')
-
-    for i in range(20):
-        files.append('file' + str(i))
-
-    for i in range(5):
-        hidden.append('.hid' + str(i))
-
-    return util.list_of_tuples(dirs + files + hidden, '.')
-
-
-# This one produces only few items to test the case with a single column
-def fakeFileLister2(isFlatDirectoryView, cwd):
-    dirs = []
-    files = []
-    hidden = []
-
-    for i in range(2):
-        dirs.append('dir' + str(i))
-
-    dirs.insert(0, '..')
-
-    for i in range(3):
-        files.append('file' + str(i))
-
-    for i in range(1):
-        hidden.append('.hid' + str(i))
-
-    return util.list_of_tuples(dirs + files + hidden, '.')
-
-
-def failingFileLister(isFlatDirectoryView, cwd):
-    raise RuntimeError('blerk')
-
-
-candy.list_files = fakeFileLister
+data.list_files = util.fake_file_lister
 
 
 class TestFileLister(unittest.TestCase):
@@ -82,18 +40,18 @@ class TestFileLister(unittest.TestCase):
         pass
 
     def testNoItemsGetLost(self):
-        ret = candy.collect_list_info(False, u'.')
-        self.assertEquals(len(ret), len(fakeFileLister(False, u'.')))
+        ret = data.collect_list_info(False, u'.')
+        self.assertEquals(len(ret), len(util.fake_file_lister(False, u'.')))
 
     def testItemName(self):
-        ret = candy.collect_list_info(False, u'.')
+        ret = data.collect_list_info(False, u'.')
         self.assertEquals(ret[0].fileName, u'..')
 
 
 class TestListFiltering(unittest.TestCase):
     def setUp(self):
-        allItems = candy.collect_list_info(False, u'.')
-        self.list = candy.construct_list_for_filling(allItems, None)
+        allItems = data.collect_list_info(False, u'.')
+        self.list = data.construct_list_for_filling(allItems, None)
 
     def tearDown(self):
         pass
@@ -160,37 +118,6 @@ class TestSmartJustifier(unittest.TestCase):
         target = '0...9.gnumeri'
         sj = candy.SmartJustifier(len(target))
         self.assertEquals(target, sj.justify('0123456789.gnumeric'))
-
-
-class TestModel(unittest.TestCase):
-    def setUp(self):
-        self.model = candy.PanelModel('m.')
-
-    def tearDown(self):
-        pass
-
-    def testInitialDirectoryOnActivePane(self):
-        homeDir = os.path.expanduser('~')
-        self.assertEqual(self.model.workingDir, homeDir)
-
-    def testItemListIsEmpty(self):
-        self.assertEquals(len(self.model.items), 0)
-
-    def testFillItemsList(self):
-        self.model.fillListByWorkingDir('.')
-        # -5 here because the fake list contains 5 hidden files
-        fakeListLen = len(fakeFileLister(False, '.')) - 5
-        self.assertEquals(len(self.model.items), fakeListLen)
-
-    def testUpdirFromFlatView(self):
-        self.model.fillListByWorkingDir('.')
-        self.model.flattenDirectory()
-        self.assertEquals(self.model.updir(), 0)
-
-    def testNextSearchMatchDoesNotOverflowWhenNearEnd(self):
-        onePastLast = len(self.model.items)
-        match = self.model.nextSearchMatch('no_such_match', onePastLast)
-        self.assertEquals(match, 0)
 
 
 class TestCandy(unittest.TestCase):
@@ -294,7 +221,7 @@ class TestCandy(unittest.TestCase):
         panel.setSelectionOnCurrItem = temp
 
     def testRefreshReadsDisk(self):
-        candy.list_files = failingFileLister
+        data.list_files = util.failing_file_lister
 
         try:
             self.frame.p1.refresh()
@@ -302,7 +229,7 @@ class TestCandy(unittest.TestCase):
         except RuntimeError as e:
             self.assertEquals(str(e), 'blerk')
 
-        candy.list_files = fakeFileLister
+        data.list_files = util.fake_file_lister
 
     def testGetSelection(self):
         self.assertEquals(self.frame.p1.getSelection().fileName, '..')
@@ -326,7 +253,7 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         self.frame.Show(True)
         self.frame.Show(False)
 
-        candy.list_files = fakeFileLister2
+        data.list_files = util.fake_file_lister2
 
         # Now when dimensions are known, let's proceed initializing
         self.frame.setUpAndShow()
@@ -336,7 +263,7 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         self.frame.p2.updateView = lambda: None
 
     def tearDown(self):
-        candy.list_files = fakeFileLister
+        data.list_files = util.fake_file_lister
         self.frame.Destroy()
 
     def testMoveRightOnSingleColumnMovesDown(self):
@@ -368,9 +295,10 @@ class TestCandyWithSingleColumn(unittest.TestCase):
 
 def suite():
     import test_keyboard
+    import test_data
     candySuite = unittest.makeSuite(TestCandy, 'test')
     candySuiteSingleCol = unittest.makeSuite(TestCandyWithSingleColumn, 'test')
-    modelSuite = unittest.makeSuite(TestModel, 'test')
+    modelSuite = unittest.makeSuite(test_data.TestModel, 'test')
     smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
     keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
     fileListerSuite = unittest.makeSuite(TestFileLister)
@@ -382,7 +310,8 @@ def suite():
 
 def fast():
     import test_keyboard
-    modelSuite = unittest.makeSuite(TestModel, 'test')
+    import test_data
+    modelSuite = unittest.makeSuite(test_data.TestModel, 'test')
     smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
     keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
     fileListerSuite = unittest.makeSuite(TestFileLister)
