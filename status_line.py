@@ -26,45 +26,48 @@ import wx.lib.pubsub as pubsub
 class StatusLine(stc.StyledTextCtrl):
     def __init__(self, parent, id, width, config, color_scheme):
         stc.StyledTextCtrl.__init__(self, parent, id, size=(width, 20))
-        self.messagePrefix = ''
+        self._message_prefix = ''
         self.SetMarginWidth(1, 0)
         self.SetUseHorizontalScrollBar(0)
 
-        faceCourier = config['font-face'] # 'Courier'
-        pb = int(config['font-size']) # 12
+        face_courier = config['font-face']
+        pb = int(config['font-size'])
 
         # Set the styles according to color scheme
-        styleSpec = 'size:%d,face:%s,back:%s,fore:%s' \
-                    % (pb, faceCourier, color_scheme['background'],
-                       color_scheme['default-text'])
-        self.StyleSetSpec(stc.STC_STYLE_DEFAULT, styleSpec)
+        style_spec = 'size:%d,face:%s,back:%s,fore:%s' \
+                     % (pb, face_courier, color_scheme['background'],
+                        color_scheme['default-text'])
+        self.StyleSetSpec(stc.STC_STYLE_DEFAULT, style_spec)
         self.StyleClearAll()
 
         self.Bind(stc.EVT_STC_MODIFIED, self.on_status_line_change)
         self.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
 
-    def on_key_down(self, evt):
-        keyCode = evt.GetKeyCode()
-        keyMod = evt.GetModifiers()
+    def set_message_prefix(self, prefix):
+        self._message_prefix = prefix
 
-        if not self.process_key_event(keyCode, keyMod):
-            evt.Skip()
+    def on_key_down(self, event):
+        key_code = event.GetKeyCode()
+        key_mod = event.GetModifiers()
 
-    def process_key_event(self, keyCode, keyMod):
-        message = self.messagePrefix
+        if not self.process_key_event(key_code, key_mod):
+            event.Skip()
 
-        if keyCode == wx.WXK_RETURN:
-            if keyMod == wx.MOD_CONTROL:
+    def process_key_event(self, key_code, key_mod):
+        message = self._message_prefix
+
+        if key_code == wx.WXK_RETURN:
+            if key_mod == wx.MOD_CONTROL:
                 message += 'CONTROL '
             message += 'ENTER'
-        elif keyCode == wx.WXK_ESCAPE:
+        elif key_code == wx.WXK_ESCAPE:
             message += 'ESCAPE'
-        elif keyCode == wx.WXK_BACK:
+        elif key_code == wx.WXK_BACK:
             text = self.GetText()
             if text and text == u'/':
                 message += 'ESCAPE'
 
-        if message != self.messagePrefix:
+        if message != self._message_prefix:
             text = self.GetText()
             self.ClearAll()
             pubsub.Publisher().sendMessage(message, text[1:])
@@ -72,14 +75,14 @@ class StatusLine(stc.StyledTextCtrl):
 
         return False
 
-    def on_status_line_change(self, evt):
-        type = evt.GetModificationType()
+    def on_status_line_change(self, event):
+        type = event.GetModificationType()
 
         if stc.STC_MOD_BEFOREINSERT & type != 0 \
            or stc.STC_MOD_BEFOREDELETE & type != 0:
             return
 
-        message = self.messagePrefix + 'NEW STATUS LINE TEXT'
+        message = self._message_prefix + 'NEW STATUS LINE TEXT'
         text = self.GetText()
 
         if text != '':

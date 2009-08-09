@@ -985,7 +985,7 @@ class Candy(wx.Frame):
     def setActivePane(self, pane):
         self.activePane = pane
         pane.view.SetFocus()
-        self.statusLine.messagePrefix = pane.controllerSignature
+        self.statusLine.set_message_prefix(pane.controllerSignature)
 
     def setUpAndShow(self):
         self.p2.initializeAndShowInitialView()
