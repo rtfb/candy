@@ -555,6 +555,8 @@ class PanelController(object):
 
     def initializeViewSettings(self, numColumns=3):
         self.view.initializeViewSettings(self.model.items, numColumns)
+        self.view.highlightSearchMatches(self.model.items, self.searchStr)
+        self.setSelectionOnCurrItem()
 
     def initializeAndShowInitialView(self):
         self.initializeViewSettings()
