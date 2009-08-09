@@ -293,33 +293,28 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         self.assertEquals(panel.numItems(), len(panel.model.items))
 
 
-def suite():
+def make_fast_suite():
     import test_keyboard
     import test_data
-    candySuite = unittest.makeSuite(TestCandy, 'test')
-    candySuiteSingleCol = unittest.makeSuite(TestCandyWithSingleColumn, 'test')
-    modelSuite = unittest.makeSuite(test_data.TestModel, 'test')
-    smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
-    keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
-    fileListerSuite = unittest.makeSuite(TestFileLister)
-    listFiltererSuite = unittest.makeSuite(TestListFiltering)
-    return unittest.TestSuite([smartJustifierSuite, keyboardSuite,
-                               modelSuite, candySuite, candySuiteSingleCol,
-                               fileListerSuite, listFiltererSuite])
+
+    model_suite = unittest.makeSuite(test_data.TestModel, 'test')
+    smart_justifier_suite = unittest.makeSuite(TestSmartJustifier, 'test')
+    keyboard_suite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
+    file_lister_suite = unittest.makeSuite(TestFileLister)
+    list_filterer_suite = unittest.makeSuite(TestListFiltering)
+    return [model_suite, smart_justifier_suite, keyboard_suite,
+            file_lister_suite, list_filterer_suite]
+
+
+def suite():
+    candy_suite = unittest.makeSuite(TestCandy, 'test')
+    single_col_suite = unittest.makeSuite(TestCandyWithSingleColumn, 'test')
+    return unittest.TestSuite(make_fast_suite() +
+                              [candy_suite, single_col_suite])
 
 
 def fast():
-    import test_keyboard
-    import test_data
-    modelSuite = unittest.makeSuite(test_data.TestModel, 'test')
-    smartJustifierSuite = unittest.makeSuite(TestSmartJustifier, 'test')
-    keyboardSuite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
-    fileListerSuite = unittest.makeSuite(TestFileLister)
-    listFiltererSuite = unittest.makeSuite(TestListFiltering)
-    return unittest.TestSuite([smartJustifierSuite, keyboardSuite,
-                               modelSuite, fileListerSuite,
-                               listFiltererSuite])
-
+    return unittest.TestSuite(make_fast_suite())
 
 
 if __name__ == '__main__':
