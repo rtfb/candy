@@ -213,7 +213,6 @@ class PanelController(object):
         if func:
             func()
             self.setSelectionOnCurrItem()
-            self.displaySelectionInfo()
 
     def displaySelectionInfo(self):
         # in the line below, I'm subtracting 1 from number of items because
@@ -279,7 +278,6 @@ class PanelController(object):
     def afterDirChange(self, message):
         self.updateView()
         self.setSelectionOnCurrItem()
-        self.displaySelectionInfo()
 
     def searchCtrlEnter(self, msg):
         self.view.SetFocus()
@@ -348,6 +346,7 @@ class PanelController(object):
             self.view.highlightSearchMatches(self.model.items, self.searchStr)
 
         self.view.setSelectionOnItem(item)
+        self.displaySelectionInfo()
 
     def moveSelectionDown(self):
         self.selectedItem += 1
