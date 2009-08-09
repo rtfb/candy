@@ -170,7 +170,7 @@ class TestCandy(unittest.TestCase):
 
     def testItemStartCharIsZeroOnEmptyList(self):
         item = self.frame.p1.model.items[0]
-        self.assertEquals(item.visual_item.startCharOnLine, 0)
+        self.assertEquals(item.visual_item.start_char_on_line, 0)
 
     def testItemsListIsNotEmpty(self):
         self.assertTrue(len(self.frame.p1.model.items) > 0)
@@ -186,13 +186,13 @@ class TestCandy(unittest.TestCase):
 
     def testItemStartCharOnLine(self):
         item = self.frame.p1.model.items[0]
-        self.assertEquals(item.visual_item.startCharOnLine, 0)
+        self.assertEquals(item.visual_item.start_char_on_line, 0)
 
         for item in self.frame.p1.model.items:
             col = item.coords[0]
             # 11 is a magic column width number here. Based on last evidence
             # that works.
-            self.assertEquals(item.visual_item.startCharOnLine, col * 11)
+            self.assertEquals(item.visual_item.start_char_on_line, col * 11)
 
     def testItemStartChar(self):
         item = self.frame.p1.model.items[0]

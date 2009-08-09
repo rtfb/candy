@@ -65,31 +65,31 @@ class VisualItem(object):
         # char of this item's visual representation. Will not be negative,
         # since objects of this class represent only visible things, even
         # if only a part of the thing is visible
-        self.startCharOnLine = 0
+        self.start_char_on_line = 0
 
         # Length of the visible item in characters. Will be as much characters
         # as actually visible
-        self.visLenInChars = 0
+        self.vis_len_in_chars = 0
 
         # The first byte in the string, representing the line that contains
         # this item. This is needed because of silly implementation detail
         # of STC: it needs to start (and apply) styling according to bytes,
         # not the characters. So for Unicode strings, I have to keep track
         # of bytes, not only characters.
-        self.startByteOnLine = 0
+        self.start_byte_on_line = 0
 
         # Length of the item's visual repr, expressed in bytes (same reasons
-        # as with startByteOnLine).
-        self.visLenInBytes = 0
+        # as with start_byte_on_line).
+        self.vis_len_in_bytes = 0
 
         # Since objects of this class only represent things that are
         # on-screen, there's no need for special check. We only need to
         # record whether the whole item was fit to screen
-        self.fullyInView = False
+        self.fully_in_view = False
 
     def set_start_byte(self, visible_text_line):
-        chars_before_this_item = visible_text_line[:self.startCharOnLine]
-        self.startByteOnLine = len(chars_before_this_item.encode('utf-8'))
+        chars_before_this_item = visible_text_line[:self.start_char_on_line]
+        self.start_byte_on_line = len(chars_before_this_item.encode('utf-8'))
 
 
 class SmartJustifier(object):
@@ -343,7 +343,7 @@ class PanelController(object):
             return
 
         item = self.getSelection()
-        if not item.visual_item or not item.visual_item.fullyInView:
+        if not item.visual_item or not item.visual_item.fully_in_view:
             self.view.moveItemIntoView(self.model.items, self.selectedItem)
             self.view.highlightSearchMatches(self.model.items, self.searchStr)
 
@@ -528,31 +528,31 @@ class Panel(stc.StyledTextCtrl):
 
         # Partially, to the left of ViewWindow:
         if start_char_on_line < 0 and endCharOnLine >= 0:
-            vi.visLenInChars = start_char_on_line + len(rawItem.visible_part)
-            vi.startCharOnLine = 0
+            vi.vis_len_in_chars = start_char_on_line + len(rawItem.visible_part)
+            vi.start_char_on_line = 0
             vi.set_start_byte(visibleLine)
-            tail = rawItem.visible_part[-vi.visLenInChars:]
-            vi.visLenInBytes = len(tail.encode('utf-8'))
-            vi.fullyInView = False
+            tail = rawItem.visible_part[-vi.vis_len_in_chars:]
+            vi.vis_len_in_bytes = len(tail.encode('utf-8'))
+            vi.fully_in_view = False
             return vi
 
         # Partially, to the right of ViewWindow:
         if endCharOnLine >= self.viewWindow.width \
            and start_char_on_line < self.viewWindow.width:
-            vi.startCharOnLine = start_char_on_line
-            vi.visLenInChars = self.viewWindow.width - vi.startCharOnLine
+            vi.start_char_on_line = start_char_on_line
+            vi.vis_len_in_chars = self.viewWindow.width - vi.start_char_on_line
             vi.set_start_byte(visibleLine)
-            head = rawItem.visible_part[:vi.visLenInChars]
-            vi.visLenInBytes = len(head.encode('utf-8'))
-            vi.fullyInView = False
+            head = rawItem.visible_part[:vi.vis_len_in_chars]
+            vi.vis_len_in_bytes = len(head.encode('utf-8'))
+            vi.fully_in_view = False
             return vi
 
         # Fully in view:
-        vi.startCharOnLine = start_char_on_line
-        vi.visLenInChars = len(rawItem.visible_part)
+        vi.start_char_on_line = start_char_on_line
+        vi.vis_len_in_chars = len(rawItem.visible_part)
         vi.set_start_byte(visibleLine)
-        vi.visLenInBytes = len(rawItem.visible_part.encode('utf-8'))
-        vi.fullyInView = True
+        vi.vis_len_in_bytes = len(rawItem.visible_part.encode('utf-8'))
+        vi.fully_in_view = True
         return vi
 
     def extractVisualItems(self, items):
@@ -652,7 +652,7 @@ class Panel(stc.StyledTextCtrl):
                 matchOffset = i.file_name.lower().find(searchStrLower)
 
                 if matchOffset != -1:
-                    endOfHighlight = i.visual_item.visLenInChars
+                    endOfHighlight = i.visual_item.vis_len_in_chars
                     if matchOffset + len(searchStr) > endOfHighlight:
                         # TODO: this is a temporary hack to make the highlight
                         # always fit the visible part of an item. As we must
@@ -693,7 +693,7 @@ class Panel(stc.StyledTextCtrl):
         self.EnsureCaretVisible()
 
         if item and item.visual_item:
-            numCharsToSelect = item.visual_item.visLenInBytes
+            numCharsToSelect = item.visual_item.vis_len_in_bytes
         else:
             numCharsToSelect = self.charsPerCol
 
@@ -723,7 +723,7 @@ class Panel(stc.StyledTextCtrl):
         start_byte_on_line = 0
 
         if item.visual_item:
-            start_byte_on_line = item.visual_item.startByteOnLine
+            start_byte_on_line = item.visual_item.start_byte_on_line
 
         return sumBytes + start_byte_on_line
 
@@ -737,7 +737,7 @@ class Panel(stc.StyledTextCtrl):
                 # the nasty green squiggle underline.
                 self.StartStyling(selStart, 0x1f)
 
-                itemNameLen = item.visual_item.visLenInBytes
+                itemNameLen = item.visual_item.vis_len_in_bytes
                 self.SetStyling(itemNameLen, item.style)
 
 
