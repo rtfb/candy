@@ -30,18 +30,18 @@ from constants import *
 
 # Obviously excludes subdirectories
 def recursive_list_dir(cwd):
-    allFiles = []
+    all_files = []
 
     for root, dirs, files in os.walk(cwd):
-        allFiles.extend(util.list_of_tuples(files, root))
+        all_files.extend(util.list_of_tuples(files, root))
 
-    return allFiles
+    return all_files
 
 
-def list_files(isFlatDirectoryView, cwd):
+def list_files(is_flat_directory_view, cwd):
     files = []
 
-    if isFlatDirectoryView:
+    if is_flat_directory_view:
         files = recursive_list_dir(cwd)
     else:
         files = util.list_of_tuples(os.listdir(cwd), cwd)
@@ -49,12 +49,12 @@ def list_files(isFlatDirectoryView, cwd):
     return files
 
 
-def collect_list_info(isFlatDirectoryView, cwd):
+def collect_list_info(is_flat_directory_view, cwd):
     items = []
-    files = list_files(isFlatDirectoryView, cwd)
+    files = list_files(is_flat_directory_view, cwd)
 
-    for fileName, path in files:
-        item = RawItem(fileName, path)
+    for file_name, path in files:
+        item = RawItem(file_name, path)
 
         if os.path.isdir(item.fileName):
             item.style = STYLE_FOLDER
@@ -70,9 +70,9 @@ def collect_list_info(isFlatDirectoryView, cwd):
 
 def collect_drive_letters():
     items = []
-    driveLetters = win32api.GetLogicalDriveStrings().split('\x00')[:-1]
+    drive_letters = win32api.GetLogicalDriveStrings().split('\x00')[:-1]
 
-    for d in driveLetters:
+    for d in drive_letters:
         item = RawItem(d, u'/')
         item.style = STYLE_FOLDER
         item.isDir = True
@@ -82,34 +82,34 @@ def collect_drive_letters():
     return items
 
 
-def construct_list_for_filling(fullList, specialFilter):
-    dirList = filter(lambda(f): f.isDir, fullList)
-    dirList.sort()
+def construct_list_for_filling(full_list, special_filter):
+    dir_list = filter(lambda(f): f.isDir, full_list)
+    dir_list.sort()
 
-    fileList = filter(lambda(f): not f.isDir, fullList)
-    fileList.sort()
+    file_list = filter(lambda(f): not f.isDir, full_list)
+    file_list.sort()
 
-    notHidden = filter(lambda(f): not f.isHidden, dirList + fileList)
+    not_hidden = filter(lambda(f): not f.isHidden, dir_list + file_list)
 
-    dotDot = RawItem(u'..', u'.')
-    dotDot.style = STYLE_FOLDER
-    dotDot.isDir = True
-    dotDot.isHidden = False
-    dotDot.visiblePartLength = len(dotDot.fileName)
-    notHidden.insert(0, dotDot)
+    dot_dot = RawItem(u'..', u'.')
+    dot_dot.style = STYLE_FOLDER
+    dot_dot.isDir = True
+    dot_dot.isHidden = False
+    dot_dot.visiblePartLength = len(dot_dot.fileName)
+    not_hidden.insert(0, dot_dot)
 
-    if specialFilter is not None:
-        return filter(specialFilter, notHidden)
+    if special_filter is not None:
+        return filter(special_filter, not_hidden)
     else:
-        return notHidden
+        return not_hidden
 
 
 class DirectoryViewFilter(object):
-    def __init__(self, searchStr):
-        self.searchStr = searchStr.lower()
+    def __init__(self, search_str):
+        self.search_str = search_str.lower()
 
     def __call__(self, item):
-        return self.searchStr in item.fileName.lower()
+        return self.search_str in item.fileName.lower()
 
 
 class RawItem(object):
@@ -119,8 +119,8 @@ class RawItem(object):
     filename, path, attributes, etc. Number of these objects is the number of
     the real objects external to our app, e.g. len (os.listdir ()).
     """
-    def __init__(self, fileName, path):
-        self.fileName = fileName
+    def __init__(self, file_name, path):
+        self.fileName = file_name
         self.path = path
         self.style = stc.STC_STYLE_DEFAULT
         self.isDir = False
@@ -134,8 +134,8 @@ class RawItem(object):
         self.startCharOnLine = 0
         self.startByteOnLine = 0
 
-    def __eq__(self, fileName):
-        return self.fileName == fileName
+    def __eq__(self, file_name):
+        return self.fileName == file_name
 
     def __lt__(self, other):
         return self.fileName < other.fileName
@@ -147,15 +147,15 @@ class RawItem(object):
 class PanelModel(object):
     def __init__(self, msgSign):
         # Working directory of the pane
-        self.workingDir = os.path.expanduser(u'~')
+        self.working_dir = os.path.expanduser(u'~')
 
         # Signifies flattened directory view
-        self.flatDirectoryView = False
+        self.flat_directory_view = False
 
         # Function Object that gets called to filter out directory view.
         # Main use (for now) is for filtering out the contents by search
         # matches.
-        self.directoryViewFilter = None
+        self.directory_view_filter = None
 
         # List of filesystem items to be displayed. Only contains those that
         # are to be actually displayed. E.g. no dot-files when hidden files
@@ -164,71 +164,71 @@ class PanelModel(object):
 
         # Signature that is added to the message, to identify the model that
         # has sent it
-        self.messageSignature = msgSign
+        self.message_signature = msgSign
 
-    def changeWorkingDir(self, newWorkingDir):
-        self.workingDir = newWorkingDir
-        message = self.messageSignature + 'WORKDIR CHANGED'
-        pubsub.Publisher().sendMessage(message, self.workingDir)
+    def _change_working_dir(self, newWorkingDir):
+        self.working_dir = newWorkingDir
+        message = self.message_signature + 'WORKDIR CHANGED'
+        pubsub.Publisher().sendMessage(message, self.working_dir)
 
-    def flattenDirectory(self):
-        self.flatDirectoryView = True
+    def flatten_directory(self):
+        self.flat_directory_view = True
 
-    def unflattenDirectory(self):
-        self.flatDirectoryView = False
+    def _unflatten_directory(self):
+        self.flat_directory_view = False
 
-    def setDirFilter(self, searchStr):
-        if searchStr != u'':
-            self.directoryViewFilter = DirectoryViewFilter(searchStr)
+    def set_dir_filter(self, search_str):
+        if search_str != u'':
+            self.directory_view_filter = DirectoryViewFilter(search_str)
         else:
-            self.directoryViewFilter = None
+            self.directory_view_filter = None
 
-    def setItems(self, items):
+    def set_items(self, items):
         self.items = items
-        message = self.messageSignature + 'NEW ITEMS'
+        message = self.message_signature + 'NEW ITEMS'
         pubsub.Publisher().sendMessage(message, self.items)
 
-    def getIndexByItem(self, item):
+    def _get_index_by_item(self, item):
         try:
             return self.items.index(item)
         except ValueError:
             return 0
 
-    def fillListByWorkingDir(self, cwd):
-        allItems = collect_list_info(self.flatDirectoryView, cwd)
-        self.changeWorkingDir(cwd)
-        list = construct_list_for_filling(allItems, self.directoryViewFilter)
-        self.setItems(list)
+    def fill_list_by_working_dir(self, cwd):
+        allItems = collect_list_info(self.flat_directory_view, cwd)
+        self._change_working_dir(cwd)
+        list = construct_list_for_filling(allItems, self.directory_view_filter)
+        self.set_items(list)
 
     def updir(self):
         if platform.system() == 'Windows':
-            if util.is_root_of_drive(self.workingDir):
-                self.setItems(collect_drive_letters())
+            if util.is_root_of_drive(self.working_dir):
+                self.set_items(collect_drive_letters())
                 return 0
 
-        self.setDirFilter(u'')
-        # if we're in self.flatDirectoryView, all we want is to refresh
-        # the view of self.workingDir without flattening
-        if self.flatDirectoryView:
-            self.unflattenDirectory()
-            self.fillListByWorkingDir(os.getcwdu())
+        self.set_dir_filter(u'')
+        # if we're in self.flat_directory_view, all we want is to refresh
+        # the view of self.working_dir without flattening
+        if self.flat_directory_view:
+            self._unflatten_directory()
+            self.fill_list_by_working_dir(os.getcwdu())
             return 0
 
-        oldDir = os.path.split(os.getcwdu())[1]
+        old_dir = os.path.split(os.getcwdu())[1]
         os.chdir(u'..')
-        self.fillListByWorkingDir(os.getcwdu())
-        return self.getIndexByItem(oldDir)
+        self.fill_list_by_working_dir(os.getcwdu())
+        return self._get_index_by_item(old_dir)
 
-    def nextSearchMatch(self, searchStr, initPos):
-        if initPos >= len(self.items):
-            initPos = 0
+    def next_search_match(self, search_str, init_pos):
+        if init_pos >= len(self.items):
+            init_pos = 0
 
-        searchRange = util.wrapped_range(initPos, len(self.items))
-        searchStrLower = searchStr.lower()
+        search_range = util.wrapped_range(init_pos, len(self.items))
+        search_str_lower = search_str.lower()
 
-        for i in searchRange:
-            if searchStrLower in self.items[i].fileName.lower():
+        for i in search_range:
+            if search_str_lower in self.items[i].fileName.lower():
                 return i
 
-        return initPos
+        return init_pos
 

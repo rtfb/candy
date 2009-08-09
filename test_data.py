@@ -37,31 +37,31 @@ class TestModel(unittest.TestCase):
 
     def testInitialDirectoryOnActivePane(self):
         homeDir = os.path.expanduser('~')
-        self.assertEqual(self.model.workingDir, homeDir)
+        self.assertEqual(self.model.working_dir, homeDir)
 
     def testItemListIsEmpty(self):
         self.assertEquals(len(self.model.items), 0)
 
     def testFillItemsList(self):
-        self.model.fillListByWorkingDir('.')
+        self.model.fill_list_by_working_dir('.')
         # -5 here because the fake list contains 5 hidden files
         fakeListLen = len(util.fake_file_lister(False, '.')) - 5
         self.assertEquals(len(self.model.items), fakeListLen)
 
     def testUpdirFromFlatView(self):
-        self.model.fillListByWorkingDir('.')
-        self.model.flattenDirectory()
+        self.model.fill_list_by_working_dir('.')
+        self.model.flatten_directory()
         self.assertEquals(self.model.updir(), 0)
 
     def testNextSearchMatchDoesNotOverflowWhenNearEnd(self):
         onePastLast = len(self.model.items)
-        match = self.model.nextSearchMatch('no_such_match', onePastLast)
+        match = self.model.next_search_match('no_such_match', onePastLast)
         self.assertEquals(match, 0)
 
     def testSetDirFilter(self):
-        self.model.setDirFilter('a')
+        self.model.set_dir_filter('a')
 
-        if self.model.directoryViewFilter is None:
+        if self.model.directory_view_filter is None:
             self.assertFalse()
 
 

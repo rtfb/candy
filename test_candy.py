@@ -181,7 +181,7 @@ class TestCandy(unittest.TestCase):
     def testNextSearchMatch(self):
         searchStr = 'file'
         currPos = self.frame.p1.incrementalSearch(searchStr)
-        match = self.frame.p1.model.nextSearchMatch(searchStr, currPos + 1)
+        match = self.frame.p1.model.next_search_match(searchStr, currPos + 1)
         self.assertEquals(match, currPos + 1)
 
     def testItemStartCharOnLine(self):

@@ -187,7 +187,7 @@ class PanelController(object):
 
     # Used in tests
     def clearList(self):
-        self.model.setItems([])
+        self.model.set_items([])
         self.selectedItem = 0
         self.view.numFullColumns = 0
 
@@ -236,7 +236,7 @@ class PanelController(object):
 
     def OnSetFocus(self, evt):
         self.view.onSetFocus()
-        os.chdir(self.model.workingDir)
+        os.chdir(self.model.working_dir)
 
     def quiter(self):
         sys.exit(0)
@@ -254,24 +254,24 @@ class PanelController(object):
             return
 
         self.selectedItem = 0
-        self.model.setItems(data.collect_drive_letters())
+        self.model.set_items(data.collect_drive_letters())
 
     def flattenDirectory(self):
-        self.model.flattenDirectory()
-        self.model.fillListByWorkingDir(self.model.workingDir)
+        self.model.flatten_directory()
+        self.model.fill_list_by_working_dir(self.model.working_dir)
 
     def changeDir(self, fullPath, searchStr=u''):
-        self.model.setDirFilter(searchStr)
+        self.model.set_dir_filter(searchStr)
         os.chdir(fullPath)
         self.clearScreen()
         self.selectedItem = 0
-        self.model.fillListByWorkingDir(fullPath)
+        self.model.fill_list_by_working_dir(fullPath)
 
     def listSearchMatches(self, searchStr):
-        self.changeDir(self.model.workingDir, searchStr)
+        self.changeDir(self.model.working_dir, searchStr)
 
     def downdir(self, dirName):
-        self.changeDir(os.path.join(self.model.workingDir, dirName))
+        self.changeDir(os.path.join(self.model.working_dir, dirName))
 
     def goHome(self):
         self.changeDir(os.path.expanduser(u'~'))
@@ -322,11 +322,12 @@ class PanelController(object):
 
     def onNextMatch(self):
         item = self.selectedItem + 1
-        self.searchMatchIndex = self.model.nextSearchMatch(self.searchStr, item)
+        self.searchMatchIndex = self.model.next_search_match(self.searchStr,
+                                                             item)
         self.selectedItem = self.searchMatchIndex
 
     def incrementalSearch(self, searchStr):
-        matchIndex = self.model.nextSearchMatch(searchStr, self.selectedItem)
+        matchIndex = self.model.next_search_match(searchStr, self.selectedItem)
         self.view.moveItemIntoView(self.model.items, matchIndex)
         self.view.highlightSearchMatches(self.model.items, searchStr)
         return matchIndex
@@ -416,7 +417,7 @@ class PanelController(object):
 
     def refresh(self):
         backup = self.selectedItem
-        self.changeDir(self.model.workingDir)
+        self.changeDir(self.model.working_dir)
         self.view.highlightSearchMatches(self.model.items, self.searchStr)
         self.selectedItem = backup
 
