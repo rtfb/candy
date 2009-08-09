@@ -45,7 +45,7 @@ class TestFileLister(unittest.TestCase):
 
     def testItemName(self):
         ret = data.collect_list_info(False, u'.')
-        self.assertEquals(ret[0].fileName, u'..')
+        self.assertEquals(ret[0].file_name, u'..')
 
 
 class TestListFiltering(unittest.TestCase):
@@ -61,17 +61,17 @@ class TestListFiltering(unittest.TestCase):
         """
 
         for i in self.list[1:]:
-            self.assertFalse(i.fileName.startswith(u'.'))
+            self.assertFalse(i.file_name.startswith(u'.'))
 
     def testOnlyDirsInFront(self):
         def looks_like_dir(str):
             return str.startswith(u'dir') or str == u'..'
 
         for item in self.list:
-            if not looks_like_dir(item.fileName):
+            if not looks_like_dir(item.file_name):
                 break
 
-            self.assertTrue(looks_like_dir(item.fileName))
+            self.assertTrue(looks_like_dir(item.file_name))
 
 
 class TestSmartJustifier(unittest.TestCase):
@@ -170,7 +170,7 @@ class TestCandy(unittest.TestCase):
 
     def testItemStartCharIsZeroOnEmptyList(self):
         item = self.frame.p1.model.items[0]
-        self.assertEquals(item.visualItem.startCharOnLine, 0)
+        self.assertEquals(item.visual_item.startCharOnLine, 0)
 
     def testItemsListIsNotEmpty(self):
         self.assertTrue(len(self.frame.p1.model.items) > 0)
@@ -186,13 +186,13 @@ class TestCandy(unittest.TestCase):
 
     def testItemStartCharOnLine(self):
         item = self.frame.p1.model.items[0]
-        self.assertEquals(item.visualItem.startCharOnLine, 0)
+        self.assertEquals(item.visual_item.startCharOnLine, 0)
 
         for item in self.frame.p1.model.items:
             col = item.coords[0]
             # 11 is a magic column width number here. Based on last evidence
             # that works.
-            self.assertEquals(item.visualItem.startCharOnLine, col * 11)
+            self.assertEquals(item.visual_item.startCharOnLine, col * 11)
 
     def testItemStartChar(self):
         item = self.frame.p1.model.items[0]
@@ -232,16 +232,16 @@ class TestCandy(unittest.TestCase):
         data.list_files = util.fake_file_lister
 
     def testGetSelection(self):
-        self.assertEquals(self.frame.p1.getSelection().fileName, '..')
+        self.assertEquals(self.frame.p1.getSelection().file_name, '..')
 
     def testRefreshMaintainsPosition(self):
         panel = self.frame.p1
         panel.handleKeyEvent(ord('J'), None)
         panel.handleKeyEvent(ord('J'), None)
         panel.handleKeyEvent(ord('J'), None)
-        file = panel.getSelection().fileName
+        file = panel.getSelection().file_name
         panel.refresh()
-        self.assertEquals(file, panel.getSelection().fileName)
+        self.assertEquals(file, panel.getSelection().file_name)
 
 
 class TestCandyWithSingleColumn(unittest.TestCase):
@@ -269,13 +269,13 @@ class TestCandyWithSingleColumn(unittest.TestCase):
     def testMoveRightOnSingleColumnMovesDown(self):
         panel = self.frame.p1
         panel.handleKeyEvent(ord('L'), None)
-        self.assertEquals('dir0', panel.getSelection().fileName)
+        self.assertEquals('dir0', panel.getSelection().file_name)
 
     def testMoveRightOnLastItemMovesToFirst(self):
         panel = self.frame.p1
         panel.handleKeyEvent(ord('9'), None)
         panel.handleKeyEvent(ord('L'), None)
-        self.assertEquals('..', panel.getSelection().fileName)
+        self.assertEquals('..', panel.getSelection().file_name)
 
     def testMoveLeftOnFirstItemMovesToLast(self):
         panel = self.frame.p1
@@ -285,7 +285,7 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         # This is a double test here: the first test is what I actually want to
         # know, and the second one makes sure I don't get fooled by Python's
         # ability to subscribe lists with negative indices
-        self.assertEquals('file2', panel.getSelection().fileName)
+        self.assertEquals('file2', panel.getSelection().file_name)
         self.assertEquals(len(panel.model.items) - 1, panel.selectedItem)
 
     def testNumItems(self):

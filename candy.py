@@ -87,9 +87,9 @@ class VisualItem(object):
         # record whether the whole item was fit to screen
         self.fullyInView = False
 
-    def set_start_byte(self, visibleTextLine):
-        charsBeforeThisItem = visibleTextLine[:self.startCharOnLine]
-        self.startByteOnLine = len(charsBeforeThisItem.encode('utf-8'))
+    def set_start_byte(self, visible_text_line):
+        chars_before_this_item = visible_text_line[:self.startCharOnLine]
+        self.startByteOnLine = len(chars_before_this_item.encode('utf-8'))
 
 
 class SmartJustifier(object):
@@ -222,7 +222,7 @@ class PanelController(object):
             item = self.getSelection()
             statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
                          % (os.getcwdu(), self.numItems() - 1,
-                            item.fileName, item.path)
+                            item.file_name, item.path)
             self.view.getFrame().statusBar.SetStatusText(statusText)
 
     def OnKeyDown(self, evt):
@@ -305,17 +305,17 @@ class PanelController(object):
     def onEnter(self):
         selection = self.getSelection()
 
-        if selection.isDir:
-            if selection.fileName == u'..':
+        if selection.is_dir:
+            if selection.file_name == u'..':
                 self.updir()
             else:
-                self.downdir(selection.fileName)
+                self.downdir(selection.file_name)
         else:
-            base, ext = os.path.splitext(selection.fileName)
+            base, ext = os.path.splitext(selection.file_name)
             commandLine = util.resolve_command_by_file_ext(ext[1:].lower())
 
             if commandLine:
-                subprocess.call([commandLine, selection.fileName])
+                subprocess.call([commandLine, selection.file_name])
 
     def clearScreen(self):
         self.view.clearScreen()
@@ -343,7 +343,7 @@ class PanelController(object):
             return
 
         item = self.getSelection()
-        if not item.visualItem or not item.visualItem.fullyInView:
+        if not item.visual_item or not item.visual_item.fullyInView:
             self.view.moveItemIntoView(self.model.items, self.selectedItem)
             self.view.highlightSearchMatches(self.model.items, self.searchStr)
 
@@ -413,7 +413,7 @@ class PanelController(object):
             self.selectedItem = 0
 
     def startEditor(self):
-        subprocess.call([u'gvim', self.getSelection().fileName])
+        subprocess.call([u'gvim', self.getSelection().file_name])
 
     def refresh(self):
         backup = self.selectedItem
@@ -426,7 +426,7 @@ class PanelController(object):
 
     def startViewer(self):
         import viewr
-        file = self.getSelection().fileName
+        file = self.getSelection().file_name
         wnd = viewr.BuiltinViewerFrame(self.view, -1, file, file)
         wnd.Show(True)
 
@@ -522,36 +522,36 @@ class Panel(stc.StyledTextCtrl):
     def createVisualItem(self, rawItem):
         row = rawItem.coords[1]
         vi = VisualItem()
-        startCharOnLine = rawItem.startCharOnLine - self.viewWindow.left
-        endCharOnLine = startCharOnLine + len(rawItem.visiblePart)
+        start_char_on_line = rawItem.start_char_on_line - self.viewWindow.left
+        endCharOnLine = start_char_on_line + len(rawItem.visible_part)
         visibleLine = self.GetLine(row)
 
         # Partially, to the left of ViewWindow:
-        if startCharOnLine < 0 and endCharOnLine >= 0:
-            vi.visLenInChars = startCharOnLine + len(rawItem.visiblePart)
+        if start_char_on_line < 0 and endCharOnLine >= 0:
+            vi.visLenInChars = start_char_on_line + len(rawItem.visible_part)
             vi.startCharOnLine = 0
             vi.set_start_byte(visibleLine)
-            tail = rawItem.visiblePart[-vi.visLenInChars:]
+            tail = rawItem.visible_part[-vi.visLenInChars:]
             vi.visLenInBytes = len(tail.encode('utf-8'))
             vi.fullyInView = False
             return vi
 
         # Partially, to the right of ViewWindow:
         if endCharOnLine >= self.viewWindow.width \
-           and startCharOnLine < self.viewWindow.width:
-            vi.startCharOnLine = startCharOnLine
+           and start_char_on_line < self.viewWindow.width:
+            vi.startCharOnLine = start_char_on_line
             vi.visLenInChars = self.viewWindow.width - vi.startCharOnLine
             vi.set_start_byte(visibleLine)
-            head = rawItem.visiblePart[:vi.visLenInChars]
+            head = rawItem.visible_part[:vi.visLenInChars]
             vi.visLenInBytes = len(head.encode('utf-8'))
             vi.fullyInView = False
             return vi
 
         # Fully in view:
-        vi.startCharOnLine = startCharOnLine
-        vi.visLenInChars = len(rawItem.visiblePart)
+        vi.startCharOnLine = start_char_on_line
+        vi.visLenInChars = len(rawItem.visible_part)
         vi.set_start_byte(visibleLine)
-        vi.visLenInBytes = len(rawItem.visiblePart.encode('utf-8'))
+        vi.visLenInBytes = len(rawItem.visible_part.encode('utf-8'))
         vi.fullyInView = True
         return vi
 
@@ -559,14 +559,14 @@ class Panel(stc.StyledTextCtrl):
         self.visualItems = []
 
         for i in items:
-            i.visualItem = None
-            startCharInView = self.viewWindow.char_in_view(i.startCharOnLine)
-            endCharPos = i.startCharOnLine + len(i.visiblePart)
+            i.visual_item = None
+            startCharInView = self.viewWindow.char_in_view(i.start_char_on_line)
+            endCharPos = i.start_char_on_line + len(i.visible_part)
             endCharInView = self.viewWindow.char_in_view(endCharPos)
 
             if startCharInView or endCharInView:
-                i.visualItem = self.createVisualItem(i)
-                self.visualItems.append(i.visualItem)
+                i.visual_item = self.createVisualItem(i)
+                self.visualItems.append(i.visual_item)
 
     def extractVisibleSubLines(self):
         visibleSublines = []
@@ -591,13 +591,13 @@ class Panel(stc.StyledTextCtrl):
         sj = SmartJustifier(self.charsPerCol - 1)
 
         for item in items:
-            visiblePart = sj.justify(item.fileName) + u' '
+            visible_part = sj.justify(item.file_name) + u' '
             item.coords =(column, row)
-            item.startCharOnLine = len(self.fullTextLines[row])
+            item.start_char_on_line = len(self.fullTextLines[row])
             utf8Line = self.fullTextLines[row].encode('utf-8')
-            item.startByteOnLine = len(utf8Line)
-            item.visiblePart = visiblePart
-            self.fullTextLines[row] += visiblePart
+            item.start_byte_on_line = len(utf8Line)
+            item.visible_part = visible_part
+            self.fullTextLines[row] += visible_part
             row += 1
 
             if row > self.viewWindow.height - 1:
@@ -648,11 +648,11 @@ class Panel(stc.StyledTextCtrl):
         searchStrLower = searchStr.lower()
 
         for i in items:
-            if i.visualItem:
-                matchOffset = i.fileName.lower().find(searchStrLower)
+            if i.visual_item:
+                matchOffset = i.file_name.lower().find(searchStrLower)
 
                 if matchOffset != -1:
-                    endOfHighlight = i.visualItem.visLenInChars
+                    endOfHighlight = i.visual_item.visLenInChars
                     if matchOffset + len(searchStr) > endOfHighlight:
                         # TODO: this is a temporary hack to make the highlight
                         # always fit the visible part of an item. As we must
@@ -673,12 +673,12 @@ class Panel(stc.StyledTextCtrl):
 
     def moveItemIntoView(self, items, index):
         item = items[index]
-        startCharOnLine = item.startCharOnLine
-        endCharOnLine = startCharOnLine + len(item.visiblePart)
+        start_char_on_line = item.start_char_on_line
+        endCharOnLine = start_char_on_line + len(item.visible_part)
 
-        if startCharOnLine < self.viewWindow.left:
+        if start_char_on_line < self.viewWindow.left:
             # move view window left
-            self.viewWindow.left = startCharOnLine
+            self.viewWindow.left = start_char_on_line
         elif endCharOnLine > self.viewWindow.right():
             # move view window right
             self.viewWindow.left = endCharOnLine - self.viewWindow.width
@@ -692,8 +692,8 @@ class Panel(stc.StyledTextCtrl):
         self.SetCurrentPos(selectionStart)
         self.EnsureCaretVisible()
 
-        if item and item.visualItem:
-            numCharsToSelect = item.visualItem.visLenInBytes
+        if item and item.visual_item:
+            numCharsToSelect = item.visual_item.visLenInBytes
         else:
             numCharsToSelect = self.charsPerCol
 
@@ -720,16 +720,16 @@ class Panel(stc.StyledTextCtrl):
             # skipped N (=row) of them
             sumBytes = self.GetLineEndPosition(row) + 1
 
-        startByteOnLine = 0
+        start_byte_on_line = 0
 
-        if item.visualItem:
-            startByteOnLine = item.visualItem.startByteOnLine
+        if item.visual_item:
+            start_byte_on_line = item.visual_item.startByteOnLine
 
-        return sumBytes + startByteOnLine
+        return sumBytes + start_byte_on_line
 
     def applyDefaultStyles(self, rawItems):
         for index, item in enumerate(rawItems):
-            if item.visualItem:
+            if item.visual_item:
                 selStart = self.getItemStartByte(item)
 
                 # Note the 0x1f. It means I'm only affecting the style
@@ -737,7 +737,7 @@ class Panel(stc.StyledTextCtrl):
                 # the nasty green squiggle underline.
                 self.StartStyling(selStart, 0x1f)
 
-                itemNameLen = item.visualItem.visLenInBytes
+                itemNameLen = item.visual_item.visLenInBytes
                 self.SetStyling(itemNameLen, item.style)
 
 

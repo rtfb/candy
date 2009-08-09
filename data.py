@@ -56,12 +56,12 @@ def collect_list_info(is_flat_directory_view, cwd):
     for file_name, path in files:
         item = RawItem(file_name, path)
 
-        if os.path.isdir(item.fileName):
+        if os.path.isdir(item.file_name):
             item.style = STYLE_FOLDER
-            item.isDir = True
+            item.is_dir = True
 
-        if item.fileName.startswith(u'.'):
-            item.isHidden = True
+        if item.file_name.startswith(u'.'):
+            item.is_hidden = True
 
         items.append(item)
 
@@ -75,7 +75,7 @@ def collect_drive_letters():
     for d in drive_letters:
         item = RawItem(d, u'/')
         item.style = STYLE_FOLDER
-        item.isDir = True
+        item.is_dir = True
 
         items.append(item)
 
@@ -83,19 +83,19 @@ def collect_drive_letters():
 
 
 def construct_list_for_filling(full_list, special_filter):
-    dir_list = filter(lambda(f): f.isDir, full_list)
+    dir_list = filter(lambda(f): f.is_dir, full_list)
     dir_list.sort()
 
-    file_list = filter(lambda(f): not f.isDir, full_list)
+    file_list = filter(lambda(f): not f.is_dir, full_list)
     file_list.sort()
 
-    not_hidden = filter(lambda(f): not f.isHidden, dir_list + file_list)
+    not_hidden = filter(lambda(f): not f.is_hidden, dir_list + file_list)
 
     dot_dot = RawItem(u'..', u'.')
     dot_dot.style = STYLE_FOLDER
-    dot_dot.isDir = True
-    dot_dot.isHidden = False
-    dot_dot.visiblePartLength = len(dot_dot.fileName)
+    dot_dot.is_dir = True
+    dot_dot.is_hidden = False
+    dot_dot.visiblePartLength = len(dot_dot.file_name)
     not_hidden.insert(0, dot_dot)
 
     if special_filter is not None:
@@ -109,39 +109,39 @@ class DirectoryViewFilter(object):
         self.search_str = search_str.lower()
 
     def __call__(self, item):
-        return self.search_str in item.fileName.lower()
+        return self.search_str in item.file_name.lower()
 
 
 class RawItem(object):
     """
     An item to hold the representation close to the one outside of the program.
-    E.g. if the external item is a filename, this one will hold things like
-    filename, path, attributes, etc. Number of these objects is the number of
+    E.g. if the external item is a file_name, this one will hold things like
+    file_name, path, attributes, etc. Number of these objects is the number of
     the real objects external to our app, e.g. len (os.listdir ()).
     """
     def __init__(self, file_name, path):
-        self.fileName = file_name
+        self.file_name = file_name
         self.path = path
         self.style = stc.STC_STYLE_DEFAULT
-        self.isDir = False
-        self.isHidden = False
-        self.visualItem = None
-        self.visiblePart = ''
+        self.is_dir = False
+        self.is_hidden = False
+        self.visual_item = None
+        self.visible_part = ''
 
         # All of the below are relative to fullTextLines (i.e. are absolute
         # coords/counts)
         self.coords = (0, 0)
-        self.startCharOnLine = 0
-        self.startByteOnLine = 0
+        self.start_char_on_line = 0
+        self.start_byte_on_line = 0
 
     def __eq__(self, file_name):
-        return self.fileName == file_name
+        return self.file_name == file_name
 
     def __lt__(self, other):
-        return self.fileName < other.fileName
+        return self.file_name < other.file_name
 
     def __str__(self):
-        return self.fileName
+        return self.file_name
 
 
 class PanelModel(object):
@@ -227,7 +227,7 @@ class PanelModel(object):
         search_str_lower = search_str.lower()
 
         for i in search_range:
-            if search_str_lower in self.items[i].fileName.lower():
+            if search_str_lower in self.items[i].file_name.lower():
                 return i
 
         return init_pos
