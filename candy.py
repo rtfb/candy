@@ -345,6 +345,7 @@ class PanelController(object):
         item = self.getSelection()
         if not item.visualItem or not item.visualItem.fullyInView:
             self.view.moveItemIntoView(self.model.items, self.selectedItem)
+            self.view.highlightSearchMatches(self.model.items, self.searchStr)
 
         self.view.setSelectionOnItem(item)
 
@@ -416,6 +417,7 @@ class PanelController(object):
     def refresh(self):
         backup = self.selectedItem
         self.changeDir(self.model.workingDir)
+        self.view.highlightSearchMatches(self.model.items, self.searchStr)
         self.selectedItem = backup
 
     def getSelection(self):
