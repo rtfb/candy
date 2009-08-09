@@ -191,8 +191,8 @@ class PanelController(object):
         self.selectedItem = 0
         self.view.numFullColumns = 0
 
-    def initializeViewSettings(self, numColumns=3):
-        self.view.initializeViewSettings(self.model.items, numColumns)
+    def initializeViewSettings(self, num_columns=3):
+        self.view.initializeViewSettings(self.model.items, num_columns)
         self.view.highlightSearchMatches(self.model.items, self.searchStr)
         self.setSelectionOnCurrItem()
 
@@ -223,7 +223,7 @@ class PanelController(object):
             statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
                          % (os.getcwdu(), self.numItems() - 1,
                             item.file_name, item.path)
-            self.view.getFrame().statusBar.SetStatusText(statusText)
+            self.view.getFrame().status_bar.SetStatusText(statusText)
 
     def OnKeyDown(self, evt):
         keyCode = evt.GetKeyCode()
@@ -334,9 +334,9 @@ class PanelController(object):
 
     def onStartIncSearch(self):
         self.searchStr = ''
-        self.view.getFrame().statusLine.SetText(u'/')
-        self.view.getFrame().statusLine.GotoPos(1)
-        self.view.getFrame().statusLine.SetFocus()
+        self.view.getFrame().status_line.SetText(u'/')
+        self.view.getFrame().status_line.GotoPos(1)
+        self.view.getFrame().status_line.SetFocus()
 
     def setSelectionOnCurrItem(self):
         if self.numItems() <= 0:
@@ -431,7 +431,7 @@ class PanelController(object):
         wnd.Show(True)
 
     def switchPane(self):
-        self.view.getFrame().switchPane()
+        self.view.getFrame().switch_pane()
         self.afterDirChange(None)
 
     def switchSplittingMode(self):
@@ -497,7 +497,7 @@ class Panel(stc.StyledTextCtrl):
         self.SetSelBackground(1, color_scheme['selection-inactive'])
         self.SetSelForeground(1, color_scheme['selection-fore'])
 
-    def initializeViewSettings(self, items, numColumns):
+    def initializeViewSettings(self, items, num_columns):
         width, height = self.GetClientSizeTuple()
         lineHeight = self.TextHeight(0)
         charWidth = self.TextWidth(stc.STC_STYLE_DEFAULT, 'a')
@@ -506,7 +506,7 @@ class Panel(stc.StyledTextCtrl):
         # it will be brought back to life when doing moveItemIntoView:
         self.viewWindow = ViewWindow(width / charWidth,
                                      height / lineHeight)
-        self.viewWindow.num_columns = numColumns
+        self.viewWindow.num_columns = num_columns
         self.charsPerCol = width / charWidth / self.viewWindow.num_columns
         self.clearScreen()
         self.updateDisplayByItems(items)
@@ -633,7 +633,7 @@ class Panel(stc.StyledTextCtrl):
         self.SetReadOnly(True)
 
     def switchSplittingMode(self):
-        self.getFrame().switchSplittingMode()
+        self.getFrame().switch_splitting_mode()
 
     def onSetFocus(self):
         self.SetSelBackground(1, color_scheme['selection-back'])
@@ -749,107 +749,108 @@ class Candy(wx.Frame):
                                           style=wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize(50)
 
-        displaySize = wx.DisplaySize()
-        appSize = (displaySize[0] / 2, displaySize[1] / 2)
-        self.SetSize(appSize)
+        display_size = wx.DisplaySize()
+        app_size = (display_size[0] / 2, display_size[1] / 2)
+        self.SetSize(app_size)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.splitter, 1, wx.EXPAND)
-        self.statusLine = StatusLine(self, ID_STATUS_LINE, appSize[0],
-                                     general_config, color_scheme)
+        self.status_line = StatusLine(self, ID_STATUS_LINE, app_size[0],
+                                      general_config, color_scheme)
         self.sizer.AddSpacer(2)
-        sizerFlags = wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND
-        self.sizer.Add(self.statusLine, 0, sizerFlags)
+        sizer_flags = wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND
+        self.sizer.Add(self.status_line, 0, sizer_flags)
         self.SetSizer(self.sizer)
 
         self.p1 = PanelController(self.splitter, 'm1.', 'c1.')
         self.p2 = PanelController(self.splitter, 'm2.', 'c2.')
         self.splitter.SplitVertically(self.p1.view, self.p2.view)
 
-        self.Bind(wx.EVT_SIZE, self.OnSize)
-        self.Bind(wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id=ID_SPLITTER)
-        self.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGED, self.OnSashPosChanged,
+        self.Bind(wx.EVT_SIZE, self.on_size)
+        self.Bind(wx.EVT_SPLITTER_DCLICK, self.on_double_click, id=ID_SPLITTER)
+        self.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGED, self.on_sash_pos_changed,
                   id=ID_SPLITTER)
 
-        self.statusBar = self.CreateStatusBar()
-        self.statusBar.SetStatusText(os.getcwdu())
+        self.status_bar = self.CreateStatusBar()
+        self.status_bar.SetStatusText(os.getcwdu())
         self.Center()
-        self.setActivePane(self.p1)
+        self.set_active_pane(self.p1)
 
-    def setActivePane(self, pane):
-        self.activePane = pane
+    def set_active_pane(self, pane):
+        self.active_pane = pane
         pane.view.SetFocus()
-        self.statusLine.set_message_prefix(pane.controllerSignature)
+        self.status_line.set_message_prefix(pane.controllerSignature)
 
-    def setUpAndShow(self):
+    def setup_and_show(self):
         self.p2.initializeAndShowInitialView()
         self.p1.initializeAndShowInitialView()
-        self.setActivePane(self.p1)
+        self.set_active_pane(self.p1)
 
+    # XXX: is it ever used?
     def OnExit(self, e):
         self.Close(True)
 
-    def updatePanesOnSize(self):
-        numColumns = 3
+    def update_panes_on_size(self):
+        num_columns = 3
 
         if self.splitter.GetSplitMode() == wx.SPLIT_HORIZONTAL:
-            numColumns = 5
+            num_columns = 5
 
-        self.p1.initializeViewSettings(numColumns)
-        self.p2.initializeViewSettings(numColumns)
+        self.p1.initializeViewSettings(num_columns)
+        self.p2.initializeViewSettings(num_columns)
 
-    def splitEqual(self):
+    def split_equal(self):
         size = self.GetSize()
 
-        splitMode = self.splitter.GetSplitMode()
-        sashDimension = size.x
+        split_mode = self.splitter.GetSplitMode()
+        sash_dimension = size.x
 
-        if splitMode == wx.SPLIT_HORIZONTAL:
-            sashDimension = size.y
+        if split_mode == wx.SPLIT_HORIZONTAL:
+            sash_dimension = size.y
 
         # compensate for the five pixels of sash itself (dammit!)
-        sashDimension -= 5
-        self.splitter.SetSashPosition(sashDimension / 2)
-        self.updatePanesOnSize()
+        sash_dimension -= 5
+        self.splitter.SetSashPosition(sash_dimension / 2)
+        self.update_panes_on_size()
 
-    def OnSize(self, event):
-        self.splitEqual()
+    def on_size(self, event):
+        self.split_equal()
         event.Skip()
 
-    def OnDoubleClick(self, event):
-        self.splitEqual()
+    def on_double_click(self, event):
+        self.split_equal()
 
-    def OnSashPosChanged(self, event):
+    def on_sash_pos_changed(self, event):
         self.splitter.UpdateSize()
-        self.updatePanesOnSize()
+        self.update_panes_on_size()
         event.Skip()
 
-    def switchPane(self):
-        if self.activePane == self.p1:
-            self.setActivePane(self.p2)
+    def switch_pane(self):
+        if self.active_pane == self.p1:
+            self.set_active_pane(self.p2)
         else:
-            self.setActivePane(self.p1)
+            self.set_active_pane(self.p1)
 
-    def switchSplittingMode(self):
-        currSplitMode = self.splitter.GetSplitMode()
-        newSplitMode = wx.SPLIT_VERTICAL
-        numColumns = 3
+    def switch_splitting_mode(self):
+        curr_split_mode = self.splitter.GetSplitMode()
+        new_split_mode = wx.SPLIT_VERTICAL
+        num_columns = 3
 
-        if currSplitMode == wx.SPLIT_VERTICAL:
-            newSplitMode = wx.SPLIT_HORIZONTAL
-            numColumns = 5
+        if curr_split_mode == wx.SPLIT_VERTICAL:
+            new_split_mode = wx.SPLIT_HORIZONTAL
+            num_columns = 5
 
-        self.splitter.SetSplitMode(newSplitMode)
-        self.splitEqual()
-        self.p1.initializeViewSettings(numColumns)
-        self.p2.initializeViewSettings(numColumns)
+        self.splitter.SetSplitMode(new_split_mode)
+        self.split_equal()
+        self.p1.initializeViewSettings(num_columns)
+        self.p2.initializeViewSettings(num_columns)
 
 
 def main():
     app = wx.App(0)
     candy = Candy(None, -1, 'Candy')
     candy.Show()
-    candy.setUpAndShow()
+    candy.setup_and_show()
     app.MainLoop()
 
 

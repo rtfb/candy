@@ -130,7 +130,7 @@ class TestCandy(unittest.TestCase):
         self.frame.Show(False)
 
         # Now when dimensions are known, let's proceed initializing
-        self.frame.setUpAndShow()
+        self.frame.setup_and_show()
 
         # Speed up the tests by not executing updateView()
         self.frame.p1.updateView = lambda: None
@@ -146,7 +146,7 @@ class TestCandy(unittest.TestCase):
         self.assertEqual((size.x - 5) / 2, sashPos)
 
     def testInitialSelection(self):
-        self.assertEqual(self.frame.activePane.selectedItem, 0)
+        self.assertEqual(self.frame.active_pane.selectedItem, 0)
 
     def testItemListIsEmpty(self):
         self.frame.p1.clearList()
@@ -256,7 +256,7 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         data.list_files = util.fake_file_lister2
 
         # Now when dimensions are known, let's proceed initializing
-        self.frame.setUpAndShow()
+        self.frame.setup_and_show()
 
         # Speed up the tests by not executing updateView()
         self.frame.p1.updateView = lambda: None
