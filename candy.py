@@ -136,7 +136,7 @@ class RawItem(object):
 
 
 # Obviously excludes subdirectories
-def recursiveListDir(cwd):
+def recursive_list_dir(cwd):
     allFiles = []
 
     for root, dirs, files in os.walk(cwd):
@@ -145,20 +145,20 @@ def recursiveListDir(cwd):
     return allFiles
 
 
-def listFiles(isFlatDirectoryView, cwd):
+def list_files(isFlatDirectoryView, cwd):
     files = []
 
     if isFlatDirectoryView:
-        files = recursiveListDir(cwd)
+        files = recursive_list_dir(cwd)
     else:
         files = util.list_of_tuples(os.listdir(cwd), cwd)
 
     return files
 
 
-def collectListInfo(isFlatDirectoryView, cwd):
+def collect_list_info(isFlatDirectoryView, cwd):
     items = []
-    files = listFiles(isFlatDirectoryView, cwd)
+    files = list_files(isFlatDirectoryView, cwd)
 
     for fileName, path in files:
         item = RawItem(fileName, path)
@@ -175,7 +175,7 @@ def collectListInfo(isFlatDirectoryView, cwd):
     return items
 
 
-def collectDriveLetters():
+def collect_drive_letters():
     items = []
     driveLetters = win32api.GetLogicalDriveStrings().split('\x00')[:-1]
 
@@ -189,7 +189,7 @@ def collectDriveLetters():
     return items
 
 
-def constructListForFilling(fullList, specialFilter):
+def construct_list_for_filling(fullList, specialFilter):
     dirList = filter(lambda(f): f.isDir, fullList)
     dirList.sort()
 
@@ -383,15 +383,15 @@ class PanelModel(object):
             return 0
 
     def fillListByWorkingDir(self, cwd):
-        allItems = collectListInfo(self.flatDirectoryView, cwd)
+        allItems = collect_list_info(self.flatDirectoryView, cwd)
         self.changeWorkingDir(cwd)
-        list = constructListForFilling(allItems, self.directoryViewFilter)
+        list = construct_list_for_filling(allItems, self.directoryViewFilter)
         self.setItems(list)
 
     def updir(self):
         if platform.system() == 'Windows':
             if util.is_root_of_drive(self.workingDir):
-                self.setItems(collectDriveLetters())
+                self.setItems(collect_drive_letters())
                 return 0
 
         self.setDirFilter(u'')
@@ -525,7 +525,7 @@ class PanelController(object):
             return
 
         self.selectedItem = 0
-        self.model.setItems(collectDriveLetters())
+        self.model.setItems(collect_drive_letters())
 
     def flattenDirectory(self):
         self.model.flattenDirectory()

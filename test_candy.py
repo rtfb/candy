@@ -71,7 +71,7 @@ def failingFileLister(isFlatDirectoryView, cwd):
     raise RuntimeError('blerk')
 
 
-candy.listFiles = fakeFileLister
+candy.list_files = fakeFileLister
 
 
 class TestFileLister(unittest.TestCase):
@@ -82,18 +82,18 @@ class TestFileLister(unittest.TestCase):
         pass
 
     def testNoItemsGetLost(self):
-        ret = candy.collectListInfo(False, u'.')
+        ret = candy.collect_list_info(False, u'.')
         self.assertEquals(len(ret), len(fakeFileLister(False, u'.')))
 
     def testItemName(self):
-        ret = candy.collectListInfo(False, u'.')
+        ret = candy.collect_list_info(False, u'.')
         self.assertEquals(ret[0].fileName, u'..')
 
 
 class TestListFiltering(unittest.TestCase):
     def setUp(self):
-        allItems = candy.collectListInfo(False, u'.')
-        self.list = candy.constructListForFilling(allItems, None)
+        allItems = candy.collect_list_info(False, u'.')
+        self.list = candy.construct_list_for_filling(allItems, None)
 
     def tearDown(self):
         pass
@@ -294,7 +294,7 @@ class TestCandy(unittest.TestCase):
         panel.setSelectionOnCurrItem = temp
 
     def testRefreshReadsDisk(self):
-        candy.listFiles = failingFileLister
+        candy.list_files = failingFileLister
 
         try:
             self.frame.p1.refresh()
@@ -302,7 +302,7 @@ class TestCandy(unittest.TestCase):
         except RuntimeError as e:
             self.assertEquals(str(e), 'blerk')
 
-        candy.listFiles = fakeFileLister
+        candy.list_files = fakeFileLister
 
     def testGetSelection(self):
         self.assertEquals(self.frame.p1.getSelection().fileName, '..')
@@ -326,7 +326,7 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         self.frame.Show(True)
         self.frame.Show(False)
 
-        candy.listFiles = fakeFileLister2
+        candy.list_files = fakeFileLister2
 
         # Now when dimensions are known, let's proceed initializing
         self.frame.setUpAndShow()
@@ -336,7 +336,7 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         self.frame.p2.updateView = lambda: None
 
     def tearDown(self):
-        candy.listFiles = fakeFileLister
+        candy.list_files = fakeFileLister
         self.frame.Destroy()
 
     def testMoveRightOnSingleColumnMovesDown(self):
