@@ -95,36 +95,37 @@ class VisualItem(object):
 class SmartJustifier(object):
     def __init__(self, width):
         self.width = width
-        self.numDots = 3
+        self.num_dots = 3
 
     def justify(self, text):
         if len(text) <= self.width:
             return text.ljust(self.width)
 
         root, ext = os.path.splitext(text)
-        newWidth = self.width - self.numDots
+        new_width = self.width - self.num_dots
 
         if ext and ext != u'':
-            newWidth -= len(ext)
+            new_width -= len(ext)
 
-        if newWidth <= 5:       # 5 = len('a...b')
-            halfWidthCeil = 1
-            halfWidthFloor = 1
-            extTop = self.width - halfWidthCeil - halfWidthFloor - self.numDots
+        if new_width <= 5:       # 5 = len('a...b')
+            half_width_ceil = 1
+            half_width_floor = 1
+            ext_top = (self.width - half_width_ceil - half_width_floor -
+                       self.num_dots)
         else:
-            halfWidthCeil = util.int_div_ceil(newWidth, 2)
-            halfWidthFloor = util.int_div_floor(newWidth, 2)
-            extTop = len(ext)
+            half_width_ceil = util.int_div_ceil(new_width, 2)
+            half_width_floor = util.int_div_floor(new_width, 2)
+            ext_top = len(ext)
 
-        if extTop > len(ext):
-            halfWidthCeil += extTop - len(ext)
+        if ext_top > len(ext):
+            half_width_ceil += ext_top - len(ext)
 
-        dots = u'.' * self.numDots
-        leftPart = root[:halfWidthCeil]
-        rightPart = root[-halfWidthFloor:]
-        newText = leftPart + dots + rightPart + ext[:extTop]
+        dots = u'.' * self.num_dots
+        left_part = root[:half_width_ceil]
+        right_part = root[-half_width_floor:]
+        new_text = left_part + dots + right_part + ext[:ext_top]
 
-        return newText
+        return new_text
 
 
 # The width/height/left/right are in characters
@@ -140,14 +141,14 @@ class ViewWindow(object):
         self.left = 0
 
         # Number of columns of items across all the width of the pane
-        self.numColumns = 0
+        self.num_columns = 0
 
     def right(self):
         return self.left + self.width
 
     # only handles horizontal dimension
-    def char_in_view(self, charPos):
-        return charPos >= self.left and charPos < self.right()
+    def char_in_view(self, char_pos):
+        return char_pos >= self.left and char_pos < self.right()
 
 
 class PanelController(object):
@@ -504,8 +505,8 @@ class Panel(stc.StyledTextCtrl):
         # it will be brought back to life when doing moveItemIntoView:
         self.viewWindow = ViewWindow(width / charWidth,
                                      height / lineHeight)
-        self.viewWindow.numColumns = numColumns
-        self.charsPerCol = width / charWidth / self.viewWindow.numColumns
+        self.viewWindow.num_columns = numColumns
+        self.charsPerCol = width / charWidth / self.viewWindow.num_columns
         self.clearScreen()
         self.updateDisplayByItems(items)
 
