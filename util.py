@@ -20,7 +20,7 @@
 
 import math
 
-def resolveColorNameOrReturn(name):
+def resolve_color_name_or_return(name):
     # http://html-color-codes.com/
     dict = {
         'black':  '#000000',
@@ -38,7 +38,7 @@ def resolveColorNameOrReturn(name):
     return name
 
 
-def readConfig(fileName):
+def read_config(fileName):
     lines = open(fileName).readlines()
     dict = {}
 
@@ -47,13 +47,13 @@ def readConfig(fileName):
             continue
 
         name, value = l.split(':')
-        val = resolveColorNameOrReturn(value.strip())
+        val = resolve_color_name_or_return(value.strip())
         dict.setdefault(name.strip(), val)
 
     return dict
 
 
-def resolveCommandByFileExt(ext):
+def resolve_command_by_file_ext(ext):
     extDict = {
         'wmv':  'mplayer',
         'mpeg': 'mplayer',
@@ -81,7 +81,7 @@ def resolveCommandByFileExt(ext):
         return None
 
 
-def listOfTuples(list, secondItem):
+def list_of_tuples(list, secondItem):
     tuples = []
 
     for i in list:
@@ -90,22 +90,22 @@ def listOfTuples(list, secondItem):
     return tuples
 
 
-def isRootOfDrive(path):
+def is_root_of_drive(path):
     letters = [chr(n) for n in range(ord(u'a'), ord(u'z') + 1)]
     return len(path) == 3 \
            and path.lower()[0] in letters \
            and path[1:] == u':\\'
 
 
-def intDivCeil(a, b):
+def int_div_ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def intDivFloor(a, b):
+def int_div_floor(a, b):
     return int(math.floor(float(a) / b))
 
 
-def wrappedRange(start, length):
+def wrapped_range(start, length):
     # Construct a range of indices to produce wrapped search from
     # given position
     return range(start, length) + range(start)

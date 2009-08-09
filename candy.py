@@ -51,9 +51,9 @@ ID_STATUS_LINE = 101
 
 projectDir = os.path.dirname(__file__)
 generalConfPath = os.path.join(projectDir, u'general.conf')
-generalConfig = util.readConfig(generalConfPath)
+generalConfig = util.read_config(generalConfPath)
 colorConf = os.path.join(projectDir, u'colorscheme-default.conf')
-colorScheme = util.readConfig(colorConf)
+colorScheme = util.read_config(colorConf)
 
 
 class DirectoryViewFilter(object):
@@ -140,7 +140,7 @@ def recursiveListDir(cwd):
     allFiles = []
 
     for root, dirs, files in os.walk(cwd):
-        allFiles.extend(util.listOfTuples(files, root))
+        allFiles.extend(util.list_of_tuples(files, root))
 
     return allFiles
 
@@ -151,7 +151,7 @@ def listFiles(isFlatDirectoryView, cwd):
     if isFlatDirectoryView:
         files = recursiveListDir(cwd)
     else:
-        files = util.listOfTuples(os.listdir(cwd), cwd)
+        files = util.list_of_tuples(os.listdir(cwd), cwd)
 
     return files
 
@@ -231,8 +231,8 @@ class SmartJustifier(object):
             halfWidthFloor = 1
             extTop = self.width - halfWidthCeil - halfWidthFloor - self.numDots
         else:
-            halfWidthCeil = util.intDivCeil(newWidth, 2)
-            halfWidthFloor = util.intDivFloor(newWidth, 2)
+            halfWidthCeil = util.int_div_ceil(newWidth, 2)
+            halfWidthFloor = util.int_div_floor(newWidth, 2)
             extTop = len(ext)
 
         if extTop > len(ext):
@@ -390,7 +390,7 @@ class PanelModel(object):
 
     def updir(self):
         if platform.system() == 'Windows':
-            if util.isRootOfDrive(self.workingDir):
+            if util.is_root_of_drive(self.workingDir):
                 self.setItems(collectDriveLetters())
                 return 0
 
@@ -411,7 +411,7 @@ class PanelModel(object):
         if initPos >= len(self.items):
             initPos = 0
 
-        searchRange = util.wrappedRange(initPos, len(self.items))
+        searchRange = util.wrapped_range(initPos, len(self.items))
         searchStrLower = searchStr.lower()
 
         for i in searchRange:
@@ -584,7 +584,7 @@ class PanelController(object):
                 self.downdir(selection.fileName)
         else:
             base, ext = os.path.splitext(selection.fileName)
-            commandLine = util.resolveCommandByFileExt(ext[1:].lower())
+            commandLine = util.resolve_command_by_file_ext(ext[1:].lower())
 
             if commandLine:
                 subprocess.call([commandLine, selection.fileName])

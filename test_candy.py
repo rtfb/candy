@@ -44,7 +44,7 @@ def fakeFileLister(isFlatDirectoryView, cwd):
     for i in range(5):
         hidden.append('.hid' + str(i))
 
-    return util.listOfTuples(dirs + files + hidden, '.')
+    return util.list_of_tuples(dirs + files + hidden, '.')
 
 
 # This one produces only few items to test the case with a single column
@@ -64,7 +64,7 @@ def fakeFileLister2(isFlatDirectoryView, cwd):
     for i in range(1):
         hidden.append('.hid' + str(i))
 
-    return util.listOfTuples(dirs + files + hidden, '.')
+    return util.list_of_tuples(dirs + files + hidden, '.')
 
 
 def failingFileLister(isFlatDirectoryView, cwd):
