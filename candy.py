@@ -41,6 +41,7 @@ if platform.system() == 'Windows':
 
 import keyboard
 import util
+from status_line import StatusLine
 
 
 STYLE_FOLDER = 1
@@ -267,69 +268,6 @@ class ViewWindow(object):
     # only handles horizontal dimension
     def char_in_view(self, charPos):
         return charPos >= self.left and charPos < self.right()
-
-
-class StatusLine(stc.StyledTextCtrl):
-    def __init__(self, parent, id, width):
-        stc.StyledTextCtrl.__init__(self, parent, id, size=(width, 20))
-        self.messagePrefix = ''
-        self.SetMarginWidth(1, 0)
-        self.SetUseHorizontalScrollBar(0)
-
-        faceCourier = generalConfig['font-face'] # 'Courier'
-        pb = int(generalConfig['font-size']) # 12
-
-        # Set the styles according to color scheme
-        styleSpec = 'size:%d,face:%s,back:%s,fore:%s' \
-                    % (pb, faceCourier, colorScheme['background'],
-                       colorScheme['default-text'])
-        self.StyleSetSpec(stc.STC_STYLE_DEFAULT, styleSpec)
-        self.StyleClearAll()
-
-        self.Bind(stc.EVT_STC_MODIFIED, self.on_status_line_change)
-        self.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
-
-    def on_key_down(self, evt):
-        keyCode = evt.GetKeyCode()
-        keyMod = evt.GetModifiers()
-
-        if not self.process_key_event(keyCode, keyMod):
-            evt.Skip()
-
-    def process_key_event(self, keyCode, keyMod):
-        message = self.messagePrefix
-
-        if keyCode == wx.WXK_RETURN:
-            if keyMod == wx.MOD_CONTROL:
-                message += 'CONTROL '
-            message += 'ENTER'
-        elif keyCode == wx.WXK_ESCAPE:
-            message += 'ESCAPE'
-        elif keyCode == wx.WXK_BACK:
-            text = self.GetText()
-            if text and text == u'/':
-                message += 'ESCAPE'
-
-        if message != self.messagePrefix:
-            text = self.GetText()
-            self.ClearAll()
-            pubsub.Publisher().sendMessage(message, text[1:])
-            return True
-
-        return False
-
-    def on_status_line_change(self, evt):
-        type = evt.GetModificationType()
-
-        if stc.STC_MOD_BEFOREINSERT & type != 0 \
-           or stc.STC_MOD_BEFOREDELETE & type != 0:
-            return
-
-        message = self.messagePrefix + 'NEW STATUS LINE TEXT'
-        text = self.GetText()
-
-        if text != '':
-            pubsub.Publisher().sendMessage(message, text[1:])
 
 
 class PanelModel(object):
@@ -1023,7 +961,8 @@ class Candy(wx.Frame):
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.splitter, 1, wx.EXPAND)
-        self.statusLine = StatusLine(self, ID_STATUS_LINE, appSize[0])
+        self.statusLine = StatusLine(self, ID_STATUS_LINE, appSize[0],
+                                     generalConfig, colorScheme)
         self.sizer.AddSpacer(2)
         sizerFlags = wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND
         self.sizer.Add(self.statusLine, 0, sizerFlags)
