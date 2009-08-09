@@ -25,7 +25,6 @@ import os
 import time
 import sys
 import pdb
-import math
 import platform
 import subprocess
 
@@ -41,6 +40,7 @@ if platform.system() == 'Windows':
         print 'Tisk tisk tisk...'
 
 import keyboard
+import util
 
 
 STYLE_FOLDER = 1
@@ -49,45 +49,11 @@ STYLE_INC_SEARCH = 2
 ID_SPLITTER = 100
 ID_STATUS_LINE = 101
 
-
-def resolveColorNameOrReturn(name):
-    # http://html-color-codes.com/
-    dict = {
-        'black':  '#000000',
-        'white':  '#ffffff',
-        'yellow': '#ffff00',
-        'blue':   '#0000ff',
-        'red':    '#ff0000',
-        'lgrey':  '#cccccc',
-        'grey':   '#999999',
-        }
-
-    if name in dict.keys():
-        return dict[name]
-
-    return name
-
-
-def readConfig(fileName):
-    lines = open(fileName).readlines()
-    dict = {}
-
-    for l in lines:
-        if l.strip() == '':
-            continue
-
-        name, value = l.split(':')
-        val = resolveColorNameOrReturn(value.strip())
-        dict.setdefault(name.strip(), val)
-
-    return dict
-
-
 projectDir = os.path.dirname(__file__)
 generalConfPath = os.path.join(projectDir, u'general.conf')
-generalConfig = readConfig(generalConfPath)
+generalConfig = util.readConfig(generalConfPath)
 colorConf = os.path.join(projectDir, u'colorscheme-default.conf')
-colorScheme = readConfig(colorConf)
+colorScheme = util.readConfig(colorConf)
 
 
 class DirectoryViewFilter(object):
@@ -169,49 +135,12 @@ class RawItem(object):
         return self.fileName
 
 
-def resolveCommandByFileExt(ext):
-    extDict = {
-        'wmv':  'mplayer',
-        'mpeg': 'mplayer',
-        'mpg':  'mplayer',
-        'avi':  'mplayer',
-        'asf':  'mplayer',
-        'pdf':  'evince',
-        'ps':   'evince',
-        'jpg':  'gqview',
-        'jpeg': 'gqview',
-        'png':  'gqview',
-        'bmp':  'gqview',
-        'xpm':  'gqview',
-        'gif':  'gqview',
-        # TODO: handle archives as folders
-        'rar':  'file-roller',
-        'zip':  'file-roller',
-        'gz':   'file-roller',
-        'tar':  'file-roller',
-        'txt':  'gvim'}
-
-    try:
-        return extDict[ext]
-    except KeyError:
-        return None
-
-
-def listOfTuples(list, secondItem):
-    tuples = []
-
-    for i in list:
-        tuples.append((i, secondItem))
-
-    return tuples
-
-
 # Obviously excludes subdirectories
 def recursiveListDir(cwd):
     allFiles = []
 
     for root, dirs, files in os.walk(cwd):
-        allFiles.extend(listOfTuples(files, root))
+        allFiles.extend(util.listOfTuples(files, root))
 
     return allFiles
 
@@ -222,7 +151,7 @@ def listFiles(isFlatDirectoryView, cwd):
     if isFlatDirectoryView:
         files = recursiveListDir(cwd)
     else:
-        files = listOfTuples(os.listdir(cwd), cwd)
+        files = util.listOfTuples(os.listdir(cwd), cwd)
 
     return files
 
@@ -260,13 +189,6 @@ def collectDriveLetters():
     return items
 
 
-def isRootOfDrive(path):
-    letters = [chr(n) for n in range(ord(u'a'), ord(u'z') + 1)]
-    return len(path) == 3 \
-           and path.lower()[0] in letters \
-           and path[1:] == u':\\'
-
-
 def constructListForFilling(fullList, specialFilter):
     dirList = filter(lambda(f): f.isDir, fullList)
     dirList.sort()
@@ -289,20 +211,6 @@ def constructListForFilling(fullList, specialFilter):
         return notHidden
 
 
-def intDivCeil(a, b):
-    return int(math.ceil(float(a) / b))
-
-
-def intDivFloor(a, b):
-    return int(math.floor(float(a) / b))
-
-
-def wrappedRange(start, length):
-    # Construct a range of indices to produce wrapped search from
-    # given position
-    return range(start, length) + range(start)
-
-
 class SmartJustifier(object):
     def __init__(self, width):
         self.width = width
@@ -323,8 +231,8 @@ class SmartJustifier(object):
             halfWidthFloor = 1
             extTop = self.width - halfWidthCeil - halfWidthFloor - self.numDots
         else:
-            halfWidthCeil = intDivCeil(newWidth, 2)
-            halfWidthFloor = intDivFloor(newWidth, 2)
+            halfWidthCeil = util.intDivCeil(newWidth, 2)
+            halfWidthFloor = util.intDivFloor(newWidth, 2)
             extTop = len(ext)
 
         if extTop > len(ext):
@@ -482,7 +390,7 @@ class PanelModel(object):
 
     def updir(self):
         if platform.system() == 'Windows':
-            if isRootOfDrive(self.workingDir):
+            if util.isRootOfDrive(self.workingDir):
                 self.setItems(collectDriveLetters())
                 return 0
 
@@ -503,7 +411,7 @@ class PanelModel(object):
         if initPos >= len(self.items):
             initPos = 0
 
-        searchRange = wrappedRange(initPos, len(self.items))
+        searchRange = util.wrappedRange(initPos, len(self.items))
         searchStrLower = searchStr.lower()
 
         for i in searchRange:
@@ -676,7 +584,7 @@ class PanelController(object):
                 self.downdir(selection.fileName)
         else:
             base, ext = os.path.splitext(selection.fileName)
-            commandLine = resolveCommandByFileExt(ext[1:].lower())
+            commandLine = util.resolveCommandByFileExt(ext[1:].lower())
 
             if commandLine:
                 subprocess.call([commandLine, selection.fileName])

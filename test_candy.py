@@ -25,6 +25,7 @@ import pdb
 import wx
 
 import candy
+import util
 
 
 def fakeFileLister(isFlatDirectoryView, cwd):
@@ -43,7 +44,7 @@ def fakeFileLister(isFlatDirectoryView, cwd):
     for i in range(5):
         hidden.append('.hid' + str(i))
 
-    return candy.listOfTuples(dirs + files + hidden, '.')
+    return util.listOfTuples(dirs + files + hidden, '.')
 
 
 # This one produces only few items to test the case with a single column
@@ -63,7 +64,7 @@ def fakeFileLister2(isFlatDirectoryView, cwd):
     for i in range(1):
         hidden.append('.hid' + str(i))
 
-    return candy.listOfTuples(dirs + files + hidden, '.')
+    return util.listOfTuples(dirs + files + hidden, '.')
 
 
 def failingFileLister(isFlatDirectoryView, cwd):
