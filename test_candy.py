@@ -197,15 +197,15 @@ class TestCandy(unittest.TestCase):
     def testItemStartChar(self):
         item = self.frame.p1.model.items[0]
         view = self.frame.p1.view
-        self.assertEquals(view.getItemStartByte(item), 0)
+        self.assertEquals(view._get_item_start_byte(item), 0)
 
         for index, item in enumerate(self.frame.p1.model.items):
             # 36 is a magic ViewWindow.width number here. Based on last
-            # evidence that works. Because of this magic, getItemStartByte
+            # evidence that works. Because of this magic, _get_item_start_byte
             # only works in this ASCII test case.
             column, row = item.coords
-            referenceValue = view.charsPerCol * column + 36 * row
-            self.assertEquals(view.getItemStartByte(item), referenceValue)
+            reference_value = view._chars_per_col * column + 36 * row
+            self.assertEquals(view._get_item_start_byte(item), reference_value)
 
     def testHandleKeyEventDoesNothingOnBadKey(self):
         panel = self.frame.p1
