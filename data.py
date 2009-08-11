@@ -72,8 +72,11 @@ def collect_drive_letters():
     items = []
     drive_letters = win32api.GetLogicalDriveStrings().split('\x00')[:-1]
 
-    for d in drive_letters:
-        item = RawItem(d, u'/')
+    if not drive_letters:
+        drive_letters = ['c:\\', 'd:\\']
+
+    for drive in drive_letters:
+        item = RawItem(drive, u'/')
         item.style = STYLE_FOLDER
         item.is_dir = True
 
