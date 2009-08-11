@@ -152,158 +152,158 @@ class ViewWindow(object):
 
 
 class PanelController(object):
-    def __init__(self, parent, modelSignature, controllerSignature):
+    def __init__(self, parent, modelSignature, controller_signature):
         self.model = data.PanelModel(modelSignature)
-        self.controllerSignature = controllerSignature
+        self.controller_signature = controller_signature
         self.view = Panel(parent)
-        self.bindEvents()
+        self._bind_events()
         signature = modelSignature + 'NEW ITEMS'
-        pubsub.Publisher().subscribe(self.afterDirChange, signature)
+        pubsub.Publisher().subscribe(self._after_dir_change, signature)
 
-        self.subscribe(self.searchCtrlEnter, 'CONTROL ENTER')
-        self.subscribe(self.searchEnter, 'ENTER')
-        self.subscribe(self.searchEscape, 'ESCAPE')
-        self.subscribe(self.searchNewStatusLineText, 'NEW STATUS LINE TEXT')
+        self._subscribe(self._search_ctrl_enter, 'CONTROL ENTER')
+        self._subscribe(self._search_enter, 'ENTER')
+        self._subscribe(self._search_escape, 'ESCAPE')
+        self._subscribe(self._search_new_status_line_text, 'NEW STATUS LINE TEXT')
 
         # String being searched incrementally
-        self.searchStr = ''
+        self.search_str = ''
 
         # Index of an item that is an accepted search match. Needed to know
         # which next match should be focused upon go-to-next-match
-        self.searchMatchIndex = -1
+        self.search_match_index = -1
 
         # Index of an item that is currently selected
-        self.selectedItem = 0
+        self.selected_item = 0
 
         self.keys = keyboard.KeyboardConfig()
         self.keys.load(u'keys.conf', self)
 
-    def subscribe(self, func, signature):
-        msg = self.controllerSignature + signature
+    def _subscribe(self, func, signature):
+        msg = self.controller_signature + signature
         pubsub.Publisher().subscribe(func, msg)
 
-    def numItems(self):
+    def _num_items(self):
         return len(self.model.items)
 
     # Used in tests
-    def clearList(self):
+    def clear_list(self):
         self.model.set_items([])
-        self.selectedItem = 0
+        self.selected_item = 0
         self.view.num_full_columns = 0
 
-    def initializeViewSettings(self, num_columns=3):
+    def initialize_view_settings(self, num_columns=3):
         self.view.initialize_view_settings(self.model.items, num_columns)
-        self.view.highlight_search_matches(self.model.items, self.searchStr)
-        self.setSelectionOnCurrItem()
+        self.view.highlight_search_matches(self.model.items, self.search_str)
+        self._set_selection_on_curr_item()
 
-    def initializeAndShowInitialView(self):
-        self.initializeViewSettings()
-        self.goHome()
+    def initialize_and_show_initial_view(self):
+        self.initialize_view_settings()
+        self.go_home()
 
         # This one is needed here to get the initial focus:
         self.view.SetFocus()
 
-    def bindEvents(self):
-        self.view.Bind(wx.EVT_CHAR, self.OnChar)
-        self.view.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
-        self.view.Bind(wx.EVT_SET_FOCUS, self.OnSetFocus)
+    def _bind_events(self):
+        self.view.Bind(wx.EVT_CHAR, self._on_char)
+        self.view.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
+        self.view.Bind(wx.EVT_SET_FOCUS, self._on_set_focus)
 
-    def handleKeyEvent(self, keyCode, keyMod):
-        func = self.keys.getFunc(keyCode, keyMod)
+    def _handle_key_event(self, key_code, key_mod):
+        func = self.keys.getFunc(key_code, key_mod)
 
         if func:
             func()
-            self.setSelectionOnCurrItem()
+            self._set_selection_on_curr_item()
 
-    def displaySelectionInfo(self):
+    def _display_selection_info(self):
         # in the line below, I'm subtracting 1 from number of items because
         # of '..' pseudoitem
-        if self.numItems() > 0:
-            item = self.getSelection()
-            statusText = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
-                         % (os.getcwdu(), self.numItems() - 1,
-                            item.file_name, item.path)
-            self.view.get_frame().status_bar.SetStatusText(statusText)
+        if self._num_items() > 0:
+            item = self._get_selection()
+            status_text = u'[Folder view]: %s\t%d item(s) -- \'%s\' in %s' \
+                          % (os.getcwdu(), self._num_items() - 1,
+                             item.file_name, item.path)
+            self.view.get_frame().status_bar.SetStatusText(status_text)
 
-    def OnKeyDown(self, evt):
-        keyCode = evt.GetKeyCode()
-        keyMod = evt.GetModifiers()
-        self.handleKeyEvent(keyCode, keyMod)
+    def _on_key_down(self, evt):
+        key_code = evt.GetKeyCode()
+        key_mod = evt.GetModifiers()
+        self._handle_key_event(key_code, key_mod)
 
-    def OnChar(self, evt):
-        keyCode = evt.GetKeyCode()
-        self.handleKeyEvent(keyCode, None)
+    def _on_char(self, evt):
+        key_code = evt.GetKeyCode()
+        self._handle_key_event(key_code, None)
 
-    def OnSetFocus(self, evt):
+    def _on_set_focus(self, evt):
         self.view.on_set_focus()
         os.chdir(self.model.working_dir)
 
     def quiter(self):
         sys.exit(0)
 
-    def updateView(self):
+    def _update_view(self):
         self.view.update_display_by_items(self.model.items)
 
     def updir(self):
-        self.selectedItem = 0
-        self.clearScreen()
-        self.selectedItem = self.model.updir()
+        self.selected_item = 0
+        self.clear_screen()
+        self.selected_item = self.model.updir()
 
-    def listDriveLetters(self):
+    def list_drive_letters(self):
         if platform.system() != 'Windows':
             return
 
-        self.selectedItem = 0
+        self.selected_item = 0
         self.model.set_items(data.collect_drive_letters())
 
-    def flattenDirectory(self):
+    def flatten_directory(self):
         self.model.flatten_directory()
         self.model.fill_list_by_working_dir(self.model.working_dir)
 
-    def changeDir(self, fullPath, searchStr=u''):
-        self.model.set_dir_filter(searchStr)
+    def _change_dir(self, fullPath, search_str=u''):
+        self.model.set_dir_filter(search_str)
         os.chdir(fullPath)
-        self.clearScreen()
-        self.selectedItem = 0
+        self.clear_screen()
+        self.selected_item = 0
         self.model.fill_list_by_working_dir(fullPath)
 
-    def listSearchMatches(self, searchStr):
-        self.changeDir(self.model.working_dir, searchStr)
+    def _list_search_matches(self, search_str):
+        self._change_dir(self.model.working_dir, search_str)
 
     def downdir(self, dirName):
-        self.changeDir(os.path.join(self.model.working_dir, dirName))
+        self._change_dir(os.path.join(self.model.working_dir, dirName))
 
-    def goHome(self):
-        self.changeDir(os.path.expanduser(u'~'))
+    def go_home(self):
+        self._change_dir(os.path.expanduser(u'~'))
 
-    def afterDirChange(self, message):
-        self.updateView()
-        self.setSelectionOnCurrItem()
+    def _after_dir_change(self, message):
+        self._update_view()
+        self._set_selection_on_curr_item()
 
-    def searchCtrlEnter(self, msg):
+    def _search_ctrl_enter(self, msg):
         self.view.SetFocus()
-        self.listSearchMatches(self.searchStr)
+        self._list_search_matches(self.search_str)
 
-    def searchEnter(self, msg):
+    def _search_enter(self, msg):
         self.view.SetFocus()
         # Here we want to stop searching and set focus on first search match.
         # But if there was no match, we want to behave more like when we cancel
         # search. Except we've no matches to clear, since no match means
         # nothing was highlighted
-        if self.searchMatchIndex != -1:
-            self.selectedItem = self.searchMatchIndex
-            self.setSelectionOnCurrItem()
+        if self.search_match_index != -1:
+            self.selected_item = self.search_match_index
+            self._set_selection_on_curr_item()
 
-    def searchEscape(self, msg):
+    def _search_escape(self, msg):
         self.view.SetFocus()
         self.view.apply_default_styles(self.model.items)  # clean matches
 
-    def searchNewStatusLineText(self, msg):
-        self.searchStr = msg.data
-        self.searchMatchIndex = self.incrementalSearch(self.searchStr)
+    def _search_new_status_line_text(self, msg):
+        self.search_str = msg.data
+        self.search_match_index = self._incremental_search(self.search_str)
 
-    def onEnter(self):
-        selection = self.getSelection()
+    def on_enter(self):
+        selection = self._get_selection()
 
         if selection.is_dir:
             if selection.file_name == u'..':
@@ -312,129 +312,129 @@ class PanelController(object):
                 self.downdir(selection.file_name)
         else:
             base, ext = os.path.splitext(selection.file_name)
-            commandLine = util.resolve_command_by_file_ext(ext[1:].lower())
+            command_line = util.resolve_command_by_file_ext(ext[1:].lower())
 
-            if commandLine:
-                subprocess.call([commandLine, selection.file_name])
+            if command_line:
+                subprocess.call([command_line, selection.file_name])
 
-    def clearScreen(self):
+    def clear_screen(self):
         self.view.clear_screen()
 
-    def onNextMatch(self):
-        item = self.selectedItem + 1
-        self.searchMatchIndex = self.model.next_search_match(self.searchStr,
+    def on_next_match(self):
+        item = self.selected_item + 1
+        self.search_match_index = self.model.next_search_match(self.search_str,
                                                              item)
-        self.selectedItem = self.searchMatchIndex
+        self.selected_item = self.search_match_index
 
-    def incrementalSearch(self, searchStr):
-        matchIndex = self.model.next_search_match(searchStr, self.selectedItem)
-        self.view.move_item_into_view(self.model.items, matchIndex)
-        self.view.highlight_search_matches(self.model.items, searchStr)
-        return matchIndex
+    def _incremental_search(self, search_str):
+        match_index = self.model.next_search_match(search_str, self.selected_item)
+        self.view.move_item_into_view(self.model.items, match_index)
+        self.view.highlight_search_matches(self.model.items, search_str)
+        return match_index
 
-    def onStartIncSearch(self):
-        self.searchStr = ''
+    def on_start_inc_search(self):
+        self.search_str = ''
         self.view.get_frame().status_line.SetText(u'/')
         self.view.get_frame().status_line.GotoPos(1)
         self.view.get_frame().status_line.SetFocus()
 
-    def setSelectionOnCurrItem(self):
-        if self.numItems() <= 0:
+    def _set_selection_on_curr_item(self):
+        if self._num_items() <= 0:
             return
 
-        item = self.getSelection()
+        item = self._get_selection()
         if not item.visual_item or not item.visual_item.fully_in_view:
-            self.view.move_item_into_view(self.model.items, self.selectedItem)
-            self.view.highlight_search_matches(self.model.items, self.searchStr)
+            self.view.move_item_into_view(self.model.items, self.selected_item)
+            self.view.highlight_search_matches(self.model.items, self.search_str)
 
         self.view.set_selection_on_item(item)
-        self.displaySelectionInfo()
+        self._display_selection_info()
 
-    def moveSelectionDown(self):
-        self.selectedItem += 1
+    def move_selection_down(self):
+        self.selected_item += 1
 
-        if self.selectedItem >= self.numItems():
-            self.selectedItem = 0
+        if self.selected_item >= self._num_items():
+            self.selected_item = 0
 
-    def moveSelectionUp(self):
-        self.selectedItem -= 1
+    def move_selection_up(self):
+        self.selected_item -= 1
 
-        if self.selectedItem < 0:
-            self.selectedItem = self.numItems() - 1
+        if self.selected_item < 0:
+            self.selected_item = self._num_items() - 1
 
         # This can happen if self.model.items is empty
-        if self.selectedItem < 0:
-            self.selectedItem = 0
+        if self.selected_item < 0:
+            self.selected_item = 0
 
-    def moveSelectionLeft(self):
-        self.selectedItem -= self.view.view_window.height
+    def move_selection_left(self):
+        self.selected_item -= self.view.view_window.height
 
-        if self.numItems() == 0:
-            self.selectedItem = 0
+        if self._num_items() == 0:
+            self.selected_item = 0
             return
 
-        if self.selectedItem < 0:
+        if self.selected_item < 0:
             # undo the decrement and start calculating from scratch:
-            self.selectedItem += self.view.view_window.height
+            self.selected_item += self.view.view_window.height
 
             # Avoiding too long line here... but...
             # TODO: figure out how to deal with that long line without
             # splitting. It suggests some nasty coupling.
-            selItem = self.selectedItem
-            numItems = self.numItems()
-            selItem = self.view.update_selected_item_left(selItem, numItems)
-            self.selectedItem = selItem
+            selItem = self.selected_item
+            num_items = self._num_items()
+            selItem = self.view.update_selected_item_left(selItem, num_items)
+            self.selected_item = selItem
 
-        if self.selectedItem == -1:
-            self.selectedItem = self.numItems() - 1
+        if self.selected_item == -1:
+            self.selected_item = self._num_items() - 1
 
-    def moveSelectionRight(self):
-        self.selectedItem += self.view.view_window.height
+    def move_selection_right(self):
+        self.selected_item += self.view.view_window.height
 
-        if self.numItems() == 0:
-            self.selectedItem = 0
+        if self._num_items() == 0:
+            self.selected_item = 0
             return
 
-        if self.selectedItem > self.numItems():
-            self.selectedItem -= self.view.view_window.height
-            self.selectedItem %= self.view.view_window.height
-            self.selectedItem += 1
+        if self.selected_item > self._num_items():
+            self.selected_item -= self.view.view_window.height
+            self.selected_item %= self.view.view_window.height
+            self.selected_item += 1
 
-        if self.selectedItem == self.numItems():
-            self.selectedItem = 0
+        if self.selected_item == self._num_items():
+            self.selected_item = 0
 
-    def moveSelectionZero(self):
-        self.selectedItem = 0
+    def move_selection_zero(self):
+        self.selected_item = 0
 
-    def moveSelectionLast(self):
-        self.selectedItem = self.numItems() - 1
+    def move_selection_last(self):
+        self.selected_item = self._num_items() - 1
 
-        if self.selectedItem < 0:
-            self.selectedItem = 0
+        if self.selected_item < 0:
+            self.selected_item = 0
 
-    def startEditor(self):
-        subprocess.call([u'gvim', self.getSelection().file_name])
+    def start_editor(self):
+        subprocess.call([u'gvim', self._get_selection().file_name])
 
     def refresh(self):
-        backup = self.selectedItem
-        self.changeDir(self.model.working_dir)
-        self.view.highlight_search_matches(self.model.items, self.searchStr)
-        self.selectedItem = backup
+        backup = self.selected_item
+        self._change_dir(self.model.working_dir)
+        self.view.highlight_search_matches(self.model.items, self.search_str)
+        self.selected_item = backup
 
-    def getSelection(self):
-        return self.model.items[self.selectedItem]
+    def _get_selection(self):
+        return self.model.items[self.selected_item]
 
-    def startViewer(self):
+    def start_viewer(self):
         import viewr
-        file = self.getSelection().file_name
+        file = self._get_selection().file_name
         wnd = viewr.BuiltinViewerFrame(self.view, -1, file, file)
         wnd.Show(True)
 
-    def switchPane(self):
+    def switch_pane(self):
         self.view.get_frame().switch_pane()
-        self.afterDirChange(None)
+        self._after_dir_change(None)
 
-    def switchSplittingMode(self):
+    def switch_splitting_mode(self):
         self.view.switch_splitting_mode()
 
 
@@ -782,11 +782,11 @@ class Candy(wx.Frame):
     def set_active_pane(self, pane):
         self.active_pane = pane
         pane.view.SetFocus()
-        self.status_line.set_message_prefix(pane.controllerSignature)
+        self.status_line.set_message_prefix(pane.controller_signature)
 
     def setup_and_show(self):
-        self.p2.initializeAndShowInitialView()
-        self.p1.initializeAndShowInitialView()
+        self.p2.initialize_and_show_initial_view()
+        self.p1.initialize_and_show_initial_view()
         self.set_active_pane(self.p1)
 
     # XXX: is it ever used?
@@ -799,8 +799,8 @@ class Candy(wx.Frame):
         if self.splitter.GetSplitMode() == wx.SPLIT_HORIZONTAL:
             num_columns = 5
 
-        self.p1.initializeViewSettings(num_columns)
-        self.p2.initializeViewSettings(num_columns)
+        self.p1.initialize_view_settings(num_columns)
+        self.p2.initialize_view_settings(num_columns)
 
     def split_equal(self):
         size = self.GetSize()
@@ -845,8 +845,8 @@ class Candy(wx.Frame):
 
         self.splitter.SetSplitMode(new_split_mode)
         self.split_equal()
-        self.p1.initializeViewSettings(num_columns)
-        self.p2.initializeViewSettings(num_columns)
+        self.p1.initialize_view_settings(num_columns)
+        self.p2.initialize_view_settings(num_columns)
 
 
 def main():

@@ -132,9 +132,9 @@ class TestCandy(unittest.TestCase):
         # Now when dimensions are known, let's proceed initializing
         self.frame.setup_and_show()
 
-        # Speed up the tests by not executing updateView()
-        self.frame.p1.updateView = lambda: None
-        self.frame.p2.updateView = lambda: None
+        # Speed up the tests by not executing update_view()
+        self.frame.p1.update_view = lambda: None
+        self.frame.p2.update_view = lambda: None
 
     def tearDown(self):
         self.frame.Destroy()
@@ -146,27 +146,27 @@ class TestCandy(unittest.TestCase):
         self.assertEqual((size.x - 5) / 2, sashPos)
 
     def testInitialSelection(self):
-        self.assertEqual(self.frame.active_pane.selectedItem, 0)
+        self.assertEqual(self.frame.active_pane.selected_item, 0)
 
     def testItemListIsEmpty(self):
-        self.frame.p1.clearList()
-        self.frame.p2.clearList()
+        self.frame.p1.clear_list()
+        self.frame.p2.clear_list()
         self.assertEquals(len(self.frame.p1.model.items), 0)
         self.assertEquals(len(self.frame.p2.model.items), 0)
 
     def testSelectionDoesntGetAnywhereOnEmptyList(self):
         c1 = self.frame.p1
         c2 = self.frame.p2
-        c1.clearList()
-        c2.clearList()
-        c1.moveSelectionUp()
-        self.assertEquals(c1.selectedItem, 0)
-        c1.moveSelectionDown()
-        self.assertEquals(c1.selectedItem, 0)
-        c1.moveSelectionLeft()
-        self.assertEquals(c1.selectedItem, 0)
-        c1.moveSelectionRight()
-        self.assertEquals(c1.selectedItem, 0)
+        c1.clear_list()
+        c2.clear_list()
+        c1.move_selection_up()
+        self.assertEquals(c1.selected_item, 0)
+        c1.move_selection_down()
+        self.assertEquals(c1.selected_item, 0)
+        c1.move_selection_left()
+        self.assertEquals(c1.selected_item, 0)
+        c1.move_selection_right()
+        self.assertEquals(c1.selected_item, 0)
 
     def testItemStartCharIsZeroOnEmptyList(self):
         item = self.frame.p1.model.items[0]
@@ -176,11 +176,11 @@ class TestCandy(unittest.TestCase):
         self.assertTrue(len(self.frame.p1.model.items) > 0)
 
     def testSimpleIncSearch(self):
-        self.assertEquals(self.frame.p1.incrementalSearch('dir'), 1)
+        self.assertEquals(self.frame.p1._incremental_search('dir'), 1)
 
     def testNextSearchMatch(self):
         searchStr = 'file'
-        currPos = self.frame.p1.incrementalSearch(searchStr)
+        currPos = self.frame.p1._incremental_search(searchStr)
         match = self.frame.p1.model.next_search_match(searchStr, currPos + 1)
         self.assertEquals(match, currPos + 1)
 
@@ -209,16 +209,16 @@ class TestCandy(unittest.TestCase):
 
     def testHandleKeyEventDoesNothingOnBadKey(self):
         panel = self.frame.p1
-        temp = panel.setSelectionOnCurrItem
-        panel.setSelectionOnCurrItem = None
+        temp = panel._set_selection_on_curr_item
+        panel._set_selection_on_curr_item = None
 
         try:
             # XXX: there should not be such a code and mod combo:
-            panel.handleKeyEvent(0, 0)
+            panel._handle_key_event(0, 0)
         except TypeError as e:
             self.assertEquals(e.what(), "'NoneType' object is not callable")
 
-        panel.setSelectionOnCurrItem = temp
+        panel._set_selection_on_curr_item = temp
 
     def testRefreshReadsDisk(self):
         data.list_files = util.failing_file_lister
@@ -232,16 +232,16 @@ class TestCandy(unittest.TestCase):
         data.list_files = util.fake_file_lister
 
     def testGetSelection(self):
-        self.assertEquals(self.frame.p1.getSelection().file_name, '..')
+        self.assertEquals(self.frame.p1._get_selection().file_name, '..')
 
     def testRefreshMaintainsPosition(self):
         panel = self.frame.p1
-        panel.handleKeyEvent(ord('J'), None)
-        panel.handleKeyEvent(ord('J'), None)
-        panel.handleKeyEvent(ord('J'), None)
-        file = panel.getSelection().file_name
+        panel._handle_key_event(ord('J'), None)
+        panel._handle_key_event(ord('J'), None)
+        panel._handle_key_event(ord('J'), None)
+        file = panel._get_selection().file_name
         panel.refresh()
-        self.assertEquals(file, panel.getSelection().file_name)
+        self.assertEquals(file, panel._get_selection().file_name)
 
 
 class TestCandyWithSingleColumn(unittest.TestCase):
@@ -258,9 +258,9 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         # Now when dimensions are known, let's proceed initializing
         self.frame.setup_and_show()
 
-        # Speed up the tests by not executing updateView()
-        self.frame.p1.updateView = lambda: None
-        self.frame.p2.updateView = lambda: None
+        # Speed up the tests by not executing update_view()
+        self.frame.p1.update_view = lambda: None
+        self.frame.p2.update_view = lambda: None
 
     def tearDown(self):
         data.list_files = util.fake_file_lister
@@ -268,29 +268,29 @@ class TestCandyWithSingleColumn(unittest.TestCase):
 
     def testMoveRightOnSingleColumnMovesDown(self):
         panel = self.frame.p1
-        panel.handleKeyEvent(ord('L'), None)
-        self.assertEquals('dir0', panel.getSelection().file_name)
+        panel._handle_key_event(ord('L'), None)
+        self.assertEquals('dir0', panel._get_selection().file_name)
 
     def testMoveRightOnLastItemMovesToFirst(self):
         panel = self.frame.p1
-        panel.handleKeyEvent(ord('9'), None)
-        panel.handleKeyEvent(ord('L'), None)
-        self.assertEquals('..', panel.getSelection().file_name)
+        panel._handle_key_event(ord('9'), None)
+        panel._handle_key_event(ord('L'), None)
+        self.assertEquals('..', panel._get_selection().file_name)
 
     def testMoveLeftOnFirstItemMovesToLast(self):
         panel = self.frame.p1
-        panel.handleKeyEvent(ord('0'), None)
-        panel.handleKeyEvent(ord('H'), None)
+        panel._handle_key_event(ord('0'), None)
+        panel._handle_key_event(ord('H'), None)
 
         # This is a double test here: the first test is what I actually want to
         # know, and the second one makes sure I don't get fooled by Python's
         # ability to subscribe lists with negative indices
-        self.assertEquals('file2', panel.getSelection().file_name)
-        self.assertEquals(len(panel.model.items) - 1, panel.selectedItem)
+        self.assertEquals('file2', panel._get_selection().file_name)
+        self.assertEquals(len(panel.model.items) - 1, panel.selected_item)
 
     def testNumItems(self):
         panel = self.frame.p1
-        self.assertEquals(panel.numItems(), len(panel.model.items))
+        self.assertEquals(panel._num_items(), len(panel.model.items))
 
 
 def make_fast_suite():
