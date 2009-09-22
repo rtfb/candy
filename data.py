@@ -24,6 +24,13 @@ import platform
 import wx.stc as stc    # TODO: this module should not include it!
 import wx.lib.pubsub as pubsub
 
+if platform.system() == 'Windows':
+    try:
+        import win32api
+    except ImportError:
+        print 'You seem to be running Windows and don\'t have win32api.'
+        print 'Tisk tisk tisk...'
+
 import util
 from constants import *
 

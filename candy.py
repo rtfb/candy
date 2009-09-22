@@ -32,13 +32,6 @@ import wx
 import wx.stc as stc
 import wx.lib.pubsub as pubsub
 
-if platform.system() == 'Windows':
-    try:
-        import win32api
-    except ImportError:
-        print 'You seem to be running Windows and don\'t have win32api.'
-        print 'Tisk tisk tisk...'
-
 import keyboard
 import util
 from status_line import StatusLine
