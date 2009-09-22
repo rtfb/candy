@@ -293,6 +293,102 @@ class TestCandyWithSingleColumn(unittest.TestCase):
         self.assertEquals(panel._num_items(), len(panel.model.items))
 
 
+class TestLocationHistory(unittest.TestCase):
+    def setUp(self):
+        self.loc_hist = candy.LocationHistory()
+
+    def test_loc_hist_empty(self):
+        self.assertEquals(len(self.loc_hist), 0)
+
+    def test_empty_get_does_not_crash(self):
+        try:
+            self.loc_hist.get()
+        except:
+            self.fail()
+
+    def test_empty_get_returns_home(self):
+        self.assert_(self.loc_hist.get() == '~')
+
+    def test_loc_hist_grows(self):
+        self.loc_hist.push('a')
+        self.assertEquals(len(self.loc_hist), 1)
+
+    def test_get_value(self):
+        self.loc_hist.push('a')
+        self.assertEquals(self.loc_hist.get(), 'a')
+
+    def test_initial_position(self):
+        self.assertEqual(self.loc_hist.position, -1)
+
+    def test_push_pushes_position(self):
+        self.loc_hist.push('a')
+        self.assertEqual(self.loc_hist.position, 0)
+        self.loc_hist.push('b')
+        self.assertEqual(self.loc_hist.position, 1)
+
+    def test_push_affects_get(self):
+        self.loc_hist.push('a')
+        self.loc_hist.push('b')
+        self.assertEquals(self.loc_hist.get(), 'b')
+
+    def test_get_depends_on_position(self):
+        self.loc_hist.push('a')
+        self.loc_hist.push('b')
+        self.loc_hist.push('c')
+        self.loc_hist.back()
+        self.failUnless(self.loc_hist.get() == 'b')
+
+    def test_go_back(self):
+        self.loc_hist.push('a')
+        self.loc_hist.push('b')
+        self.loc_hist.back()
+        self.assertEquals(self.loc_hist.get(), 'a')
+
+    def test_go_back_does_not_shrink(self):
+        self.loc_hist.push('a')
+        self.loc_hist.push('b')
+        self.loc_hist.back()
+        self.assertEquals(len(self.loc_hist), 2)
+
+    def test_go_back_cycles(self):
+        self.loc_hist.push('a')
+        self.loc_hist.push('b')
+        self.loc_hist.back()
+        self.assertEqual(self.loc_hist.get(), 'a')
+        self.assertEqual(self.loc_hist.position, 0)
+        self.loc_hist.back()
+        self.assertEqual(self.loc_hist.get(), 'b')
+        self.assertEqual(self.loc_hist.position, 1)
+        self.loc_hist.back()
+        self.assertEqual(self.loc_hist.get(), 'a')
+        self.assertEqual(self.loc_hist.position, 0)
+
+    def test_push_the_same_does_not_grow(self):
+        self.loc_hist.push('a')
+        self.loc_hist.push('a')
+        self.assertEqual(len(self.loc_hist.container), 1)
+
+    def test_go_forth(self):
+        self.loc_hist.push('a')
+        self.loc_hist.push('b')
+        self.loc_hist.back()
+        self.loc_hist.forth()
+        self.assertEquals(self.loc_hist.get(), 'b')
+
+    def test_go_forth_cycles(self):
+        self.loc_hist.push('a')
+        self.loc_hist.push('b')
+        self.loc_hist.forth()
+        self.assertEqual(self.loc_hist.get(), 'a')
+        self.assertEqual(self.loc_hist.position, 0)
+        self.loc_hist.forth()
+        self.assertEqual(self.loc_hist.get(), 'b')
+        self.assertEqual(self.loc_hist.position, 1)
+        self.loc_hist.forth()
+        self.assertEqual(self.loc_hist.get(), 'a')
+        self.assertEqual(self.loc_hist.position, 0)
+
+
 def make_fast_suite():
     import test_keyboard
     import test_data
@@ -302,8 +398,9 @@ def make_fast_suite():
     keyboard_suite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
     file_lister_suite = unittest.makeSuite(TestFileLister)
     list_filterer_suite = unittest.makeSuite(TestListFiltering)
+    loc_hist_suite = unittest.makeSuite(TestLocationHistory)
     return [model_suite, smart_justifier_suite, keyboard_suite,
-            file_lister_suite, list_filterer_suite]
+            file_lister_suite, list_filterer_suite, loc_hist_suite]
 
 
 def suite():

@@ -121,6 +121,40 @@ class SmartJustifier(object):
         return new_text
 
 
+class LocationHistory:
+    def __init__(self):
+        self.container = []
+        self.position = -1
+
+    def __len__(self):
+        return len(self.container)
+
+    def push(self, path):
+        if path == self.get():
+            return
+
+        self.container.append(path)
+        self.position += 1
+
+    def get(self):
+        if len(self.container) == 0:
+            return '~'
+
+        return self.container[self.position]
+
+    def back(self):
+        self.position -= 1
+
+        if self.position < 0:
+            self.position = len(self.container) - 1
+
+    def forth(self):
+        self.position += 1
+
+        if self.position >= len(self.container):
+            self.position = 0
+
+
 # The width/height/left/right are in characters
 class ViewWindow(object):
     def __init__(self, width, height):
