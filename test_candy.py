@@ -148,12 +148,6 @@ class TestCandy(unittest.TestCase):
     def testInitialSelection(self):
         self.assertEqual(self.frame.active_pane.selected_item, 0)
 
-    def testItemListIsEmpty(self):
-        self.frame.p1.clear_list()
-        self.frame.p2.clear_list()
-        self.assertEquals(len(self.frame.p1.model.items), 0)
-        self.assertEquals(len(self.frame.p2.model.items), 0)
-
     def testSelectionDoesntGetAnywhereOnEmptyList(self):
         c1 = self.frame.p1
         c2 = self.frame.p2

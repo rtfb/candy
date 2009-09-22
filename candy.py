@@ -190,7 +190,8 @@ class PanelController(object):
         self._subscribe(self._search_ctrl_enter, 'CONTROL ENTER')
         self._subscribe(self._search_enter, 'ENTER')
         self._subscribe(self._search_escape, 'ESCAPE')
-        self._subscribe(self._search_new_status_line_text, 'NEW STATUS LINE TEXT')
+        self._subscribe(self._search_new_status_line_text,
+                        'NEW STATUS LINE TEXT')
 
         # String being searched incrementally
         self.search_str = ''
@@ -354,7 +355,8 @@ class PanelController(object):
         self.selected_item = self.search_match_index
 
     def _incremental_search(self, search_str):
-        match_index = self.model.next_search_match(search_str, self.selected_item)
+        match_index = self.model.next_search_match(search_str,
+                                                   self.selected_item)
         self.view.move_item_into_view(self.model.items, match_index)
         self.view.highlight_search_matches(self.model.items, search_str)
         return match_index
@@ -372,7 +374,8 @@ class PanelController(object):
         item = self._get_selection()
         if not item.visual_item or not item.visual_item.fully_in_view:
             self.view.move_item_into_view(self.model.items, self.selected_item)
-            self.view.highlight_search_matches(self.model.items, self.search_str)
+            self.view.highlight_search_matches(self.model.items,
+                                               self.search_str)
 
         self.view.set_selection_on_item(item)
         self._display_selection_info()
@@ -617,7 +620,7 @@ class Panel(stc.StyledTextCtrl):
 
         for item in items:
             visible_part = sj.justify(item.file_name) + u' '
-            item.coords =(column, row)
+            item.coords = (column, row)
             item.start_char_on_line = len(self._full_text_lines[row])
             utf8_line = self._full_text_lines[row].encode('utf-8')
             item.start_byte_on_line = len(utf8_line)
@@ -779,13 +782,12 @@ class Candy(wx.Frame):
                                           style=wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize(50)
 
-        display_size = wx.DisplaySize()
-        app_size = (display_size[0] / 2, display_size[1] / 2)
-        self.SetSize(app_size)
+        width, height = wx.DisplaySize()
+        self.SetSize((width / 2, height / 2))
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.splitter, 1, wx.EXPAND)
-        self.status_line = StatusLine(self, ID_STATUS_LINE, app_size[0],
+        self.status_line = StatusLine(self, ID_STATUS_LINE, width / 2,
                                       general_config, color_scheme)
         self.sizer.AddSpacer(2)
         sizer_flags = wx.BOTTOM | wx.ALIGN_BOTTOM | wx.EXPAND
