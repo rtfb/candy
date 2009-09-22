@@ -180,9 +180,37 @@ class TestKeyboardEventHandler(unittest.TestCase):
         f = kc.get_func(0, 0)
         self.assertEquals(f, None)
 
+
+class TestKeyValueSplit(unittest.TestCase):
+    def test_simple_cplit(self):
+        test_val = 'on_next_match: n'
+        k, v = keyboard.split_left_colon(test_val)
+        k2, v2 = test_val.strip().split(':')
+        self.assertEquals(k, k2)
+        self.assertEquals(v, v2)
+
+    def test_split_with_extra_spaces(self):
+        test_val = '  on_next_match: n  '
+        k, v = keyboard.split_left_colon(test_val)
+        k2, v2 = test_val.strip().split(':')
+        self.assertEquals(k, k2)
+        self.assertEquals(v, v2)
+
+    def test_split_preserves_commas(self):
+        test_val = 'on_next_match: n, m, l'
+        k, v = keyboard.split_left_colon(test_val)
+        self.assertEquals(2, test_val.count(','))
+
+    def test_colon_binding(self):
+        test_val = 'on_next_match: :'
+        k, v = keyboard.split_left_colon(test_val)
+        self.assertEquals(' :', v)
+
+
 def suite():
     kbd_handler_suite = unittest.makeSuite(TestKeyboardEventHandler, 'test')
-    return unittest.TestSuite([kbd_handler_suite])
+    split_suite = unittest.makeSuite(TestKeyValueSplit)
+    return unittest.TestSuite([kbd_handler_suite, split_suite])
 
 
 if __name__ == '__main__':

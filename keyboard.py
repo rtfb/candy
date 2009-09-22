@@ -127,6 +127,16 @@ class KeyboardEvent(object):
             return
 
 
+def split_left_colon(line):
+    sline = line.strip()
+    colon_index = sline.find(':')
+
+    if colon_index == -1:
+        return line
+
+    return (sline[:colon_index], sline[colon_index + 1:])
+
+
 class KeyboardConfig(object):
     def __init__(self):
         self.events = {}
@@ -162,7 +172,7 @@ class KeyboardConfig(object):
             if line.strip() == '':
                 continue
 
-            command, bindings = line.strip().split(':')
+            command, bindings = split_left_colon(line)
             for e in self._parse_bindings(command, bindings):
                 try:
                     func = eval('panel.' + e.command)
