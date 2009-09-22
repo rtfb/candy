@@ -389,7 +389,7 @@ def make_fast_suite():
 
     model_suite = unittest.makeSuite(test_data.TestModel, 'test')
     smart_justifier_suite = unittest.makeSuite(TestSmartJustifier, 'test')
-    keyboard_suite = unittest.makeSuite(test_keyboard.TestKeyboardEventHandler)
+    keyboard_suite = test_keyboard.suite()
     file_lister_suite = unittest.makeSuite(TestFileLister)
     list_filterer_suite = unittest.makeSuite(TestListFiltering)
     loc_hist_suite = unittest.makeSuite(TestLocationHistory)
