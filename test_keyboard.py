@@ -36,67 +36,67 @@ class TestKeyboardEventHandler(unittest.TestCase):
     def testNewKeyboardEventIsEmpty(self):
         ke = keyboard.KeyboardEvent()
         self.assertEquals(ke.char, '')
-        self.assertEquals(ke.keyCode, 0)
-        self.assertEquals(ke.modCtrl, False)
-        self.assertEquals(ke.modAlt, False)
-        self.assertEquals(ke.modShift, False)
+        self.assertEquals(ke.key_code, 0)
+        self.assertEquals(ke.mod_ctrl, False)
+        self.assertEquals(ke.mod_alt, False)
+        self.assertEquals(ke.mod_shift, False)
 
     def testOneLetterLowercase(self):
         ke = keyboard.KeyboardEvent()
-        # ke.char is simply the letter, ke.keyCode is the uppercased letter
+        # ke.char is simply the letter, ke.key_code is the uppercased letter
         for char in range(ord('a'), ord('z')):
             ke.parse(chr(char))
             self.assertEquals(ke.char, chr(char))
-            self.assertEquals(ke.keyCode, ord(chr(char).upper()))
-            self.assertFalse(ke.modShift)
+            self.assertEquals(ke.key_code, ord(chr(char).upper()))
+            self.assertFalse(ke.mod_shift)
 
     def testOneLetterUppercase(self):
         ke = keyboard.KeyboardEvent()
         for char in range(ord('A'), ord('Z')):
             ke.parse(chr(char))
             self.assertEquals(ke.char, chr(char))
-            self.assertEquals(ke.keyCode, char)
-            self.assertTrue(ke.modShift)
+            self.assertEquals(ke.key_code, char)
+            self.assertTrue(ke.mod_shift)
 
     def testDigits(self):
         ke = keyboard.KeyboardEvent()
-        # ke.char is simply the digit, ke.keyCode is the ascii number for that
+        # ke.char is simply the digit, ke.key_code is the ascii number for that
         # digit
         for char in range(ord('0'), ord('9')):
             ke.parse(chr(char))
             self.assertEquals(ke.char, chr(char))
-            self.assertEquals(ke.keyCode, char)
-            self.assertFalse(ke.modShift)
+            self.assertEquals(ke.key_code, char)
+            self.assertFalse(ke.mod_shift)
 
     def testShiftDigits(self):
         ke = keyboard.KeyboardEvent()
-        # ke.char is the '!@#', etc., ke.keyCode is the ascii number for that
+        # ke.char is the '!@#', etc., ke.key_code is the ascii number for that
         # symbol
         for char in '!@#$%^&*()':
             ke.parse(char)
             self.assertEquals(ke.char, char)
-            self.assertEquals(ke.keyCode, ord(char))
-            self.assertTrue(ke.modShift)
+            self.assertEquals(ke.key_code, ord(char))
+            self.assertTrue(ke.mod_shift)
 
     def testOtherUnshifted(self):
         ke = keyboard.KeyboardEvent()
-        # ke.char is the '`-=', etc., ke.keyCode is the ascii number for that
+        # ke.char is the '`-=', etc., ke.key_code is the ascii number for that
         # symbol
         for char in '`-=[];\',./\\':
             ke.parse(char)
             self.assertEquals(ke.char, char)
-            self.assertEquals(ke.keyCode, ord(char))
-            self.assertFalse(ke.modShift)
+            self.assertEquals(ke.key_code, ord(char))
+            self.assertFalse(ke.mod_shift)
 
     def testOtherShifted(self):
         ke = keyboard.KeyboardEvent()
-        # ke.char is the '~_+', etc., ke.keyCode is the ascii number for that
+        # ke.char is the '~_+', etc., ke.key_code is the ascii number for that
         # symbol
         for char in '~_+{}|:"<>?':
             ke.parse(char)
             self.assertEquals(ke.char, char)
-            self.assertEquals(ke.keyCode, ord(char))
-            self.assertTrue(ke.modShift)
+            self.assertEquals(ke.key_code, ord(char))
+            self.assertTrue(ke.mod_shift)
 
     def testSomeSpecials(self):
         ke = keyboard.KeyboardEvent()
@@ -109,7 +109,7 @@ class TestKeyboardEventHandler(unittest.TestCase):
                           ('Return', wx.WXK_RETURN), ('return', wx.WXK_RETURN)]:
             ke.parse(key)
             self.assertEquals(ke.char, '')
-            self.assertEquals(ke.keyCode, code)
+            self.assertEquals(ke.key_code, code)
 
     def testEmpty(self):
         ke = keyboard.KeyboardEvent()
@@ -124,27 +124,27 @@ class TestKeyboardEventHandler(unittest.TestCase):
         ke = keyboard.KeyboardEvent()
         ke.parse('C-a')
         self.assertEquals(ke.char, 'a')
-        self.assertEquals(ke.keyCode, ord('A'))
-        self.assertTrue(ke.modCtrl)
-        self.assertFalse(ke.modShift)
-        self.assertFalse(ke.modAlt)
+        self.assertEquals(ke.key_code, ord('A'))
+        self.assertTrue(ke.mod_ctrl)
+        self.assertFalse(ke.mod_shift)
+        self.assertFalse(ke.mod_alt)
 
     def testShiftB(self):
         ke = keyboard.KeyboardEvent()
         ke.parse('S-b')
         self.assertEquals(ke.char, 'b')
-        self.assertEquals(ke.keyCode, ord('B'))
-        self.assertTrue(ke.modShift)
-        self.assertFalse(ke.modAlt)
-        self.assertFalse(ke.modCtrl)
+        self.assertEquals(ke.key_code, ord('B'))
+        self.assertTrue(ke.mod_shift)
+        self.assertFalse(ke.mod_alt)
+        self.assertFalse(ke.mod_ctrl)
 
     def testAltZ(self):
         def check(ke):
             self.assertEquals(ke.char, 'z')
-            self.assertEquals(ke.keyCode, ord('Z'))
-            self.assertTrue(ke.modAlt)
-            self.assertFalse(ke.modShift)
-            self.assertFalse(ke.modCtrl)
+            self.assertEquals(ke.key_code, ord('Z'))
+            self.assertTrue(ke.mod_alt)
+            self.assertFalse(ke.mod_shift)
+            self.assertFalse(ke.mod_ctrl)
 
         ke = keyboard.KeyboardEvent()
         ke.parse('A-z')
@@ -163,26 +163,26 @@ class TestKeyboardEventHandler(unittest.TestCase):
         for i in range(1, 25):
             ke = keyboard.KeyboardEvent()
             ke.parse('f%d' % (i))
-            self.assertEquals(ke.keyCode, funcs[i - 1])
+            self.assertEquals(ke.key_code, funcs[i - 1])
 
     def testControlAltM(self):
         ke = keyboard.KeyboardEvent()
         ke.parse('C-A-m')
         self.assertEquals(ke.char, 'm')
-        self.assertEquals(ke.keyCode, ord('M'))
-        self.assertFalse(ke.modShift)
-        self.assertTrue(ke.modAlt)
-        self.assertTrue(ke.modCtrl)
+        self.assertEquals(ke.key_code, ord('M'))
+        self.assertFalse(ke.mod_shift)
+        self.assertTrue(ke.mod_alt)
+        self.assertTrue(ke.mod_ctrl)
 
     def testGetFuncReturnsNone(self):
         kc = keyboard.KeyboardConfig()
         # XXX: there should not be such a code and mod combo:
-        f = kc.getFunc(0, 0)
+        f = kc.get_func(0, 0)
         self.assertEquals(f, None)
 
 def suite():
-    keyboardHandlerSuite = unittest.makeSuite(TestKeyboardEventHandler, 'test')
-    return unittest.TestSuite([keyboardHandlerSuite])
+    kbd_handler_suite = unittest.makeSuite(TestKeyboardEventHandler, 'test')
+    return unittest.TestSuite([kbd_handler_suite])
 
 
 if __name__ == '__main__':

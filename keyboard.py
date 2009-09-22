@@ -41,42 +41,42 @@ class KeyboardEvent(object):
 
     def reset(self):
         self.char = ''
-        self.keyCode = 0
-        self.modCtrl = False
-        self.modAlt = False
-        self.modShift = False
+        self.key_code = 0
+        self.mod_ctrl = False
+        self.mod_alt = False
+        self.mod_shift = False
 
-    def modifiersBitMask(self):
+    def modifiers_bit_mask(self):
         mask = 0
 
-        if self.modCtrl:
+        if self.mod_ctrl:
             mask |= wx.MOD_CONTROL
 
-        if self.modShift:
+        if self.mod_shift:
             mask |= wx.MOD_SHIFT
 
-        if self.modAlt:
+        if self.mod_alt:
             mask |= wx.MOD_ALT
 
         return mask
 
     def parse(self, str):
         if len(str) == 1:
-            self._parseLenOne(str)
+            self._parse_len_one(str)
         elif str.lower() == 'esc':
-            self.keyCode = wx.WXK_ESCAPE
+            self.key_code = wx.WXK_ESCAPE
         elif str.lower() == 'space':
-            self.keyCode = wx.WXK_SPACE
+            self.key_code = wx.WXK_SPACE
         elif str.lower() == 'tab':
-            self.keyCode = wx.WXK_TAB
+            self.key_code = wx.WXK_TAB
         elif str.lower() in ['enter', 'return']:
-            self.keyCode = wx.WXK_RETURN
+            self.key_code = wx.WXK_RETURN
         elif str.lower().startswith('f') and len(str) > 1:
-            self._parseFunctionKeys(str)
+            self._parse_function_keys(str)
         else:
-            self._parseComplex(str)
+            self._parse_complex(str)
 
-    def _parseFunctionKeys(self, str):
+    def _parse_function_keys(self, str):
         try:
             number = eval(str[1:])
         except:
@@ -87,43 +87,43 @@ class KeyboardEvent(object):
                  wx.WXK_F11, wx.WXK_F12, wx.WXK_F13, wx.WXK_F14, wx.WXK_F15,
                  wx.WXK_F16, wx.WXK_F17, wx.WXK_F18, wx.WXK_F19, wx.WXK_F20,
                  wx.WXK_F21, wx.WXK_F22, wx.WXK_F23, wx.WXK_F24]
-        self.keyCode = funcs[number - 1]
+        self.key_code = funcs[number - 1]
 
-    def _parseComplex(self, str):
+    def _parse_complex(self, str):
         parts = str.split('-')
 
         if len(parts) <= 1:
             raise EventParseError(str)
 
         if parts[0] == 'C':
-            self.modCtrl = True
+            self.mod_ctrl = True
         elif parts[0] == 'S':
-            self.modShift = True
+            self.mod_shift = True
         elif parts[0] in ['A', 'M']:
-            self.modAlt = True
+            self.mod_alt = True
         else:
             raise EventParseError(str)
 
         self.parse('-'.join(parts[1:]))
 
-    def _parseLenOne(self, str):
+    def _parse_len_one(self, str):
         if str in 'ABCDEFGHIJKLMNOPQRSTUVWZYX':
             self.char = str
-            self.keyCode = ord(str)
-            self.modShift = True
+            self.key_code = ord(str)
+            self.mod_shift = True
             return
         elif str in 'abcdefghijklmnopqrstuvwzyx':
             self.char = str
-            self.keyCode = ord(str.upper())
+            self.key_code = ord(str.upper())
             return
         elif str in '0123456789`-=[]\\;\',./':
             self.char = str
-            self.keyCode = ord(str)
+            self.key_code = ord(str)
             return
         elif str in '!@#$%^&*()~_+{}|:"<>?':
             self.char = str
-            self.keyCode = ord(str)
-            self.modShift = True
+            self.key_code = ord(str)
+            self.mod_shift = True
             return
 
 
@@ -131,18 +131,18 @@ class KeyboardConfig(object):
     def __init__(self):
         self.events = {}
 
-    def getFunc(self, keyCode, keyMod):
+    def get_func(self, key_code, key_mod):
         for e in self.events:
-            if keyCode == e.keyCode:
-                if not keyMod:
+            if key_code == e.key_code:
+                if not key_mod:
                     return self.events[e]
 
-                if keyMod == e.modifiersBitMask():
+                if key_mod == e.modifiers_bit_mask():
                     return self.events[e]
 
         return None
 
-    def _parseBindings(self, command, bindings):
+    def _parse_bindings(self, command, bindings):
         bs = bindings.split(',')
         events = []
 
@@ -153,22 +153,22 @@ class KeyboardConfig(object):
 
         return events
 
-    def load(self, fileName, panel):
-        projectDir = os.path.dirname(__file__)
-        keysConfPath = os.path.join(projectDir, fileName)
-        lines = open(keysConfPath).readlines()
+    def load(self, file_name, panel):
+        project_dir = os.path.dirname(__file__)
+        keys_conf_path = os.path.join(project_dir, file_name)
+        lines = open(keys_conf_path).readlines()
 
         for line in lines:
             if line.strip() == '':
                 continue
 
             command, bindings = line.strip().split(':')
-            for e in self._parseBindings(command, bindings):
+            for e in self._parse_bindings(command, bindings):
                 try:
                     func = eval('panel.' + e.command)
                     self.events.setdefault(e, func)
                 except AttributeError:
-                    errStr = 'Key binding error: no such command "'
-                    errStr += e.command + '"'
-                    print errStr
+                    err_str = 'Key binding error: no such command "'
+                    err_str += e.command + '"'
+                    print err_str
 

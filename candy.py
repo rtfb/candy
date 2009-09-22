@@ -209,7 +209,7 @@ class PanelController(object):
         self.view.Bind(wx.EVT_SET_FOCUS, self._on_set_focus)
 
     def _handle_key_event(self, key_code, key_mod):
-        func = self.keys.getFunc(key_code, key_mod)
+        func = self.keys.get_func(key_code, key_mod)
 
         if func:
             func()
