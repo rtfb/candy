@@ -363,9 +363,11 @@ class PanelController(object):
 
     def on_start_inc_search(self):
         self.search_str = ''
-        self.view.get_frame().status_line.SetText(u'/')
-        self.view.get_frame().status_line.GotoPos(1)
-        self.view.get_frame().status_line.SetFocus()
+        self.view.get_frame().status_line.start_typing(u'/')
+
+    def on_start_command(self):
+        self.command_str = ''
+        self.view.get_frame().status_line.start_typing(u':')
 
     def _set_selection_on_curr_item(self):
         if self._num_items() <= 0:

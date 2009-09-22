@@ -85,6 +85,11 @@ class StatusLine(stc.StyledTextCtrl):
         message = self._message_prefix + 'NEW STATUS LINE TEXT'
         text = self.GetText()
 
-        if text != '':
+        if text != '' and text.startswith(u'/'):
             pubsub.Publisher().sendMessage(message, text[1:])
+
+    def start_typing(self, prefix):
+        self.SetText(prefix)
+        self.GotoPos(1)
+        self.SetFocus()
 
