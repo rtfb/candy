@@ -201,30 +201,6 @@ class TestCandy(unittest.TestCase):
             reference_value = view._chars_per_col * column + 36 * row
             self.assertEquals(view._get_item_start_byte(item), reference_value)
 
-    def testHandleKeyEventDoesNothingOnBadKey(self):
-        panel = self.frame.p1
-        temp = panel._set_selection_on_curr_item
-        panel._set_selection_on_curr_item = None
-
-        try:
-            # XXX: there should not be such a code and mod combo:
-            panel._handle_key_event(0, 0)
-        except TypeError as e:
-            self.assertEquals(e.what(), "'NoneType' object is not callable")
-
-        panel._set_selection_on_curr_item = temp
-
-    def testRefreshReadsDisk(self):
-        data.list_files = util.failing_file_lister
-
-        try:
-            self.frame.p1.refresh()
-            self.assertTrue(False)
-        except RuntimeError as e:
-            self.assertEquals(str(e), 'blerk')
-
-        data.list_files = util.fake_file_lister
-
     def testGetSelection(self):
         self.assertEquals(self.frame.p1._get_selection().file_name, '..')
 
@@ -383,6 +359,39 @@ class TestLocationHistory(unittest.TestCase):
         self.assertEqual(self.loc_hist.position, 0)
 
 
+class TestPanelController(unittest.TestCase):
+    def setUp(self):
+        sink = candy.PanelSink()
+        self.controller = candy.PanelController(sink, '', '')
+
+    def tearDown(self):
+        pass
+
+    def testHandleKeyEventDoesNothingOnBadKey(self):
+        panel = self.controller
+        temp = panel._set_selection_on_curr_item
+        panel._set_selection_on_curr_item = None
+
+        try:
+            # XXX: there should not be such a code and mod combo:
+            panel._handle_key_event(0, 0)
+        except TypeError, e:
+            self.assertEquals(e.what(), "'NoneType' object is not callable")
+
+        panel._set_selection_on_curr_item = temp
+
+    def testRefreshReadsDisk(self):
+        data.list_files = util.failing_file_lister
+
+        try:
+            self.controller.refresh()
+            self.assert_(False)
+        except RuntimeError, e:
+            self.assertEquals(str(e), 'blerk')
+        finally:
+            data.list_files = util.fake_file_lister
+
+
 def make_fast_suite():
     import test_keyboard
     import test_data
@@ -393,8 +402,10 @@ def make_fast_suite():
     file_lister_suite = unittest.makeSuite(TestFileLister)
     list_filterer_suite = unittest.makeSuite(TestListFiltering)
     loc_hist_suite = unittest.makeSuite(TestLocationHistory)
+    panel_controller_suite = unittest.makeSuite(TestPanelController)
     return [model_suite, smart_justifier_suite, keyboard_suite,
-            file_lister_suite, list_filterer_suite, loc_hist_suite]
+            file_lister_suite, list_filterer_suite, loc_hist_suite,
+            panel_controller_suite]
 
 
 def suite():

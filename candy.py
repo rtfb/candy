@@ -179,11 +179,11 @@ class ViewWindow(object):
 
 
 class PanelController(object):
-    def __init__(self, parent, modelSignature, controller_signature):
+    def __init__(self, panel, modelSignature, controller_signature):
         self.model = data.PanelModel(modelSignature)
         self.controller_signature = controller_signature
-        self.view = Panel(parent)
-        self._bind_events()
+        self.view = panel
+        self._bind_events(self.view)
         signature = modelSignature + 'NEW ITEMS'
         pubsub.Publisher().subscribe(self._after_dir_change, signature)
 
@@ -231,10 +231,10 @@ class PanelController(object):
         # This one is needed here to get the initial focus:
         self.view.SetFocus()
 
-    def _bind_events(self):
-        self.view.Bind(wx.EVT_CHAR, self._on_char)
-        self.view.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
-        self.view.Bind(wx.EVT_SET_FOCUS, self._on_set_focus)
+    def _bind_events(self, view):
+        view.Bind(wx.EVT_CHAR, self._on_char)
+        view.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
+        view.Bind(wx.EVT_SET_FOCUS, self._on_set_focus)
 
     def _handle_key_event(self, key_code, key_mod):
         func = self.keys.get_func(key_code, key_mod)
@@ -776,6 +776,20 @@ class Panel(stc.StyledTextCtrl):
                 self.SetStyling(item_name_len, item.style)
 
 
+class PanelSink:
+    def __init__(self):
+        pass
+
+    def Bind(self, binder, func):
+        pass
+
+    def clear_screen(self):
+        pass
+
+    def update_display_by_items(self, foo):
+        pass
+
+
 class Candy(wx.Frame):
     def __init__(self, parent, id, title):
         wx.Frame.__init__(self, parent, -1, title)
@@ -796,8 +810,8 @@ class Candy(wx.Frame):
         self.sizer.Add(self.status_line, 0, sizer_flags)
         self.SetSizer(self.sizer)
 
-        self.p1 = PanelController(self.splitter, 'm1.', 'c1.')
-        self.p2 = PanelController(self.splitter, 'm2.', 'c2.')
+        self.p1 = PanelController(Panel(self.splitter), 'm1.', 'c1.')
+        self.p2 = PanelController(Panel(self.splitter), 'm2.', 'c2.')
         self.splitter.SplitVertically(self.p1.view, self.p2.view)
 
         self.Bind(wx.EVT_SIZE, self.on_size)
