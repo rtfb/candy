@@ -290,7 +290,13 @@ class PanelController(object):
 
     def _change_dir(self, fullPath, search_str=u''):
         self.model.set_dir_filter(search_str)
-        os.chdir(fullPath)
+
+        try:
+            os.chdir(fullPath)
+        except OSError, inst:
+            self.view.set_status_line_text(str(inst))
+            return
+
         self.clear_screen()
         self.selected_item = 0
         self.model.fill_list_by_working_dir(fullPath)
@@ -775,6 +781,9 @@ class Panel(stc.StyledTextCtrl):
                 item_name_len = item.visual_item.vis_len_in_bytes
                 self.SetStyling(item_name_len, item.style)
 
+    def set_status_line_text(self, text):
+        self.get_frame().status_line.SetText(text)
+
 
 class PanelSink:
     def __init__(self):
@@ -787,6 +796,9 @@ class PanelSink:
         pass
 
     def update_display_by_items(self, foo):
+        pass
+
+    def set_status_line_text(self, text):
         pass
 
 

@@ -367,6 +367,19 @@ class TestPanelController(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def testChangeDirCatchesException(self):
+        backup = os.chdir
+        def thrower(path):
+            raise OSError('foo', 'bar')
+        os.chdir = thrower
+
+        try:
+            self.controller._change_dir('')
+        except:
+            self.assert_(False)
+
+        os.chdir = backup
+
     def testHandleKeyEventDoesNothingOnBadKey(self):
         panel = self.controller
         temp = panel._set_selection_on_curr_item
@@ -377,8 +390,8 @@ class TestPanelController(unittest.TestCase):
             panel._handle_key_event(0, 0)
         except TypeError, e:
             self.assertEquals(e.what(), "'NoneType' object is not callable")
-
-        panel._set_selection_on_curr_item = temp
+        finally:
+            panel._set_selection_on_curr_item = temp
 
     def testRefreshReadsDisk(self):
         data.list_files = util.failing_file_lister
