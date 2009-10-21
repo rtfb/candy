@@ -179,12 +179,12 @@ class ViewWindow(object):
 
 
 class PanelController(object):
-    def __init__(self, panel, modelSignature, controller_signature):
-        self.model = data.PanelModel(modelSignature)
+    def __init__(self, panel, model_signature, controller_signature):
+        self.model = data.PanelModel(model_signature)
         self.controller_signature = controller_signature
         self.view = panel
         self._bind_events(self.view)
-        signature = modelSignature + 'NEW ITEMS'
+        signature = model_signature + 'NEW ITEMS'
         pubsub.Publisher().subscribe(self._after_dir_change, signature)
 
         self._subscribe(self._search_ctrl_enter, 'CONTROL ENTER')
