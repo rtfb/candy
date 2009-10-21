@@ -39,7 +39,7 @@ import data
 from constants import *
 
 
-project_dir = os.path.dirname(__file__)
+project_dir = os.path.join(os.path.dirname(__file__), '..')
 general_conf_path = os.path.join(project_dir, u'general.conf')
 general_config = util.read_config(general_conf_path)
 color_conf = os.path.join(project_dir, u'colorscheme-default.conf')

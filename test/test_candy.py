@@ -21,6 +21,9 @@
 import unittest
 import os
 import pdb
+import sys
+
+sys.path.append(os.path.abspath('../src'))
 
 import wx
 

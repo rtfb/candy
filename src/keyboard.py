@@ -164,7 +164,7 @@ class KeyboardConfig(object):
         return events
 
     def load(self, file_name, panel):
-        project_dir = os.path.dirname(__file__)
+        project_dir = os.path.join(os.path.dirname(__file__), '..')
         keys_conf_path = os.path.join(project_dir, file_name)
         lines = open(keys_conf_path).readlines()
 
