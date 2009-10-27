@@ -147,6 +147,11 @@ class KeyboardConfig(object):
                 if not key_mod:
                     return self.events[e]
 
+                # XXX: make sure MOD_WIN flag is not on. We don't have any
+                # shortcuts bound for MOD_WIN yet, and I've seen a VM that
+                # weirdmostly produces every keystroke with MOD_WIN bit set.
+                key_mod = key_mod & ~wx.MOD_WIN
+
                 if key_mod == e.modifiers_bit_mask():
                     return self.events[e]
 
