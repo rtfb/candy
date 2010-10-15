@@ -50,6 +50,10 @@ class TestFileLister(unittest.TestCase):
         list = data.collect_list_info(False, u'.')
         self.assertRaises(ValueError, list.index, u'..')
 
+    def testNumHiddenFiles(self):
+        list = data.collect_list_info(False, u'.')
+        self.assertEquals(len(filter(lambda(f): f.is_hidden, list)), 5)
+
 
 class TestListFiltering(unittest.TestCase):
     def setUp(self):
