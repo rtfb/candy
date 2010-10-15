@@ -29,6 +29,12 @@ import platform
 import subprocess
 
 import wx
+
+wxVersion = wx.VERSION_STRING
+if not wxVersion.startswith('2.8'):
+    print "Can't run Candy! Need wxWidgets v2.8+, but got v" + wxVersion
+    sys.exit(0)
+
 import wx.stc as stc
 import wx.lib.pubsub as pubsub
 
