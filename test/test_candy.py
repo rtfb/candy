@@ -35,26 +35,6 @@ import data
 data.list_files = util.fake_file_lister
 
 
-class TestFileLister(unittest.TestCase):
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def testNoItemsGetLost(self):
-        ret = data.collect_list_info(False, u'.')
-        self.assertEquals(len(ret), len(util.fake_file_lister(False, u'.')))
-
-    def testItemsDontContainDotDot(self):
-        list = data.collect_list_info(False, u'.')
-        self.assertRaises(ValueError, list.index, u'..')
-
-    def testNumHiddenFiles(self):
-        list = data.collect_list_info(False, u'.')
-        self.assertEquals(len(filter(lambda(f): f.is_hidden, list)), 5)
-
-
 class TestListFiltering(unittest.TestCase):
     def setUp(self):
         allItems = data.collect_list_info(False, u'.')
@@ -419,13 +399,11 @@ def make_fast_suite():
     model_suite = unittest.makeSuite(test_data.TestModel, 'test')
     smart_justifier_suite = unittest.makeSuite(TestSmartJustifier, 'test')
     keyboard_suite = test_keyboard.suite()
-    file_lister_suite = unittest.makeSuite(TestFileLister)
     list_filterer_suite = unittest.makeSuite(TestListFiltering)
     loc_hist_suite = unittest.makeSuite(TestLocationHistory)
     panel_controller_suite = unittest.makeSuite(TestPanelController)
     return [model_suite, smart_justifier_suite, keyboard_suite,
-            file_lister_suite, list_filterer_suite, loc_hist_suite,
-            panel_controller_suite]
+            list_filterer_suite, loc_hist_suite, panel_controller_suite]
 
 
 def suite():

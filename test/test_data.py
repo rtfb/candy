@@ -31,6 +31,26 @@ import util
 data.list_files = util.fake_file_lister
 
 
+class TestFileLister(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def testNoItemsGetLost(self):
+        ret = data.collect_list_info(False, u'.')
+        self.assertEquals(len(ret), len(util.fake_file_lister(False, u'.')))
+
+    def testItemsDontContainDotDot(self):
+        list = data.collect_list_info(False, u'.')
+        self.assertRaises(ValueError, list.index, u'..')
+
+    def testNumHiddenFiles(self):
+        list = data.collect_list_info(False, u'.')
+        self.assertEquals(len(filter(lambda(f): f.is_hidden, list)), 5)
+
+
 class TestModel(unittest.TestCase):
     def setUp(self):
         self.model = data.PanelModel('m.')
@@ -74,7 +94,8 @@ class TestModel(unittest.TestCase):
 
 def suite():
     modelSuite = unittest.makeSuite(TestModel, 'test')
-    return unittest.TestSuite([modelSuite])
+    file_lister_suite = unittest.makeSuite(TestFileLister)
+    return unittest.TestSuite([modelSuite, file_lister_suite])
 
 
 if __name__ == '__main__':
