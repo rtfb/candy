@@ -46,9 +46,9 @@ class TestFileLister(unittest.TestCase):
         ret = data.collect_list_info(False, u'.')
         self.assertEquals(len(ret), len(util.fake_file_lister(False, u'.')))
 
-    def testItemName(self):
-        ret = data.collect_list_info(False, u'.')
-        self.assertEquals(ret[0].file_name, u'..')
+    def testItemsDontContainDotDot(self):
+        list = data.collect_list_info(False, u'.')
+        self.assertRaises(ValueError, list.index, u'..')
 
 
 class TestListFiltering(unittest.TestCase):
@@ -60,8 +60,8 @@ class TestListFiltering(unittest.TestCase):
         pass
 
     def testNothingHiddenRemains(self):
-        """Nothing should start with a dot, except for the '..'
-        """
+        """Nothing should start with a dot, except for the '..', which is
+        always the 0th element """
 
         for i in self.list[1:]:
             self.assertFalse(i.file_name.startswith(u'.'))

@@ -47,9 +47,13 @@ class TestModel(unittest.TestCase):
 
     def testFillItemsList(self):
         self.model.fill_list_by_working_dir('.')
-        # -5 here because the fake list contains 5 hidden files
+
+        # -5 here because the fake list contains 5 hidden files:
         fakeListLen = len(util.fake_file_lister(False, '.')) - 5
-        self.assertEquals(len(self.model.items), fakeListLen)
+
+        # -1 here because fake lister will not have the '..', but model will
+        # have it added internally:
+        self.assertEquals(len(self.model.items) - 1, fakeListLen)
 
     def testUpdirFromFlatView(self):
         self.model.fill_list_by_working_dir('.')

@@ -124,8 +124,6 @@ def fake_file_lister(is_flat_directory_view, cwd):
     for i in range(10):
         dirs.append('dir' + str(i))
 
-    dirs.insert(0, '..')
-
     for i in range(20):
         files.append('file' + str(i))
 
@@ -143,8 +141,6 @@ def fake_file_lister2(is_flat_directory_view, cwd):
 
     for i in range(2):
         dirs.append('dir' + str(i))
-
-    dirs.insert(0, '..')
 
     for i in range(3):
         files.append('file' + str(i))
