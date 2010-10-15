@@ -158,10 +158,9 @@ class KeyboardConfig(object):
         return None
 
     def _parse_bindings(self, command, bindings):
-        bs = bindings.split(',')
         events = []
 
-        for b in bs:
+        for b in bindings.split(','):
             event = KeyboardEvent(command)
             event.parse(b.strip())
             events.append(event)
