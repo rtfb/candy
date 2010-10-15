@@ -107,22 +107,31 @@ class KeyboardEvent(object):
         self.parse('-'.join(parts[1:]))
 
     def _parse_len_one(self, str):
-        if str in 'ABCDEFGHIJKLMNOPQRSTUVWZYX':
+        lowercase_alphabet = 'abcdefghijklmnopqrstuvwzyx'
+        uppercase_alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWZYX'
+
+        # XXX: this is an ugly hack! These two sets depend on being in the same
+        # order, e.g. I look up the keycode of '@' by taking ord('2')
+        numericals_and_specials = '1234567890`-=[]\\;\',./'
+        shifted_numericals_and_specials = '!@#$%^&*()~_+{}|:"<>?'
+
+        if str in uppercase_alphabet:
             self.char = str
             self.key_code = ord(str)
             self.mod_shift = True
             return
-        elif str in 'abcdefghijklmnopqrstuvwzyx':
+        elif str in lowercase_alphabet:
             self.char = str
             self.key_code = ord(str.upper())
             return
-        elif str in '0123456789`-=[]\\;\',./':
+        elif str in numericals_and_specials:
             self.char = str
             self.key_code = ord(str)
             return
-        elif str in '!@#$%^&*()~_+{}|:"<>?':
+        elif str in shifted_numericals_and_specials:
+            unshifted_str = shifted_numericals_and_specials.index(str)
             self.char = str
-            self.key_code = ord(str)
+            self.key_code = ord(numericals_and_specials[unshifted_str])
             self.mod_shift = True
             return
 

@@ -200,6 +200,13 @@ class TestCandy(unittest.TestCase):
         panel.refresh()
         self.assertEquals(file, panel._get_selection().file_name)
 
+    def testTildeGoesHome(self):
+        panel = self.frame.p1
+        panel._change_dir('/')
+        self.assertEquals(panel.model.working_dir, '/')
+        panel._handle_key_event(ord('`'), 4)
+        self.assertEquals(panel.model.working_dir, os.path.expanduser('~'))
+
 
 class TestCandyWithSingleColumn(unittest.TestCase):
     def setUp(self):

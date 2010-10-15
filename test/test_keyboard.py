@@ -28,6 +28,7 @@ sys.path.append(os.path.abspath('../src'))
 import wx
 
 import keyboard
+import candy
 
 
 class TestKeyboardEventHandler(unittest.TestCase):
@@ -74,12 +75,14 @@ class TestKeyboardEventHandler(unittest.TestCase):
 
     def testShiftDigits(self):
         ke = keyboard.KeyboardEvent()
-        # ke.char is the '!@#', etc., ke.key_code is the ascii number for that
-        # symbol
-        for char in '!@#$%^&*()':
+        # ke.char is the '!@#', etc., ke.key_code is the ascii number for the
+        # same key w/o Shift modifier
+        numbers = '1234567890'
+        symbols = '!@#$%^&*()'
+        for index, char in enumerate(symbols):
             ke.parse(char)
             self.assertEquals(ke.char, char)
-            self.assertEquals(ke.key_code, ord(char))
+            self.assertEquals(ke.key_code, ord(numbers[index]))
             self.assertTrue(ke.mod_shift)
 
     def testOtherUnshifted(self):
@@ -94,12 +97,14 @@ class TestKeyboardEventHandler(unittest.TestCase):
 
     def testOtherShifted(self):
         ke = keyboard.KeyboardEvent()
-        # ke.char is the '~_+', etc., ke.key_code is the ascii number for that
-        # symbol
-        for char in '~_+{}|:"<>?':
+        # ke.char is the '~_+', etc., ke.key_code is the ascii number for the
+        # same key w/o Shift modifier
+        unshifted = '`-=[]\\;\',./'
+        symbols   = '~_+{}|:"<>?'
+        for index, char in enumerate(symbols):
             ke.parse(char)
             self.assertEquals(ke.char, char)
-            self.assertEquals(ke.key_code, ord(char))
+            self.assertEquals(ke.key_code, ord(unshifted[index]))
             self.assertTrue(ke.mod_shift)
 
     def testSomeSpecials(self):
@@ -185,6 +190,21 @@ class TestKeyboardEventHandler(unittest.TestCase):
         self.assertEquals(f, None)
 
 
+class TestKeyboardOnRealConfig(unittest.TestCase):
+    def setUp(self):
+        sink = candy.PanelSink()
+        controller = candy.PanelController(sink, '', '')
+        self.kconfig = keyboard.KeyboardConfig()
+        self.kconfig.load(u'keys.conf', controller)
+
+    def tearDown(self):
+        pass
+
+    def testTildeReturnsGoHome(self):
+        func = self.kconfig.get_func(ord('`'), 4)
+        self.assertNotEquals(func, None)
+
+
 class TestKeyValueSplit(unittest.TestCase):
     def test_simple_cplit(self):
         test_val = 'on_next_match: n'
@@ -214,7 +234,9 @@ class TestKeyValueSplit(unittest.TestCase):
 def suite():
     kbd_handler_suite = unittest.makeSuite(TestKeyboardEventHandler, 'test')
     split_suite = unittest.makeSuite(TestKeyValueSplit)
-    return unittest.TestSuite([kbd_handler_suite, split_suite])
+    real_config_suite = unittest.makeSuite(TestKeyboardOnRealConfig)
+    return unittest.TestSuite([kbd_handler_suite, split_suite,
+                               real_config_suite])
 
 
 if __name__ == '__main__':
