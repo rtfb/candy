@@ -39,6 +39,8 @@ class StatusLine(stc.StyledTextCtrl):
                         color_scheme['default-text'])
         self.StyleSetSpec(stc.STC_STYLE_DEFAULT, style_spec)
         self.StyleClearAll()
+        self.SetCaretForeground(color_scheme['default-text'])
+        self.SetCaretWidth(3)
 
         self.Bind(stc.EVT_STC_MODIFIED, self.on_status_line_change)
         self.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
