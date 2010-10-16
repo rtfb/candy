@@ -66,7 +66,7 @@ class StatusLine(stc.StyledTextCtrl):
             message += 'ESCAPE'
         elif key_code == wx.WXK_BACK:
             text = self.GetText()
-            if text and text == u'/':
+            if text and (text == u'/' or text == u':'):
                 message += 'ESCAPE'
 
         if message != self._message_prefix:

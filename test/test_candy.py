@@ -207,6 +207,31 @@ class TestCandy(unittest.TestCase):
         panel._handle_key_event(ord('`'), 4)
         self.assertEquals(panel.model.working_dir, os.path.expanduser('~'))
 
+    def testColonEntersCommandMode(self):
+        self.frame.p1._handle_key_event(ord(';'), 4)
+        self.assertEquals(self.frame.status_line.GetText(), u':')
+
+    def testBackspaceOnColonReturnsFocusToPanel(self):
+        self.frame.p1._handle_key_event(ord(';'), 4)
+        st_line = self.frame.status_line
+        st_line.SetText(u':abc')
+        st_line.GotoPos(len(st_line.GetText()))
+
+        # Make sure the focus is on the status line:
+        self.assertTrue('status_line' in str(st_line.FindFocus()))
+
+        # Backpedal enough times to erase the colon:
+        event = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+        event.m_keyCode = wx.WXK_BACK
+        st_line.GetEventHandler().ProcessEvent(event)
+        st_line.GetEventHandler().ProcessEvent(event)
+        st_line.GetEventHandler().ProcessEvent(event)
+        st_line.GetEventHandler().ProcessEvent(event)
+
+        # Make sure the status line is empty and focus is back on the panel:
+        self.assertEquals(st_line.GetText(), u'')
+        self.assertTrue('Panel' in str(st_line.FindFocus()))
+
 
 class TestCandyWithSingleColumn(unittest.TestCase):
     def setUp(self):
