@@ -225,8 +225,9 @@ class PanelController(object):
         self.selected_item = 0
         self.view.num_full_columns = 0
 
-    def initialize_view_settings(self, num_columns=3):
-        self.view.initialize_view_settings(self.model.items, num_columns)
+    def initialize_view_settings(self, num_columns=3, num_rows=None):
+        self.view.initialize_view_settings(self.model.items, num_columns,
+                                           num_rows)
         self.view.highlight_search_matches(self.model.items, self.search_str)
         self._set_selection_on_curr_item()
 
@@ -541,15 +542,19 @@ class Panel(stc.StyledTextCtrl):
         self.SetSelBackground(1, color_scheme['selection-inactive'])
         self.SetSelForeground(1, color_scheme['selection-fore'])
 
-    def initialize_view_settings(self, items, num_columns):
-        width, height = self.GetClientSizeTuple()
+    def initialize_view_settings(self, items, num_columns, num_rows=None):
         line_height = self.TextHeight(0)
+        width, height = self.GetClientSizeTuple()
         char_width = self.TextWidth(stc.STC_STYLE_DEFAULT, 'a')
 
-        # Here view_window.left will be set to 0. Even if it's not,
-        # it will be brought back to life when doing move_item_into_view:
-        self.view_window = ViewWindow(width / char_width,
-                                      height / line_height)
+        if num_rows:
+            self.view_window = ViewWindow(width / char_width, num_rows)
+        else:
+            # Here view_window.left will be set to 0. Even if it's not,
+            # it will be brought back to life when doing move_item_into_view:
+            self.view_window = ViewWindow(width / char_width,
+                                          height / line_height)
+
         self.view_window.num_columns = num_columns
         self._chars_per_col = width / char_width / self.view_window.num_columns
         self.clear_screen()
