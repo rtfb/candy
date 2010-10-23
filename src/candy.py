@@ -433,12 +433,19 @@ class PanelController(object):
         if self.selected_item == -1:
             self.selected_item = self._num_items() - 1
 
+    def _is_selection_on_bottom_line(self):
+        return (self.selected_item + 1) % self.view.view_window.height == 0
+
+    def _nothing_to_the_right(self):
+        num_rows = self.view.view_window.height
+        return self._num_items () < (self.selected_item + num_rows)
+
     def move_selection_right(self):
         if self._num_items() == 0:
             self.selected_item = 0
             return
 
-        if self.selected_item == self._num_items() - 1:
+        if self._is_selection_on_bottom_line() and self._nothing_to_the_right():
             self.selected_item = 0
             return
 
