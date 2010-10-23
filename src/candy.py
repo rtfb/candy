@@ -440,7 +440,7 @@ class PanelController(object):
             self.selected_item = 0
             return
 
-        if self.selected_item > self._num_items():
+        if self.selected_item >= self._num_items():
             self.selected_item -= self.view.view_window.height
             self.selected_item %= self.view.view_window.height
             self.selected_item += 1
