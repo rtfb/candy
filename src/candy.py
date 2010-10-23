@@ -434,11 +434,15 @@ class PanelController(object):
             self.selected_item = self._num_items() - 1
 
     def move_selection_right(self):
-        self.selected_item += self.view.view_window.height
-
         if self._num_items() == 0:
             self.selected_item = 0
             return
+
+        if self.selected_item == self._num_items() - 1:
+            self.selected_item = 0
+            return
+
+        self.selected_item += self.view.view_window.height
 
         if self.selected_item >= self._num_items():
             self.selected_item -= self.view.view_window.height
