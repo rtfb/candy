@@ -130,7 +130,7 @@ class TestMotion(unittest.TestCase):
     # What's going wrong:
     # * When on 'g' and press RIGHT, should go to 'd', but goes to 'a'
     # * When on 'a' and press LEFT, should go to 'j', but goes to 'h'
-    #      - that one might actually be correct...
+    #      - that one is actually correct...
     # * When on 'h' and press RIGHT, should go to 'a', but goes to 'e'
     #
     def testGtoD(self):
@@ -151,7 +151,7 @@ class TestMotion(unittest.TestCase):
         self.panel.move_selection_right()
         self.assertEquals(self.panel.selected_item, 3)
 
-    def testAtoJ(self):
+    def testAtoH(self):
         lst = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
         data.list_files = lambda a, b: util.list_of_tuples(lst, b)
         # Constrain the size, to feed the test data in a controlled manner
@@ -159,7 +159,7 @@ class TestMotion(unittest.TestCase):
         self.panel.model.fill_list_by_working_dir('.')
 
         self.panel.move_selection_left()
-        self.assertEquals(self.panel.selected_item, 9)
+        self.assertEquals(self.panel.selected_item, 7)
 
     def testHtoA(self):
         lst = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']
