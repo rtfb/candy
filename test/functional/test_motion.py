@@ -76,6 +76,24 @@ class TestMotion(unittest.TestCase):
         self.panel.move_selection_left()
         self.assertEquals(self.panel.selected_item, 1)
 
+    def testMoveDown(self):
+        self.panel.move_selection_down()
+        self.assertEquals(self.panel.selected_item, 1)
+        self.panel.move_selection_down()
+        self.assertEquals(self.panel.selected_item, 2)
+        self.panel.move_selection_down()
+        self.assertEquals(self.panel.selected_item, 3)
+
+    def testMoveUp(self):
+        self.panel.move_selection_up()
+        self.assertEquals(self.panel.selected_item, 5)
+        self.panel.move_selection_up()
+        self.assertEquals(self.panel.selected_item, 4)
+        self.panel.move_selection_up()
+        self.assertEquals(self.panel.selected_item, 3)
+        self.panel.move_selection_up()
+        self.assertEquals(self.panel.selected_item, 2)
+
     #
     # Layout:
     #
