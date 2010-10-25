@@ -180,6 +180,28 @@ class TestMotion(unittest.TestCase):
         self.panel.move_selection_right()
         self.assertEquals(self.panel.selected_item, 0)
 
+    def testSelectionDoesntGetAnywhereOnEmptyList(self):
+        p1 = self.panel
+        p1.clear_list()
+        p1.move_selection_up()
+        self.assertEquals(p1.selected_item, 0)
+        p1.move_selection_down()
+        self.assertEquals(p1.selected_item, 0)
+        p1.move_selection_left()
+        self.assertEquals(p1.selected_item, 0)
+        p1.move_selection_right()
+        self.assertEquals(p1.selected_item, 0)
+
+    def testInitialSelection(self):
+        self.assertEqual(self.panel.selected_item, 0)
+
+    def testItemStartCharIsZeroOnEmptyList(self):
+        item = self.panel.model.items[0]
+        self.assertEquals(item.visual_item.start_char_on_line, 0)
+
+    def testItemsListIsNotEmpty(self):
+        self.assertTrue(len(self.panel.model.items) > 0)
+
 
 def suite():
     motion_suite = unittest.makeSuite(TestMotion, 'test')

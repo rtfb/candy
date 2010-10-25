@@ -132,28 +132,6 @@ class TestCandy(unittest.TestCase):
         sashPos = self.frame.splitter.GetSashPosition()
         self.assertEqual((size.x - 5) / 2, sashPos)
 
-    def testInitialSelection(self):
-        self.assertEqual(self.frame.active_pane.selected_item, 0)
-
-    def testSelectionDoesntGetAnywhereOnEmptyList(self):
-        p1 = self.frame.p1
-        p1.clear_list()
-        p1.move_selection_up()
-        self.assertEquals(p1.selected_item, 0)
-        p1.move_selection_down()
-        self.assertEquals(p1.selected_item, 0)
-        p1.move_selection_left()
-        self.assertEquals(p1.selected_item, 0)
-        p1.move_selection_right()
-        self.assertEquals(p1.selected_item, 0)
-
-    def testItemStartCharIsZeroOnEmptyList(self):
-        item = self.frame.p1.model.items[0]
-        self.assertEquals(item.visual_item.start_char_on_line, 0)
-
-    def testItemsListIsNotEmpty(self):
-        self.assertTrue(len(self.frame.p1.model.items) > 0)
-
     def testSimpleIncSearch(self):
         self.assertEquals(self.frame.p1._incremental_search('dir'), 1)
 
