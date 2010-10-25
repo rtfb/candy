@@ -136,18 +136,16 @@ class TestCandy(unittest.TestCase):
         self.assertEqual(self.frame.active_pane.selected_item, 0)
 
     def testSelectionDoesntGetAnywhereOnEmptyList(self):
-        c1 = self.frame.p1
-        c2 = self.frame.p2
-        c1.clear_list()
-        c2.clear_list()
-        c1.move_selection_up()
-        self.assertEquals(c1.selected_item, 0)
-        c1.move_selection_down()
-        self.assertEquals(c1.selected_item, 0)
-        c1.move_selection_left()
-        self.assertEquals(c1.selected_item, 0)
-        c1.move_selection_right()
-        self.assertEquals(c1.selected_item, 0)
+        p1 = self.frame.p1
+        p1.clear_list()
+        p1.move_selection_up()
+        self.assertEquals(p1.selected_item, 0)
+        p1.move_selection_down()
+        self.assertEquals(p1.selected_item, 0)
+        p1.move_selection_left()
+        self.assertEquals(p1.selected_item, 0)
+        p1.move_selection_right()
+        self.assertEquals(p1.selected_item, 0)
 
     def testItemStartCharIsZeroOnEmptyList(self):
         item = self.frame.p1.model.items[0]
